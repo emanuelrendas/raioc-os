@@ -94,6 +94,10 @@ export class SharedMemory {
     return matches.slice(0, limit).map((m) => m.record);
   }
 
+  search(query, options = {}) {
+    return this.recallKnowledge(query, options);
+  }
+
   getKnowledgeByTopic(topic) {
     const normalized = topic.toLowerCase().trim();
     const results = [];

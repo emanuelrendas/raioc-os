@@ -81,6 +81,7 @@ export async function handleAssessmentSubmission(payload = {}, options = {}) {
       status: 200,
       body: {
         success: true,
+        status: 'INGESTED',
         leadId: leadRecord.id,
         briefId: brief.id,
         riis: intelligence.riis,
