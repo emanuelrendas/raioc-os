@@ -1,8 +1,10 @@
 /**
  * RAIOC API - Shared Agent API Routes
- * Allows authorized services & subagents to execute tools across Gmail, Calendar, WhatsApp, CRM, and IKL.
+ * Allows authorized services & subagents to execute tools and command JARVIS autonomous goals.
  */
 
+import { jarvis } from '../../agents/specialists/jarvis-orchestrator.js';
+import { agentDirectory } from '../../agents/agent-directory.js';
 import { agentRuntime } from '../../agents/agent-runtime.js';
 import { AgentAction, AgentContext } from '../../agents/agent-action-interface.js';
 import { authMiddleware, Roles } from '../../security/auth-middleware.js';
@@ -12,7 +14,32 @@ import { secretsManager } from '../../config/secrets-manager.js';
 export async function handleAgentRequest(path, method = 'POST', body = {}, headers = {}) {
   const normalized = path.replace(/^\/api\/agents\/?/, '');
 
-  // 1. List Available Tools (Public / Agent inspection)
+  // 1. JARVIS Autonomous Goal Orchestration Endpoint
+  if (normalized.startsWith('jarvis/goal') || normalized === 'goal') {
+    const objective = body.objective || body.goal;
+    if (!objective) {
+      return { status: 400, body: { error: "Missing required 'objective' field" } };
+    }
+
+    const report = await jarvis.executeObjective(objective, body.contextData || body);
+    return {
+      status: 200,
+      body: report,
+    };
+  }
+
+  // 2. Agent Directory Roster & Heartbeats
+  if (normalized === 'directory' || normalized === 'roster') {
+    return {
+      status: 200,
+      body: {
+        agents: agentDirectory.listAgents(),
+        totalAgents: agentDirectory.agents.size,
+      },
+    };
+  }
+
+  // 3. List Available Tools
   if (normalized === 'tools' || normalized === '') {
     return {
       status: 200,
@@ -23,7 +50,7 @@ export async function handleAgentRequest(path, method = 'POST', body = {}, heade
     };
   }
 
-  // 2. Execute Single Action or Plan (Requires Service Authentication)
+  // 4. Execute Single Action or Plan (Requires Service Authentication)
   if (normalized === 'execute') {
     const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN, Roles.AGENT]);
     if (!auth.authenticated) {
@@ -52,7 +79,7 @@ export async function handleAgentRequest(path, method = 'POST', body = {}, heade
     return { status: result.status === 'SUCCESS' ? 200 : 500, body: result };
   }
 
-  // 3. System Environment Status (Sanitized)
+  // 5. System Environment Status (Sanitized)
   if (normalized === 'environment' || normalized === 'status') {
     const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN]);
     if (!auth.authenticated) {

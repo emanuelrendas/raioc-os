@@ -139,6 +139,10 @@ export class IKLQueryInterface {
     return this.recommendationEngine.recommendStrategy(persona, diraRiskLevel);
   }
 
+  recommend(persona = {}, diraRiskLevel = 'LOW') {
+    return this.recommendStrategy(persona, diraRiskLevel);
+  }
+
   generateActionPlan(strategy = {}, diraRiskLevel = 'LOW') {
     return this.recommendationEngine.generateActionPlan(strategy, diraRiskLevel);
   }

@@ -1,6 +1,6 @@
 /**
- * RAIOC OS - Rendas AI Intelligence Operating Center
- * Core Entry Point (Sprint 2 - Operational Infrastructure)
+ * RAIOC OS - Autonomous Multi-Agent Operating Company (Operational Layer)
+ * Core System Entrypoint
  */
 
 import { run_cycle } from './core/run-cycle.js';
@@ -23,6 +23,8 @@ import { googleCalendarClient } from './integrations/google/calendar-client.js';
 import { whatsAppBusinessClient } from './integrations/whatsapp/whatsapp-business-client.js';
 import { crmSyncClient } from './integrations/crm/crm-sync-client.js';
 import { n8nWebhookClient } from './integrations/n8n/n8n-webhook-client.js';
+import { gitHubClient } from './integrations/github/github-client.js';
+import { vercelClient } from './integrations/vercel/vercel-client.js';
 import { gmailAdapter } from './adapters/gmail-adapter.js';
 import { calendarAdapter } from './adapters/calendar-adapter.js';
 import { whatsAppCloudAdapter } from './adapters/whatsapp-cloud-adapter.js';
@@ -31,6 +33,27 @@ import { agentRuntime } from './agents/agent-runtime.js';
 import { AgentAction, AgentContext, ExecutionResult } from './agents/agent-action-interface.js';
 import { correlationTracer } from './monitoring/correlation-tracer.js';
 import { metricsCollector } from './monitoring/metrics-collector.js';
+
+// Operational Layer & Specialist Agents
+import { BaseSpecialistAgent } from './agents/specialists/base-agent.js';
+import { jarvis } from './agents/specialists/jarvis-orchestrator.js';
+import { markTriageAgent } from './agents/specialists/mark-triage-agent.js';
+import { aidaCommsAgent } from './agents/specialists/aida-comms-agent.js';
+import { atlasMarketAgent } from './agents/specialists/atlas-market-agent.js';
+import { lexComplianceAgent } from './agents/specialists/lex-compliance-agent.js';
+import { heliosCalendarAgent } from './agents/specialists/helios-calendar-agent.js';
+import { hermesCrmAgent } from './agents/specialists/hermes-crm-agent.js';
+import { sentinelHealthAgent } from './agents/specialists/sentinel-health-agent.js';
+import { agentDirectory } from './agents/agent-directory.js';
+import { sharedMemory } from './memory/shared-memory.js';
+import { agentEventBus, AgentEvents } from './events/agent-event-bus.js';
+import { priorityTaskDispatcher, TaskPriority } from './operational/priority-task-dispatcher.js';
+import { autonomousPlanner } from './operational/autonomous-planner.js';
+import { decisionLogger } from './operational/decision-logger.js';
+import { kpiCollector } from './operational/kpi-collector.js';
+import { dailyBriefingGenerator } from './operational/daily-briefing-generator.js';
+import { executiveDashboard } from './operational/executive-dashboard.js';
+import { operatingCenter } from './operational/operating-center.js';
 
 export {
   run_cycle,
@@ -55,6 +78,8 @@ export {
   whatsAppBusinessClient,
   crmSyncClient,
   n8nWebhookClient,
+  gitHubClient,
+  vercelClient,
   gmailAdapter,
   calendarAdapter,
   whatsAppCloudAdapter,
@@ -65,20 +90,42 @@ export {
   ExecutionResult,
   correlationTracer,
   metricsCollector,
+  // Operational Multi-Agent Exports
+  BaseSpecialistAgent,
+  jarvis,
+  markTriageAgent,
+  aidaCommsAgent,
+  atlasMarketAgent,
+  lexComplianceAgent,
+  heliosCalendarAgent,
+  hermesCrmAgent,
+  sentinelHealthAgent,
+  agentDirectory,
+  sharedMemory,
+  agentEventBus,
+  AgentEvents,
+  priorityTaskDispatcher,
+  TaskPriority,
+  autonomousPlanner,
+  decisionLogger,
+  kpiCollector,
+  dailyBriefingGenerator,
+  executiveDashboard,
+  operatingCenter,
 };
 
-// If started directly, start autonomous scheduler with graceful signal handling
+// If started directly, boot Always-On Autonomous Operating Center
 if (process.argv[1] && (process.argv[1].endsWith('index.js') || process.argv[1].endsWith('raioc-os'))) {
-  logger.info('SYSTEM', 'Booting RAIOC OS Autonomous Operating System (MAS-INFRA v1.0)...');
+  logger.info('SYSTEM', 'Booting RAIOC Autonomous Multi-Agent Operating Center...');
 
-  distributedScheduler.start().catch((err) => {
-    logger.error('SYSTEM', 'Fatal boot failure', { error: err.message });
+  operatingCenter.boot().catch((err) => {
+    logger.error('SYSTEM', 'Fatal boot failure in Operating Center', { error: err.message });
     process.exit(1);
   });
 
   const handleShutdown = async (signal) => {
-    logger.info('SYSTEM', `Received ${signal}, shutting down gracefully...`);
-    await distributedScheduler.stop();
+    logger.info('SYSTEM', `Received ${signal}, shutting down operating center gracefully...`);
+    await operatingCenter.shutdown();
     process.exit(0);
   };
 

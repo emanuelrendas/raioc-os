@@ -19,20 +19,20 @@ export class ExecutiveBriefGenerator {
    */
   generate(lead = {}, intelligence = {}) {
     const companyName = lead.company || lead.company_name || 'Enterprise Client';
-    const contactName = lead.name || lead.full_name || 'Executive';
+    const contactName = lead.name || lead.full_name || lead.contact_name || 'Executive';
     const contactEmail = lead.email || '';
     const contactPhone = lead.phone || lead.whatsapp || '';
     const riis = intelligence.riis || { score: 70, tier: 'TIER_2_ACCELERATOR', tierLabel: 'Growth Acceleration' };
     const dira = intelligence.dira || { riskLevel: 'MODERATE', riskVectors: [] };
-    const strategy = intelligence.strategy || this.ikl.getStrategy(intelligence.recommendedTrack) || this.ikl.getStrategies()[0];
+    const strategy = intelligence.strategy || (intelligence.recommendedTrack ? this.ikl.getStrategy(intelligence.recommendedTrack) : null) || this.ikl.getStrategies()[0];
 
-    const executiveSummary = `Executive Intelligence Brief for ${companyName}. Lead score rated at RIIS ${riis.score}/100 (${riis.tierLabel}) with ${dira.riskLevel} operational risk profile. Recommended track: ${intelligence.recommendedTrack || strategy.code}.`;
+    const executiveSummary = `Executive Intelligence Brief for ${companyName}. Lead score rated at RIIS ${riis.score}/100 (${riis.tierLabel}) with ${dira.riskLevel} operational risk profile. Recommended track: ${intelligence.recommendedTrack || (strategy ? strategy.code : 'STRAT_ACCELERATION')}.`;
 
     // Fetch action plan from IKL
-    const actionPlan = this.ikl.generateActionPlan(strategy, dira.riskLevel);
+    const actionPlan = strategy ? this.ikl.generateActionPlan(strategy, dira.riskLevel) : [];
 
     // Fetch relevant institutional context
-    const persona = intelligence.persona || this.ikl.getPersona(strategy.targetPersonaCode);
+    const persona = intelligence.persona || (strategy ? this.ikl.getPersona(strategy.targetPersonaCode) : null);
     const taxRules = this.ikl.getTaxRules();
     const regulations = this.ikl.getRegulations();
 
@@ -55,7 +55,7 @@ export class ExecutiveBriefGenerator {
       `- **Composite Readiness:** ${intelligence.compositeScore || 75}/100\n` +
       `- **Matched Persona:** ${persona ? persona.name : 'Enterprise Operating Candidate'}\n\n` +
       `### Key Risk Vectors\n` +
-      dira.riskVectors.map((v) => `- **${v.vector}** [${v.severity}]: ${v.recommendation}`).join('\n') +
+      (dira.riskVectors || []).map((v) => `- **${v.vector}** [${v.severity}]: ${v.recommendation}`).join('\n') +
       `\n\n### Strategic Action Plan\n` +
       actionPlan.map((p) => `1. **${p.title}** (${p.timeframe}): ${p.description}`).join('\n');
 
@@ -71,6 +71,12 @@ export class ExecutiveBriefGenerator {
       diraTier: riis.tier,
       diraRiskLevel: dira.riskLevel,
       executiveSummary,
+      executive_summary: executiveSummary,
+      email_subject: emailSubject,
+      whatsapp_payload: {
+        text: whatsappMessage,
+        recipient: contactPhone,
+      },
       actionPlan,
       dispatchPayloads: {
         whatsapp: {
@@ -96,11 +102,15 @@ export class ExecutiveBriefGenerator {
       iklMetadata: {
         version: this.ikl.getVersion(),
         personaCode: persona ? persona.code : null,
-        strategyCode: strategy.code,
-        provenanceKey: `strategy_${strategy.code.toLowerCase()}`,
+        strategyCode: strategy ? strategy.code : null,
+        provenanceKey: strategy ? `strategy_${strategy.code.toLowerCase()}` : 'strategy_default',
       },
       generatedAt: new Date().toISOString(),
     };
+  }
+
+  generateBrief(lead = {}, intelligence = {}) {
+    return this.generate(lead, intelligence);
   }
 }
 
