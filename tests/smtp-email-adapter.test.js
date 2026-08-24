@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { EmailAdapter } from '../src/adapters/email-adapter.js';
 import { config } from '../src/config/env.js';
 import { queueEngine } from '../src/engines/queue-engine.js';
+import { routeApiRequest } from '../src/api/server.js';
 
 describe('Namecheap PrivateEmail & Nodemailer SMTP Adapter Tests', () => {
   test('1. Reads all standard SMTP environment variables and config defaults', () => {
@@ -100,5 +101,13 @@ describe('Namecheap PrivateEmail & Nodemailer SMTP Adapter Tests', () => {
     const configuredHealth = await configuredAdapter.checkHealth();
     assert.ok(['ACTIVE', 'AUTH_FAILED'].includes(configuredHealth.status));
     assert.strictEqual(configuredHealth.host, 'mail.privateemail.com');
+  });
+
+  test('6. Temporary diagnostic endpoint /api/test-email dispatches to requested recipient', async () => {
+    const res = await routeApiRequest('/api/test-email', 'GET', {}, { to: 'privateadvisory@emanuelrendas.com' });
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.body.success, true);
+    assert.strictEqual(res.body.recipient, 'privateadvisory@emanuelrendas.com');
+    assert.strictEqual(res.body.host, 'mail.privateemail.com');
   });
 });
