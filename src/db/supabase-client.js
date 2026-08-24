@@ -1,6 +1,6 @@
 /**
- * RAIOC OS - Supabase Database Client & Adapter Layer
- * Handles fetching unprocessed leads, assessments, queue operations, and brief persistence.
+ * RAIOC OS - Supabase Database Client & Adapter Layer (Sprint 3)
+ * Handles leads, assessments, queue operations, briefs, and operational tables for monitoring & Realtime.
  */
 
 import { config } from '../config/env.js';
@@ -20,8 +20,20 @@ export class SupabaseClient {
       dispatch_queue: [],
       audit_logs: [],
       telemetry: [],
+      agent_status: new Map(),
+      system_health: [],
+      system_metrics: [],
+      connector_health: new Map(),
+      scheduler_jobs: new Map(),
+      agent_logs: [],
+      agent_heartbeats: [],
+      executions: new Map(),
+      workflow_runs: new Map(),
+      notifications: [],
     };
   }
+
+  // --- Lead & Assessment Operations ---
 
   async fetchPendingLeads(limit = 50) {
     if (this.isMock) {
@@ -280,6 +292,172 @@ export class SupabaseClient {
       logger.error('SUPABASE', `Failed to update dispatch task ${id}`, { error: err.message });
       return null;
     }
+  }
+
+  // --- Sprint 3: Operational Monitoring & Realtime State ---
+
+  async syncAgentStatus(agentData) {
+    const record = {
+      agent_id: agentData.id,
+      name: agentData.name,
+      role: agentData.role,
+      status: agentData.status || 'IDLE',
+      current_task: agentData.currentTask || null,
+      is_autonomous: Boolean(agentData.isAutonomous),
+      capabilities: agentData.capabilities || [],
+      tasks_completed: agentData.tasksCompleted || 0,
+      tasks_failed: agentData.tasksFailed || 0,
+      last_heartbeat: agentData.lastHeartbeat || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.agent_status.set(record.agent_id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/agent_status`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : null;
+    } catch (err) {
+      return record;
+    }
+  }
+
+  async recordConnectorHealth(connectorId, healthData) {
+    const record = {
+      connector_id: connectorId,
+      name: healthData.name || connectorId,
+      status: healthData.status || 'UNKNOWN',
+      latency_ms: healthData.latencyMs || 0,
+      authenticated: Boolean(healthData.authenticated),
+      endpoint_url: healthData.endpointUrl || null,
+      last_execution: healthData.lastExecution || new Date().toISOString(),
+      failure_reason: healthData.failureReason || null,
+      retry_state: healthData.retryState || { retries: 0, max: 5 },
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.connector_health.set(connectorId, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/connector_health`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : null;
+    } catch (err) {
+      return record;
+    }
+  }
+
+  async recordExecution(task) {
+    const record = {
+      id: task.id,
+      owner_agent: task.ownerAgent,
+      objective: task.objective,
+      priority: task.priority,
+      status: task.status,
+      priority_score: task.priorityScore || 75,
+      business_value_aed: task.businessValue || 0,
+      duration_ms: task.executionDuration || 0,
+      dependencies: task.dependencies || [],
+      parent_task: task.parentTask || null,
+      child_tasks: task.childTasks || [],
+      retries: task.retries || { attempt: 0, max: 3 },
+      execution_history: task.executionHistory || [],
+      result: task.result || {},
+      error: task.error || null,
+      created_at: task.createdAt || new Date().toISOString(),
+      completed_at: task.completedAt || null,
+    };
+
+    if (this.isMock) {
+      this.mockStore.executions.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/executions`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : null;
+    } catch (err) {
+      return record;
+    }
+  }
+
+  async recordWorkflowRun(workflow) {
+    const record = {
+      id: workflow.id,
+      name: workflow.name || 'run_cycle_pipeline',
+      correlation_id: workflow.correlationId,
+      status: workflow.status || 'RUNNING',
+      total_steps: workflow.totalSteps || 15,
+      completed_steps: workflow.completedSteps || 0,
+      duration_ms: workflow.durationMs || 0,
+      lead_id: workflow.leadId || null,
+      revenue_impact_aed: workflow.revenueImpactAed || 0,
+      step_results: workflow.stepResults || [],
+      created_at: workflow.createdAt || new Date().toISOString(),
+      completed_at: workflow.completedAt || null,
+    };
+
+    if (this.isMock) {
+      this.mockStore.workflow_runs.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/workflow_runs`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : null;
+    } catch (err) {
+      return record;
+    }
+  }
+
+  getOperationalStoreSnapshot() {
+    return {
+      agents: Array.from(this.mockStore.agent_status.values()),
+      connectors: Array.from(this.mockStore.connector_health.values()),
+      executions: Array.from(this.mockStore.executions.values()),
+      workflows: Array.from(this.mockStore.workflow_runs.values()),
+      notifications: this.mockStore.notifications,
+    };
   }
 }
 

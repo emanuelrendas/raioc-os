@@ -1,6 +1,6 @@
 /**
- * RAIOC OS - Web API Router & HTTP Dispatcher (Sprint 2 Updated)
- * Dispatches inbound requests from website frontend, n8n, Meta WhatsApp, and autonomous agents.
+ * RAIOC OS - Web API Router & HTTP Dispatcher (Sprint 3)
+ * Dispatches inbound requests, serves the Executive Command Center, and manages SSE Realtime streams.
  */
 
 import { createServer } from 'node:http';
@@ -13,6 +13,9 @@ import { handleWebhookRequest } from './routes/webhook-routes.js';
 import { handleAgentRequest } from './routes/agent-routes.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
 import { metricsCollector } from '../monitoring/metrics-collector.js';
+import { agentEventBus } from '../events/agent-event-bus.js';
+import { executiveDashboard } from '../operational/executive-dashboard.js';
+import { connectorHealthMatrix } from '../monitoring/connector-health-matrix.js';
 import { logger } from '../logging/audit-logger.js';
 
 export async function routeApiRequest(reqPath, method = 'GET', body = {}, query = {}, headers = {}) {
@@ -25,33 +28,33 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
   return await correlationTracer.runWithContext({ correlationId }, async () => {
     let response;
 
-    // 1. IKL Endpoints
-    if (url.startsWith('/api/ikl')) {
+    // 1. Dashboard UI & Telemetry (Root, /dashboard, /api/dashboard/*, /health)
+    if (url === '/' || url === '/dashboard' || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url === '/health' || url === '/api/health') {
+      response = await handleTelemetryRequest(url, headers);
+    }
+    // 2. IKL Endpoints
+    else if (url.startsWith('/api/ikl')) {
       response = await handleIklRequest(url, query);
     }
-    // 2. Calculator Endpoints
+    // 3. Calculator Endpoints
     else if (url.startsWith('/api/calculators')) {
       response = await handleCalculatorRequest(url, body);
     }
-    // 3. Assessment Submission
+    // 4. Assessment Submission
     else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {
       response = await handleAssessmentSubmission(body);
     }
-    // 4. Lead Submission
+    // 5. Lead Submission
     else if (url.startsWith('/api/lead') || url.startsWith('/api/brief')) {
       response = await handleLeadSubmission(body);
     }
-    // 5. Webhook Endpoints (n8n & WhatsApp)
+    // 6. Webhook Endpoints (n8n & WhatsApp)
     else if (url.startsWith('/api/webhooks')) {
       response = await handleWebhookRequest(url, method, body, query, headers);
     }
-    // 6. Shared Agent API
+    // 7. Shared Agent API
     else if (url.startsWith('/api/agents')) {
       response = await handleAgentRequest(url, method, body, headers);
-    }
-    // 7. Dashboard & Telemetry
-    else if (url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url === '/health' || url === '/api/health') {
-      response = await handleTelemetryRequest(url);
     } else {
       response = { status: 404, body: { error: `Endpoint not found: ${url}` } };
     }
@@ -63,13 +66,14 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       ...response,
       headers: {
         'X-Correlation-ID': correlationId,
+        ...(response.headers || {}),
       },
     };
   });
 }
 
 /**
- * Starts a native standalone HTTP server for local testing and containerized deployments
+ * Starts a native standalone HTTP server with SSE Realtime streaming support
  */
 export function startApiServer(port = 3000) {
   const server = createServer(async (req, res) => {
@@ -81,6 +85,39 @@ export function startApiServer(port = 3000) {
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
+      return;
+    }
+
+    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
+    const query = Object.fromEntries(parsedUrl.searchParams.entries());
+
+    // --- Realtime SSE Stream Endpoint ---
+    if (parsedUrl.pathname === '/api/dashboard/stream' || parsedUrl.pathname === '/api/realtime') {
+      res.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+
+      // Send initial snapshot
+      const snapshot = executiveDashboard.getDashboardData();
+      const connectors = connectorHealthMatrix.getAllConnectorHealth();
+      res.write(`data: ${JSON.stringify({ type: 'SNAPSHOT', data: snapshot, connectors })}\n\n`);
+
+      // Subscribe to real-time events on the bus
+      const unsub = agentEventBus.subscribe('*', (event) => {
+        res.write(`data: ${JSON.stringify(event)}\n\n`);
+      });
+
+      // Keep connection alive with periodic heartbeat comment
+      const keepAliveTimer = setInterval(() => {
+        res.write(': ping\n\n');
+      }, 15000);
+
+      req.on('close', () => {
+        clearInterval(keepAliveTimer);
+        unsub();
+      });
       return;
     }
 
@@ -100,9 +137,6 @@ export function startApiServer(port = 3000) {
       }
     }
 
-    const parsedUrl = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
-    const query = Object.fromEntries(parsedUrl.searchParams.entries());
-
     const response = await routeApiRequest(parsedUrl.pathname, req.method, body, query, req.headers);
 
     if (response.headers) {
@@ -111,16 +145,19 @@ export function startApiServer(port = 3000) {
       }
     }
 
+    const contentType = response.headers?.['Content-Type'] || 'application/json';
+    const isHtml = contentType.includes('text/html');
     const isRawString = typeof response.body === 'string';
+
     res.writeHead(response.status, {
-      'Content-Type': isRawString ? 'text/plain' : 'application/json',
+      'Content-Type': contentType,
     });
-    res.end(isRawString ? response.body : JSON.stringify(response.body));
+    res.end(isHtml || isRawString ? response.body : JSON.stringify(response.body));
   });
 
   return new Promise((resolve) => {
     server.listen(port, () => {
-      logger.info('API_SERVER', `RAIOC Web API server listening on http://localhost:${port}`);
+      logger.info('API_SERVER', `RAIOC Executive Command Center & API server listening on http://localhost:${port}`);
       resolve(server);
     });
   });

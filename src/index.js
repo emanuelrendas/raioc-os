@@ -1,11 +1,12 @@
 /**
- * RAIOC OS - Autonomous Multi-Agent Operating Company (Operational Layer - JOS v1.0)
+ * RAIOC OS - Autonomous Multi-Agent Operating Company (Operational Layer - JOS v1.0 & Sprint 3)
  * Core System Entrypoint
  */
 
 import { run_cycle } from './core/run-cycle.js';
 import { scheduler } from './core/scheduler.js';
 import { distributedScheduler } from './core/distributed-scheduler.js';
+import { productionSupervisor } from './core/production-supervisor.js';
 import { diraRiisEngine } from './engines/dira-riis-engine.js';
 import { executiveBriefGenerator } from './engines/executive-brief.js';
 import { queueEngine } from './engines/queue-engine.js';
@@ -25,6 +26,7 @@ import { crmSyncClient } from './integrations/crm/crm-sync-client.js';
 import { n8nWebhookClient } from './integrations/n8n/n8n-webhook-client.js';
 import { gitHubClient } from './integrations/github/github-client.js';
 import { vercelClient } from './integrations/vercel/vercel-client.js';
+import { openAiClient } from './integrations/openai/openai-client.js';
 import { gmailAdapter } from './adapters/gmail-adapter.js';
 import { calendarAdapter } from './adapters/calendar-adapter.js';
 import { whatsAppCloudAdapter } from './adapters/whatsapp-cloud-adapter.js';
@@ -33,6 +35,7 @@ import { agentRuntime } from './agents/agent-runtime.js';
 import { AgentAction, AgentContext, ExecutionResult } from './agents/agent-action-interface.js';
 import { correlationTracer } from './monitoring/correlation-tracer.js';
 import { metricsCollector } from './monitoring/metrics-collector.js';
+import { connectorHealthMatrix } from './monitoring/connector-health-matrix.js';
 
 // Operational Layer & Specialist Agents
 import { BaseSpecialistAgent } from './agents/specialists/base-agent.js';
@@ -65,11 +68,13 @@ import { continuousLearningLayer } from './operational/continuous-learning-layer
 import { businessIntelligenceBus, BusinessDomains } from './events/business-intelligence-bus.js';
 import { executiveSelfHealingLayer } from './operational/executive-self-healing.js';
 import { autonomousDailyOperations } from './operational/autonomous-daily-operations.js';
+import { renderCommandCenterHtml } from './dashboard/command-center-html.js';
 
 export {
   run_cycle,
   scheduler,
   distributedScheduler,
+  productionSupervisor,
   diraRiisEngine,
   executiveBriefGenerator,
   queueEngine,
@@ -91,6 +96,7 @@ export {
   n8nWebhookClient,
   gitHubClient,
   vercelClient,
+  openAiClient,
   gmailAdapter,
   calendarAdapter,
   whatsAppCloudAdapter,
@@ -101,6 +107,7 @@ export {
   ExecutionResult,
   correlationTracer,
   metricsCollector,
+  connectorHealthMatrix,
   // Operational Multi-Agent Exports
   BaseSpecialistAgent,
   jarvis,
@@ -136,20 +143,21 @@ export {
   BusinessDomains,
   executiveSelfHealingLayer,
   autonomousDailyOperations,
+  renderCommandCenterHtml,
 };
 
-// If started directly, boot Always-On Autonomous Operating Center
+// If started directly, boot Always-On Production Supervisor
 if (process.argv[1] && (process.argv[1].endsWith('index.js') || process.argv[1].endsWith('raioc-os'))) {
-  logger.info('SYSTEM', 'Booting RAIOC Autonomous Multi-Agent Operating Center (JOS v1.0)...');
+  logger.info('SYSTEM', '🛡️ Booting RAIOC Always-On Production Operating System (Supervisor)...');
 
-  operatingCenter.boot().catch((err) => {
-    logger.error('SYSTEM', 'Fatal boot failure in Operating Center', { error: err.message });
+  productionSupervisor.start().catch((err) => {
+    logger.error('SYSTEM', 'Fatal boot failure in Production Supervisor', { error: err.message });
     process.exit(1);
   });
 
   const handleShutdown = async (signal) => {
-    logger.info('SYSTEM', `Received ${signal}, shutting down operating center gracefully...`);
-    await operatingCenter.shutdown();
+    logger.info('SYSTEM', `Received ${signal}, shutting down production supervisor gracefully...`);
+    await productionSupervisor.stop();
     process.exit(0);
   };
 
