@@ -9,3 +9,5 @@ export { handleCalculatorRequest } from './routes/calculator-routes.js';
 export { handleAssessmentSubmission } from './routes/assessment-routes.js';
 export { handleLeadSubmission } from './routes/lead-routes.js';
 export { handleTelemetryRequest } from './routes/telemetry-routes.js';
+export { handleWebhookRequest } from './routes/webhook-routes.js';
+export { handleAgentRequest } from './routes/agent-routes.js';
