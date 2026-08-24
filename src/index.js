@@ -1,5 +1,5 @@
 /**
- * RAIOC OS - Autonomous Multi-Agent Operating Company (Operational Layer)
+ * RAIOC OS - Autonomous Multi-Agent Operating Company (Operational Layer - JOS v1.0)
  * Core System Entrypoint
  */
 
@@ -54,6 +54,17 @@ import { kpiCollector } from './operational/kpi-collector.js';
 import { dailyBriefingGenerator } from './operational/daily-briefing-generator.js';
 import { executiveDashboard } from './operational/executive-dashboard.js';
 import { operatingCenter } from './operational/operating-center.js';
+
+// JOS v1.0 Executive Intelligence Layer
+import { executiveLongTermMemory, MemoryCategories } from './memory/executive-long-term-memory.js';
+import { executiveDecisionEngine } from './operational/executive-decision-engine.js';
+import { autonomousTaskManager } from './operational/autonomous-task-manager.js';
+import { opportunityEngine, OpportunityTypes } from './operational/opportunity-engine.js';
+import { agentPerformanceEngine } from './operational/agent-performance-engine.js';
+import { continuousLearningLayer } from './operational/continuous-learning-layer.js';
+import { businessIntelligenceBus, BusinessDomains } from './events/business-intelligence-bus.js';
+import { executiveSelfHealingLayer } from './operational/executive-self-healing.js';
+import { autonomousDailyOperations } from './operational/autonomous-daily-operations.js';
 
 export {
   run_cycle,
@@ -112,11 +123,24 @@ export {
   dailyBriefingGenerator,
   executiveDashboard,
   operatingCenter,
+  // JOS v1.0 Executive Layer Exports
+  executiveLongTermMemory,
+  MemoryCategories,
+  executiveDecisionEngine,
+  autonomousTaskManager,
+  opportunityEngine,
+  OpportunityTypes,
+  agentPerformanceEngine,
+  continuousLearningLayer,
+  businessIntelligenceBus,
+  BusinessDomains,
+  executiveSelfHealingLayer,
+  autonomousDailyOperations,
 };
 
 // If started directly, boot Always-On Autonomous Operating Center
 if (process.argv[1] && (process.argv[1].endsWith('index.js') || process.argv[1].endsWith('raioc-os'))) {
-  logger.info('SYSTEM', 'Booting RAIOC Autonomous Multi-Agent Operating Center...');
+  logger.info('SYSTEM', 'Booting RAIOC Autonomous Multi-Agent Operating Center (JOS v1.0)...');
 
   operatingCenter.boot().catch((err) => {
     logger.error('SYSTEM', 'Fatal boot failure in Operating Center', { error: err.message });

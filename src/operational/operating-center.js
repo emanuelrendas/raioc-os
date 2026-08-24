@@ -1,6 +1,6 @@
 /**
- * RAIOC Autonomous Operating Center (Company Operating System)
- * Central orchestrator maintaining the always-on multi-agent runtime, heartbeats, and goal executions.
+ * RAIOC Autonomous Operating Center (Company Operating System - JOS v1.0)
+ * Central orchestrator maintaining the always-on multi-agent runtime, heartbeats, continuous loop, and goal executions.
  */
 
 import { jarvis } from '../agents/specialists/jarvis-orchestrator.js';
@@ -10,6 +10,9 @@ import { agentEventBus, AgentEvents } from '../events/agent-event-bus.js';
 import { sharedMemory } from '../memory/shared-memory.js';
 import { kpiCollector } from './kpi-collector.js';
 import { executiveDashboard } from './executive-dashboard.js';
+import { autonomousDailyOperations } from './autonomous-daily-operations.js';
+import { opportunityEngine } from './opportunity-engine.js';
+import { executiveSelfHealingLayer } from './executive-self-healing.js';
 import { logger } from '../logging/audit-logger.js';
 
 export class OperatingCenter {
@@ -19,12 +22,12 @@ export class OperatingCenter {
   }
 
   /**
-   * Boots the always-on Autonomous Operating Center
+   * Boots the always-on Autonomous Operating Center (JOS v1.0)
    */
-  async boot() {
+  async boot(options = { startContinuousLoop: true }) {
     if (this.isOnline) return;
     this.isOnline = true;
-    logger.info('OPERATING_CENTER', '🚀 Booting RAIOC Autonomous Multi-Agent Operating Center...');
+    logger.info('OPERATING_CENTER', '🚀 Booting RAIOC JARVIS Executive Operating Center (JOS v1.0)...');
 
     // 1. Initialize Event Subscriptions
     this._setupEventSubscriptions();
@@ -32,10 +35,15 @@ export class OperatingCenter {
     // 2. Enable Autonomous Reactive Mesh across all Specialist Agents
     agentDirectory.enableAutonomousMesh();
 
-    // 3. Start Distributed Autonomous Scheduler
+    // 3. Start Continuous Executive Loop
+    if (options.startContinuousLoop) {
+      jarvis.startContinuousExecutiveLoop(options.loopIntervalMs || 60000);
+    }
+
+    // 4. Start Distributed Autonomous Scheduler
     await distributedScheduler.start();
 
-    // 4. Start Agent Heartbeat Broadcasting (every 60s)
+    // 5. Start Agent Heartbeat Broadcasting (every 60s)
     this.heartbeatTimer = setInterval(() => {
       if (this.isOnline) {
         agentDirectory.broadcastHeartbeats();
@@ -45,8 +53,8 @@ export class OperatingCenter {
     // Broadcast initial heartbeats
     agentDirectory.broadcastHeartbeats();
 
-    logger.info('OPERATING_CENTER', '✅ RAIOC Autonomous Operating Center is ONLINE and ALWAYS-ON');
-    return { status: 'ONLINE', agents: agentDirectory.listAgents().length };
+    logger.info('OPERATING_CENTER', '✅ RAIOC JOS v1.0 is ONLINE, ALWAYS-ON, and OPERATING AUTONOMOUSLY');
+    return { status: 'ONLINE', agents: agentDirectory.listAgents().length, josVersion: '1.0' };
   }
 
   _setupEventSubscriptions() {
@@ -76,9 +84,23 @@ export class OperatingCenter {
     return executiveDashboard.getDailyBriefing();
   }
 
+  async runDailyOperationsRoutine(routineType = 'morning') {
+    if (routineType === 'morning') {
+      return await autonomousDailyOperations.runMorningExecutiveBrief();
+    }
+    if (routineType === 'evening') {
+      return await autonomousDailyOperations.runEveningReview();
+    }
+    if (routineType === 'pipeline') {
+      return await autonomousDailyOperations.runPipelineReview();
+    }
+    return await autonomousDailyOperations.runMarketIntelligenceReview();
+  }
+
   async shutdown() {
-    logger.info('OPERATING_CENTER', 'Shutting down Operating Center...');
+    logger.info('OPERATING_CENTER', 'Shutting down JOS Operating Center...');
     this.isOnline = false;
+    jarvis.stopContinuousExecutiveLoop();
     if (this.heartbeatTimer) {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
