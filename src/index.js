@@ -13,6 +13,7 @@ import { telemetry } from './logging/telemetry.js';
 import { logger } from './logging/audit-logger.js';
 import { config } from './config/env.js';
 import { ikl } from './core/ikl/index.js';
+import { routeApiRequest, startApiServer, propertyCalculators } from './api/index.js';
 
 export {
   run_cycle,
@@ -25,6 +26,9 @@ export {
   logger,
   config,
   ikl,
+  routeApiRequest,
+  startApiServer,
+  propertyCalculators,
 };
 
 // If started directly, start autonomous scheduler with graceful signal handling

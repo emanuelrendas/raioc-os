@@ -29,21 +29,27 @@ export class IKLQueryInterface {
 
   _initializeProvenance() {
     communitiesData.forEach((c) => {
+      this.provenanceEngine.register(c.id, c.provenance);
       this.provenanceEngine.register(`community_${c.id}`, c.provenance);
     });
     developersData.forEach((d) => {
+      this.provenanceEngine.register(d.id, d.provenance);
       this.provenanceEngine.register(`developer_${d.id}`, d.provenance);
     });
     regulationsData.forEach((r) => {
+      this.provenanceEngine.register(r.id, r.provenance);
       this.provenanceEngine.register(`regulation_${r.id}`, r.provenance);
     });
     taxData.forEach((t) => {
+      this.provenanceEngine.register(t.id, t.provenance);
       this.provenanceEngine.register(`tax_${t.id}`, t.provenance);
     });
     personasData.forEach((p) => {
+      this.provenanceEngine.register(p.id, p.provenance);
       this.provenanceEngine.register(`persona_${p.code.toLowerCase()}`, p.provenance);
     });
     strategiesData.forEach((s) => {
+      this.provenanceEngine.register(s.id, s.provenance);
       this.provenanceEngine.register(`strategy_${s.code.toLowerCase()}`, s.provenance);
     });
     this.provenanceEngine.register('rules_riis', riisRules.provenance);
