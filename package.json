@@ -9,13 +9,18 @@
     "cycle": "node src/core/run-cycle.js",
     "test": "node --test tests/*.test.js"
   },
+  "dependencies": {
+    "nodemailer": "^6.9.16"
+  },
   "keywords": [
     "raioc",
     "autonomous-os",
     "intelligence-center",
     "dira",
     "riis",
-    "supabase"
+    "supabase",
+    "nodemailer",
+    "smtp"
   ],
   "author": "Emanuel Rendas",
   "license": "MIT",

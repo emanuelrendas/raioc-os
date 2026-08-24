@@ -1,5 +1,5 @@
 /**
- * RAIOC OS - Environment & Operational Infrastructure Configuration (Sprint 2)
+ * RAIOC OS - Environment & Operational Infrastructure Configuration (Sprint 2 & 3)
  */
 
 import { secretsManager } from './secrets-manager.js';
@@ -23,6 +23,15 @@ export const config = {
     baseBackoffMs: parseInt(process.env.QUEUE_BASE_BACKOFF_MS || '1000', 10),
     maxBackoffMs: parseInt(process.env.QUEUE_MAX_BACKOFF_MS || '60000', 10),
   },
+  smtp: {
+    enabled: process.env.SMTP_ENABLED !== 'false',
+    host: process.env.SMTP_HOST || 'mail.privateemail.com',
+    port: parseInt(process.env.SMTP_PORT || '465', 10),
+    secure: process.env.SMTP_SECURE !== 'false',
+    user: process.env.SMTP_USER || '',
+    password: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || '',
+    from: process.env.SMTP_FROM || process.env.EMAIL_FROM || 'Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>',
+  },
   adapters: {
     whatsapp: {
       enabled: process.env.WHATSAPP_ENABLED !== 'false',
@@ -30,10 +39,15 @@ export const config = {
       apiKey: process.env.WHATSAPP_API_KEY || '',
     },
     email: {
-      enabled: process.env.EMAIL_ENABLED !== 'false',
+      enabled: process.env.SMTP_ENABLED !== 'false' && process.env.EMAIL_ENABLED !== 'false',
+      host: process.env.SMTP_HOST || 'mail.privateemail.com',
+      port: parseInt(process.env.SMTP_PORT || '465', 10),
+      secure: process.env.SMTP_SECURE !== 'false',
+      user: process.env.SMTP_USER || '',
+      password: process.env.SMTP_PASSWORD || process.env.SMTP_PASS || '',
+      from: process.env.SMTP_FROM || process.env.EMAIL_FROM || 'Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>',
       apiUrl: process.env.EMAIL_API_URL || '',
-      apiKey: process.env.EMAIL_API_KEY || '',
-      from: process.env.EMAIL_FROM || 'intelligence@emanuelrendas.com',
+      apiKey: process.env.SMTP_PASSWORD || process.env.EMAIL_API_KEY || '',
     },
     crm: {
       enabled: process.env.CRM_ENABLED !== 'false',
