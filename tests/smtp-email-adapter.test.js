@@ -16,12 +16,13 @@ describe('Namecheap PrivateEmail & Nodemailer SMTP Adapter Tests', () => {
       from: 'Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>',
     });
 
-    assert.strictEqual(adapter.host, 'mail.privateemail.com');
-    assert.strictEqual(adapter.port, 465);
-    assert.strictEqual(adapter.secure, true);
-    assert.strictEqual(adapter.user, 'intelligence@emanuelrendas.com');
-    assert.strictEqual(adapter.password, 'test_password_123');
-    assert.strictEqual(adapter.from, 'Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>');
+    const cfg = adapter.getSmtpConfig();
+    assert.strictEqual(cfg.host, 'mail.privateemail.com');
+    assert.strictEqual(cfg.port, 465);
+    assert.strictEqual(cfg.secure, true);
+    assert.strictEqual(cfg.user, 'intelligence@emanuelrendas.com');
+    assert.strictEqual(cfg.password, 'test_password_123');
+    assert.strictEqual(cfg.from, 'Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>');
   });
 
   test('2. Formats and prepares Executive Brief email for dispatch via SMTP', async () => {
@@ -42,7 +43,7 @@ describe('Namecheap PrivateEmail & Nodemailer SMTP Adapter Tests', () => {
     };
 
     const res = await adapter.dispatch(task);
-    assert.ok(['queued_for_mailer', 'simulated', 'sent_smtp', 'sent_native_smtp'].includes(res.status));
+    assert.ok(['queued_for_mailer', 'simulated', 'sent_smtp'].includes(res.status));
     assert.strictEqual(res.recipient, 'investor@familyoffice.ae');
     assert.strictEqual(res.host, 'mail.privateemail.com');
     assert.strictEqual(res.port, 465);
@@ -103,11 +104,13 @@ describe('Namecheap PrivateEmail & Nodemailer SMTP Adapter Tests', () => {
     assert.strictEqual(configuredHealth.host, 'mail.privateemail.com');
   });
 
-  test('6. Temporary diagnostic endpoint /api/test-email dispatches to requested recipient', async () => {
+  test('6. Temporary diagnostic endpoint /api/test-email captures diagnostics and attempts live send', async () => {
     const res = await routeApiRequest('/api/test-email', 'GET', {}, { to: 'privateadvisory@emanuelrendas.com' });
-    assert.strictEqual(res.status, 200);
-    assert.strictEqual(res.body.success, true);
+    assert.ok([200, 500].includes(res.status));
+    assert.ok(res.body.smtpDiagnostics);
     assert.strictEqual(res.body.recipient, 'privateadvisory@emanuelrendas.com');
-    assert.strictEqual(res.body.host, 'mail.privateemail.com');
+    assert.strictEqual(res.body.smtpDiagnostics.host, 'mail.privateemail.com');
+    assert.strictEqual(res.body.smtpDiagnostics.port, 465);
+    assert.strictEqual(res.body.smtpDiagnostics.secure, true);
   });
 });

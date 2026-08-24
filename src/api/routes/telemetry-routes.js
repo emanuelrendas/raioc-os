@@ -1,7 +1,7 @@
 /**
  * RAIOC API - Telemetry & Dashboard Feed Routes (Sprint 3)
  * Provides real-time operational feeds, executive dashboards, connector matrices, SSE Realtime streams,
- * and temporary diagnostic endpoints (/api/test-email).
+ * and live diagnostic endpoints (/api/test-email).
  */
 
 import { telemetry } from '../../logging/telemetry.js';
@@ -17,23 +17,29 @@ import { emailAdapter } from '../../adapters/email-adapter.js';
 export async function handleTelemetryRequest(path, context = {}) {
   const normalized = path.replace(/^\/api\/(dashboard|telemetry)\/?/, '');
 
-  // 1. Temporary Diagnostic SMTP Endpoint: /api/test-email
+  // 1. Live Diagnostic SMTP Endpoint: /api/test-email
   if (path === '/api/test-email' || normalized === 'test-email') {
     const query = context.query || {};
     const body = context.body || {};
     const to = query.to || body.to || 'privateadvisory@emanuelrendas.com';
-    const subject = query.subject || body.subject || 'RAIOC — SMTP Diagnostic & Operational Verification';
-    const customMessage = query.message || body.message || 'RAIOC Autonomous Operating System — Diagnostic Email';
+    const subject = query.subject || body.subject || 'RAIOC — SMTP Live Operational Verification';
+    const customMessage = query.message || body.message || 'RAIOC Autonomous Operating System — Live Production Test Email';
+
+    const cfg = emailAdapter.getSmtpConfig();
 
     try {
-      const result = await emailAdapter.dispatch({
-        id: `diag_test_${Date.now()}`,
-        recipient: to,
-        payload: {
-          subject,
-          body: `${customMessage}\n\nRecipient: ${to}\nTransport: Namecheap PrivateEmail (SMTP / Nodemailer)\nHost: ${emailAdapter.host}:${emailAdapter.port} (SSL: ${emailAdapter.secure})\nFrom: ${emailAdapter.from}\nTimestamp: ${new Date().toISOString()}\n\nStatus: VERIFIED_OPERATIONAL`,
+      // Require live delivery (will verify connection and send or throw real error)
+      const result = await emailAdapter.dispatch(
+        {
+          id: `diag_live_${Date.now()}`,
+          recipient: to,
+          payload: {
+            subject,
+            body: `${customMessage}\n\nRecipient: ${to}\nTransport: Namecheap PrivateEmail (SMTP / Nodemailer)\nHost: ${cfg.host}:${cfg.port} (SSL: ${cfg.secure})\nFrom: ${cfg.from}\nTimestamp: ${new Date().toISOString()}\n\nStatus: VERIFIED_OPERATIONAL`,
+          },
         },
-      });
+        { requireLiveSend: true }
+      );
 
       return {
         status: 200,
@@ -41,22 +47,60 @@ export async function handleTelemetryRequest(path, context = {}) {
           success: true,
           endpoint: '/api/test-email',
           recipient: to,
-          host: emailAdapter.host,
-          port: emailAdapter.port,
-          secure: emailAdapter.secure,
-          from: emailAdapter.from,
-          result,
+          smtpDiagnostics: {
+            host: cfg.host,
+            port: cfg.port,
+            secure: cfg.secure,
+            from: cfg.from,
+            userLoaded: Boolean(cfg.user),
+            user: cfg.user ? cfg.user : '[NOT SET]',
+            passwordExists: Boolean(cfg.password),
+            passwordLength: cfg.password ? cfg.password.length : 0,
+          },
+          dispatchResult: {
+            status: result.status,
+            smtpVerified: result.smtpVerified,
+            accepted: result.accepted || [],
+            rejected: result.rejected || [],
+            response: result.response,
+            messageId: result.messageId,
+            envelope: result.envelope,
+          },
           timestamp: new Date().toISOString(),
         },
       };
     } catch (err) {
+      logger.error('TELEMETRY_ROUTES', `Live SMTP test failed: ${err.message}`, {
+        code: err.code,
+        command: err.command,
+        response: err.response,
+        stack: err.stack,
+      });
+
       return {
         status: 500,
         body: {
           success: false,
           endpoint: '/api/test-email',
           recipient: to,
-          error: err.message,
+          smtpDiagnostics: {
+            host: cfg.host,
+            port: cfg.port,
+            secure: cfg.secure,
+            from: cfg.from,
+            userLoaded: Boolean(cfg.user),
+            user: cfg.user ? cfg.user : '[NOT SET]',
+            passwordExists: Boolean(cfg.password),
+            passwordLength: cfg.password ? cfg.password.length : 0,
+          },
+          error: {
+            message: err.message,
+            code: err.code || 'UNKNOWN_ERROR',
+            command: err.command || null,
+            response: err.response || null,
+            responseCode: err.responseCode || null,
+            stack: err.stack,
+          },
           timestamp: new Date().toISOString(),
         },
       };
