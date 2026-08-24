@@ -29,10 +29,13 @@ export class OperatingCenter {
     // 1. Initialize Event Subscriptions
     this._setupEventSubscriptions();
 
-    // 2. Start Distributed Autonomous Scheduler
+    // 2. Enable Autonomous Reactive Mesh across all Specialist Agents
+    agentDirectory.enableAutonomousMesh();
+
+    // 3. Start Distributed Autonomous Scheduler
     await distributedScheduler.start();
 
-    // 3. Start Agent Heartbeat Broadcasting (every 60s)
+    // 4. Start Agent Heartbeat Broadcasting (every 60s)
     this.heartbeatTimer = setInterval(() => {
       if (this.isOnline) {
         agentDirectory.broadcastHeartbeats();

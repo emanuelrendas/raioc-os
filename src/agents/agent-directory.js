@@ -51,6 +51,15 @@ export class AgentDirectory {
     return Array.from(this.agents.values()).map((a) => a.getStatus());
   }
 
+  enableAutonomousMesh() {
+    for (const agent of this.agents.values()) {
+      if (typeof agent.enableAutonomousMesh === 'function') {
+        agent.enableAutonomousMesh();
+      }
+    }
+    logger.info('AGENT_DIRECTORY', `Autonomous execution mesh active across all ${this.agents.size} agents`);
+  }
+
   broadcastHeartbeats() {
     const statuses = [];
     for (const agent of this.agents.values()) {

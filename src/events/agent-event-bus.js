@@ -1,6 +1,6 @@
 /**
  * RAIOC Event Bus & Inter-Agent Messaging Protocol
- * Provides decoupled pub/sub event distribution and point-to-point agent mailboxes.
+ * Provides decoupled pub/sub event distribution, event chaining, and point-to-point agent mailboxes.
  */
 
 import { EventEmitter } from 'node:events';
@@ -14,11 +14,20 @@ export const AgentEvents = {
   TASK_STARTED: 'task:started',
   TASK_COMPLETED: 'task:completed',
   TASK_FAILED: 'task:failed',
+  TASK_RECOVERED: 'task:recovered',
   DECISION_LOGGED: 'decision:logged',
   ALERT_RAISED: 'alert:raised',
   AGENT_HEARTBEAT: 'agent:heartbeat',
-  BRIEF_READY: 'brief:ready',
+  // Domain Chaining Events
   LEAD_INGESTED: 'lead:ingested',
+  LEAD_QUALIFIED: 'lead:qualified',
+  MARKET_ANALYZED: 'market:analyzed',
+  COMPLIANCE_VERIFIED: 'compliance:verified',
+  BRIEF_READY: 'brief:ready',
+  BRIEF_DISPATCHED: 'brief:dispatched',
+  CRM_SYNCED: 'crm:synced',
+  MEETING_SCHEDULED: 'meeting:scheduled',
+  CYCLE_AUDITED: 'cycle:audited',
 };
 
 export class AgentEventBus {

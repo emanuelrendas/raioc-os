@@ -1,10 +1,13 @@
 /**
  * RAIOC Specialist Agent: MARK (Lead Triage & Risk Intelligence)
  * Evaluates inbound investor profiles using DIRA risk matrices and RIIS scoring.
+ * Autonomously reacts to LEAD_INGESTED events and emits LEAD_QUALIFIED.
  */
 
 import { BaseSpecialistAgent } from './base-agent.js';
 import { diraRiisEngine } from '../../engines/dira-riis-engine.js';
+import { AgentEvents } from '../../events/agent-event-bus.js';
+import { logger } from '../../logging/audit-logger.js';
 
 export class MarkTriageAgent extends BaseSpecialistAgent {
   constructor() {
@@ -14,6 +17,30 @@ export class MarkTriageAgent extends BaseSpecialistAgent {
       role: 'Lead Triage & Risk Intelligence Specialist',
       capabilities: ['lead_triage', 'dira_risk_analysis', 'riis_scoring', 'investor_qualification'],
       systemPrompt: 'You analyze prospect readiness, evaluate risk vectors across operational readiness, regulatory compliance, and calculate deterministic RIIS scores.',
+    });
+  }
+
+  setupAutonomousHandlers() {
+    this.subscribeEvent(AgentEvents.LEAD_INGESTED, async (event) => {
+      try {
+        const lead = event.payload.lead || event.payload;
+        logger.info('MARK', `Autonomous reaction to LEAD_INGESTED for ${lead.company_name || lead.email}`);
+        
+        const result = await this.executeTask({ leadData: lead }, { correlationId: event.metadata.correlationId });
+        
+        if (result.status === 'SUCCESS') {
+          this.emitEvent(AgentEvents.LEAD_QUALIFIED, {
+            lead,
+            evaluation: result.output,
+            riisScore: result.output.riis?.score || 50,
+            diraRiskLevel: result.output.dira?.riskLevel || 'LOW',
+            communityId: lead.communityId || event.payload.communityId || 'comm_palm_jumeirah',
+            propertyPriceAed: lead.propertyPriceAed || event.payload.propertyPriceAed || 5000000,
+          }, event.metadata.correlationId);
+        }
+      } catch (err) {
+        logger.error('MARK', `Autonomous triage handler failed: ${err.message}`);
+      }
     });
   }
 

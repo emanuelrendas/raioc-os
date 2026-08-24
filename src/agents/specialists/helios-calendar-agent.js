@@ -1,9 +1,12 @@
 /**
  * RAIOC Specialist Agent: HELIOS (Advisory Calendar & Scheduling)
  * Manages Google Calendar advisory bookings, client appointment links, and consultation time slots.
+ * Autonomously reacts to CRM_SYNCED events and emits MEETING_SCHEDULED.
  */
 
 import { BaseSpecialistAgent } from './base-agent.js';
+import { AgentEvents } from '../../events/agent-event-bus.js';
+import { logger } from '../../logging/audit-logger.js';
 
 export class HeliosCalendarAgent extends BaseSpecialistAgent {
   constructor() {
@@ -13,6 +16,34 @@ export class HeliosCalendarAgent extends BaseSpecialistAgent {
       role: 'Advisory Calendar & Scheduling Specialist',
       capabilities: ['calendar_booking', 'appointment_coordination', 'google_meet_generation', 'availability_management'],
       systemPrompt: 'You coordinate private real estate advisory consultations, generate Google Meet links, and manage advisory calendar slots.',
+    });
+  }
+
+  setupAutonomousHandlers() {
+    this.subscribeEvent(AgentEvents.CRM_SYNCED, async (event) => {
+      try {
+        const payload = event.payload;
+        logger.info('HELIOS', `Autonomous reaction to CRM_SYNCED for ${payload.lead?.company_name || 'prospect'}`);
+
+        const result = await this.executeTask({
+          attendeeEmail: payload.lead?.email,
+          summary: `RAIOC Strategic Advisory — ${payload.lead?.company_name || 'VIP Client'}`,
+          durationMinutes: 45,
+        }, { correlationId: event.metadata.correlationId });
+
+        if (result.status === 'SUCCESS') {
+          this.emitEvent(AgentEvents.MEETING_SCHEDULED, {
+            lead: payload.lead,
+            booking: result.output,
+            brief: payload.brief,
+            evaluation: payload.evaluation,
+            marketIntelligence: payload.marketIntelligence,
+            complianceAudit: payload.complianceAudit,
+          }, event.metadata.correlationId);
+        }
+      } catch (err) {
+        logger.error('HELIOS', `Autonomous consultation booking failed: ${err.message}`);
+      }
     });
   }
 

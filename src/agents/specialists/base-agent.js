@@ -1,6 +1,7 @@
 /**
  * RAIOC Base Specialist Agent
  * Foundation class for all autonomous specialist agents in the RAIOC Multi-Agent Operating System.
+ * Supports task execution, tool invocation, decision logging, associative memory, and autonomous event-driven chaining.
  */
 
 import { toolRegistry } from '../tool-registry.js';
@@ -21,6 +22,8 @@ export class BaseSpecialistAgent {
     this.lastHeartbeat = new Date().toISOString();
     this.tasksCompleted = 0;
     this.tasksFailed = 0;
+    this.subscriptions = [];
+    this.isAutonomous = false;
   }
 
   emitHeartbeat() {
@@ -33,6 +36,7 @@ export class BaseSpecialistAgent {
       currentTask: this.currentTask,
       tasksCompleted: this.tasksCompleted,
       tasksFailed: this.tasksFailed,
+      isAutonomous: this.isAutonomous,
       timestamp: this.lastHeartbeat,
     };
 
@@ -41,6 +45,19 @@ export class BaseSpecialistAgent {
     });
 
     return heartbeatData;
+  }
+
+  emitEvent(topic, payload = {}, correlationId = null) {
+    return agentEventBus.publish(topic, payload, {
+      sourceAgent: this.id,
+      correlationId: correlationId || `corr_${Date.now()}`,
+    });
+  }
+
+  subscribeEvent(topic, handler) {
+    const unsub = agentEventBus.subscribe(topic, handler);
+    this.subscriptions.push(unsub);
+    return unsub;
   }
 
   logDecision(rationale, chosenAction, options = {}) {
@@ -78,6 +95,22 @@ export class BaseSpecialistAgent {
 
   recallMemory(query, options = {}) {
     return sharedMemory.recallKnowledge(query, options);
+  }
+
+  /**
+   * Enables autonomous event-driven chaining mesh for this agent
+   */
+  enableAutonomousMesh() {
+    this.isAutonomous = true;
+    this.setupAutonomousHandlers();
+    logger.info(`AGENT_${this.id.toUpperCase()}`, `Autonomous execution mesh ENABLED`);
+  }
+
+  /**
+   * Overridden by specialist subclasses to attach reactive domain event handlers
+   */
+  setupAutonomousHandlers() {
+    // Implemented in subclasses
   }
 
   /**
@@ -151,6 +184,7 @@ export class BaseSpecialistAgent {
       lastHeartbeat: this.lastHeartbeat,
       tasksCompleted: this.tasksCompleted,
       tasksFailed: this.tasksFailed,
+      isAutonomous: this.isAutonomous,
     };
   }
 }

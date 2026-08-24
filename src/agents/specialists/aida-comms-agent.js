@@ -1,11 +1,14 @@
 /**
  * RAIOC Specialist Agent: AIDA (Client Relations & Multi-Channel Communications)
  * Coordinates executive brief delivery, WhatsApp Cloud dispatch, and Gmail outreach.
+ * Autonomously reacts to COMPLIANCE_VERIFIED events and emits BRIEF_DISPATCHED.
  */
 
 import { BaseSpecialistAgent } from './base-agent.js';
 import { executiveBriefGenerator } from '../../engines/executive-brief.js';
 import { diraRiisEngine } from '../../engines/dira-riis-engine.js';
+import { AgentEvents } from '../../events/agent-event-bus.js';
+import { logger } from '../../logging/audit-logger.js';
 
 export class AidaCommsAgent extends BaseSpecialistAgent {
   constructor() {
@@ -15,6 +18,33 @@ export class AidaCommsAgent extends BaseSpecialistAgent {
       role: 'Client Relations & Communications Specialist',
       capabilities: ['executive_brief_generation', 'email_dispatch', 'whatsapp_dispatch', 'client_outreach'],
       systemPrompt: 'You specialize in high-touch, institutional-grade investor communications, formatting bespoke executive briefs, and omnichannel client engagement.',
+    });
+  }
+
+  setupAutonomousHandlers() {
+    this.subscribeEvent(AgentEvents.COMPLIANCE_VERIFIED, async (event) => {
+      try {
+        const payload = event.payload;
+        logger.info('AIDA', `Autonomous reaction to COMPLIANCE_VERIFIED for ${payload.lead?.company_name || 'prospect'}`);
+
+        const result = await this.executeTask({
+          leadData: payload.lead,
+          channel: 'all',
+        }, { correlationId: event.metadata.correlationId });
+
+        if (result.status === 'SUCCESS') {
+          this.emitEvent(AgentEvents.BRIEF_DISPATCHED, {
+            lead: payload.lead,
+            brief: result.output.brief,
+            dispatches: result.output.dispatches,
+            evaluation: payload.evaluation,
+            marketIntelligence: payload.marketIntelligence,
+            complianceAudit: payload.complianceAudit,
+          }, event.metadata.correlationId);
+        }
+      } catch (err) {
+        logger.error('AIDA', `Autonomous brief dispatch failed: ${err.message}`);
+      }
     });
   }
 
@@ -46,7 +76,7 @@ export class AidaCommsAgent extends BaseSpecialistAgent {
     if ((channel === 'all' || channel === 'whatsapp') && leadData.phone) {
       const waRes = await this.invokeTool('send_whatsapp_message', {
         to: leadData.phone,
-        message: brief.whatsapp_payload.text,
+        message: brief.whatsapp_payload?.text || brief.executive_summary,
       });
       dispatchResults.dispatches.push({ channel: 'whatsapp', status: waRes.status, to: leadData.phone });
     }

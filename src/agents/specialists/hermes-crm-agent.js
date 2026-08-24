@@ -1,9 +1,12 @@
 /**
  * RAIOC Specialist Agent: HERMES (CRM & Pipeline Management)
  * Manages HubSpot and Supabase CRM records, deal pipeline stages, and contact intelligence syncing.
+ * Autonomously reacts to BRIEF_DISPATCHED events and emits CRM_SYNCED.
  */
 
 import { BaseSpecialistAgent } from './base-agent.js';
+import { AgentEvents } from '../../events/agent-event-bus.js';
+import { logger } from '../../logging/audit-logger.js';
 
 export class HermesCrmAgent extends BaseSpecialistAgent {
   constructor() {
@@ -13,6 +16,35 @@ export class HermesCrmAgent extends BaseSpecialistAgent {
       role: 'CRM & Pipeline Management Specialist',
       capabilities: ['crm_sync', 'deal_pipeline_staging', 'contact_enrichment', 'lifecycle_tracking'],
       systemPrompt: 'You synchronize contacts, deal pipelines, custom RIIS properties, and lead statuses to CRM gateways.',
+    });
+  }
+
+  setupAutonomousHandlers() {
+    this.subscribeEvent(AgentEvents.BRIEF_DISPATCHED, async (event) => {
+      try {
+        const payload = event.payload;
+        logger.info('HERMES', `Autonomous reaction to BRIEF_DISPATCHED for ${payload.lead?.company_name || 'prospect'}`);
+
+        const result = await this.executeTask({
+          leadData: payload.lead,
+          riisScore: payload.evaluation?.riis?.score || 80,
+          riskLevel: payload.evaluation?.dira?.riskLevel || 'LOW',
+          dealValueAed: payload.complianceAudit?.propertyPriceAed || 5000000,
+        }, { correlationId: event.metadata.correlationId });
+
+        if (result.status === 'SUCCESS') {
+          this.emitEvent(AgentEvents.CRM_SYNCED, {
+            lead: payload.lead,
+            crmResult: result.output,
+            brief: payload.brief,
+            evaluation: payload.evaluation,
+            marketIntelligence: payload.marketIntelligence,
+            complianceAudit: payload.complianceAudit,
+          }, event.metadata.correlationId);
+        }
+      } catch (err) {
+        logger.error('HERMES', `Autonomous CRM sync failed: ${err.message}`);
+      }
     });
   }
 
