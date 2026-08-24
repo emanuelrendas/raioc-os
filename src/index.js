@@ -12,6 +12,7 @@ import { supabase } from './db/supabase-client.js';
 import { telemetry } from './logging/telemetry.js';
 import { logger } from './logging/audit-logger.js';
 import { config } from './config/env.js';
+import { ikl } from './core/ikl/index.js';
 
 export {
   run_cycle,
@@ -23,6 +24,7 @@ export {
   telemetry,
   logger,
   config,
+  ikl,
 };
 
 // If started directly, start autonomous scheduler with graceful signal handling

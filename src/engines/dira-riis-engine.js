@@ -2,160 +2,170 @@
  * RAIOC OS - DIRA & RIIS Intelligence Engine
  * DIRA: Deep Intelligence Risk Analysis
  * RIIS: Rendas Intelligence Index System
+ * 
+ * Refactored to retrieve ALL business intelligence, rules, weights, and vectors
+ * exclusively from the Institutional Knowledge Layer (IKL v1.0).
  */
 
+import { ikl } from '../core/ikl/index.js';
+
 export class DiraRiisEngine {
+  constructor(options = {}) {
+    this.ikl = options.ikl || ikl;
+  }
+
   /**
-   * Computes the RIIS (Rendas Intelligence Index Score) from lead and assessment inputs
+   * Computes the RIIS (Rendas Intelligence Index Score) using IKL rules
    * @param {Object} input - Assessment or lead answers
    * @returns {Object} RIIS computation result
    */
   evaluateRiis(input = {}) {
-    let score = 50; // Base score
+    const rules = this.ikl.getRiisRules();
+    let score = rules.baseScore;
     const factors = [];
 
     // Factor 1: Company Size / Revenue Scale
     const companySize = (input.company_size || input.employees || '').toString().toLowerCase();
-    if (companySize.includes('500+') || companySize.includes('enterprise') || companySize.includes('100-500')) {
-      score += 20;
-      factors.push({ name: 'Enterprise Scale', impact: '+20' });
-    } else if (companySize.includes('20-99') || companySize.includes('50-200')) {
-      score += 12;
-      factors.push({ name: 'Mid-Market Scale', impact: '+12' });
-    } else if (companySize.includes('1-19') || companySize.includes('startup')) {
-      score += 5;
-      factors.push({ name: 'Startup / Lean Scale', impact: '+5' });
+    for (const item of rules.factors.companySize) {
+      if (item.keywords.some((kw) => companySize.includes(kw))) {
+        score += item.weight;
+        factors.push({ name: item.factorName, impact: item.impact });
+        break;
+      }
     }
 
     // Factor 2: AI & Automation Maturity
     const maturity = (input.ai_maturity || input.automation_level || '').toString().toLowerCase();
-    if (maturity.includes('advanced') || maturity.includes('in_production')) {
-      score += 15;
-      factors.push({ name: 'Advanced AI Infrastructure', impact: '+15' });
-    } else if (maturity.includes('piloting') || maturity.includes('experimenting')) {
-      score += 10;
-      factors.push({ name: 'Active AI Pilot Phase', impact: '+10' });
-    } else if (maturity.includes('manual') || maturity.includes('none')) {
-      score += 5;
-      factors.push({ name: 'High Green-Field Potential', impact: '+5' });
+    for (const item of rules.factors.aiMaturity) {
+      if (item.keywords.some((kw) => maturity.includes(kw))) {
+        score += item.weight;
+        factors.push({ name: item.factorName, impact: item.impact });
+        break;
+      }
     }
 
     // Factor 3: Operational Bottlenecks / Complexity
     const bottlenecks = (input.bottlenecks || input.challenges || '').toString().toLowerCase();
-    if (bottlenecks.includes('scale') || bottlenecks.includes('data') || bottlenecks.includes('latency')) {
-      score += 10;
-      factors.push({ name: 'High-Impact Scale Bottleneck', impact: '+10' });
+    for (const item of rules.factors.operationalBottlenecks) {
+      if (item.keywords.some((kw) => bottlenecks.includes(kw))) {
+        score += item.weight;
+        factors.push({ name: item.factorName, impact: item.impact });
+        break;
+      }
     }
 
     // Factor 4: Budget / Timeline Urgency
     const timeline = (input.timeline || input.urgency || '').toString().toLowerCase();
-    if (timeline.includes('immediate') || timeline.includes('1_month') || timeline.includes('asap')) {
-      score += 15;
-      factors.push({ name: 'Immediate Deployment Priority', impact: '+15' });
-    } else if (timeline.includes('quarter') || timeline.includes('3_months')) {
-      score += 8;
-      factors.push({ name: 'Q1 Target Priority', impact: '+8' });
+    for (const item of rules.factors.timelineUrgency) {
+      if (item.keywords.some((kw) => timeline.includes(kw))) {
+        score += item.weight;
+        factors.push({ name: item.factorName, impact: item.impact });
+        break;
+      }
     }
 
-    // Clamp score to 0 - 100
-    const finalScore = Math.min(100, Math.max(0, score));
+    // Clamp score to bounds
+    const finalScore = Math.min(rules.maxScore, Math.max(rules.minScore, score));
 
-    let tier = 'TIER_4_EXPLORATORY';
-    let tierLabel = 'Exploratory Candidate';
-    if (finalScore >= 80) {
-      tier = 'TIER_1_STRATEGIC';
-      tierLabel = 'Strategic Enterprise Operating Candidate';
-    } else if (finalScore >= 65) {
-      tier = 'TIER_2_ACCELERATOR';
-      tierLabel = 'Growth Acceleration Candidate';
-    } else if (finalScore >= 50) {
-      tier = 'TIER_3_FOUNDATION';
-      tierLabel = 'Foundational Modernization Candidate';
-    }
+    // Determine tier threshold from IKL
+    const matchedTier = rules.tierThresholds.find((t) => finalScore >= t.minScore) || rules.tierThresholds[rules.tierThresholds.length - 1];
+
+    const confidence = this.ikl.getConfidence('rules_riis', {
+      matchedCount: factors.length,
+      expectedCount: 4,
+    });
 
     return {
       score: finalScore,
-      tier,
-      tierLabel,
+      tier: matchedTier.tier,
+      tierLabel: matchedTier.tierLabel,
       factors,
+      confidence,
+      iklVersion: this.ikl.getVersion(),
       evaluatedAt: new Date().toISOString(),
     };
   }
 
   /**
-   * Computes DIRA (Deep Intelligence Risk Analysis)
+   * Computes DIRA (Deep Intelligence Risk Analysis) using IKL risk vectors
    * @param {Object} input - Lead data & assessment details
    * @param {Object} riis - Computed RIIS score
    * @returns {Object} DIRA Risk evaluation
    */
   evaluateDira(input = {}, riis = {}) {
+    const rules = this.ikl.getDiraRules();
     const riskVectors = [];
     let riskPoints = 0;
 
-    // Vector 1: Data Architecture Risk
-    const dataStack = (input.data_stack || input.tech_stack || '').toString().toLowerCase();
-    if (!dataStack || dataStack.includes('spreadsheets') || dataStack.includes('legacy')) {
-      riskPoints += 30;
-      riskVectors.push({
-        vector: 'Data Silo & Fragmentation',
-        severity: 'HIGH',
-        recommendation: 'Deploy automated Supabase ingestion pipeline and centralized ETL normalization.',
-      });
-    } else {
-      riskVectors.push({
-        vector: 'Modern Cloud Architecture',
-        severity: 'LOW',
-        recommendation: 'Directly hook into existing cloud event bus.',
-      });
+    for (const vec of rules.riskVectors) {
+      const val = (input[vec.field] || input.tech_stack || input.operational_overhead || input.industry || '').toString().toLowerCase();
+
+      let isTriggered = false;
+      if (vec.triggerKeywords && vec.triggerKeywords.some((kw) => val.includes(kw))) {
+        isTriggered = true;
+      } else if (!val && vec.failSeverity === 'HIGH') {
+        // Missing data stack triggers data silo risk
+        isTriggered = true;
+      }
+
+      if (isTriggered) {
+        riskPoints += vec.failPoints;
+        riskVectors.push({
+          vector: vec.failVectorName,
+          severity: vec.failSeverity,
+          recommendation: vec.failRecommendation,
+        });
+      } else if (vec.passVectorName) {
+        riskVectors.push({
+          vector: vec.passVectorName,
+          severity: vec.passSeverity,
+          recommendation: vec.passRecommendation,
+        });
+      }
     }
 
-    // Vector 2: Process Latency & Manual Overhead
-    const manualWork = (input.manual_hours || input.operational_overhead || '').toString().toLowerCase();
-    if (manualWork.includes('high') || manualWork.includes('40+') || manualWork.includes('critical')) {
-      riskPoints += 25;
-      riskVectors.push({
-        vector: 'Manual Process Bottleneck',
-        severity: 'CRITICAL',
-        recommendation: 'Automate high-frequency decision loops via RAIOC autonomous agents.',
-      });
-    }
+    // Determine risk level from IKL thresholds
+    const matchedSeverity = rules.severityLevels.find((s) => riskPoints >= s.minScore) || { level: 'LOW' };
 
-    // Vector 3: Security & Governance Compliance
-    const compliance = (input.compliance || input.industry || '').toString().toLowerCase();
-    if (compliance.includes('fintech') || compliance.includes('healthcare') || compliance.includes('banking')) {
-      riskPoints += 20;
-      riskVectors.push({
-        vector: 'Regulatory & Data Governance',
-        severity: 'MODERATE',
-        recommendation: 'Enforce end-to-end telemetry and immutable audit logging on every cycle.',
-      });
-    }
+    // Determine readiness grade
+    const currentScore = riis.score ?? 50;
+    const matchedGrade = rules.readinessThresholds.find((r) => currentScore >= r.minRiis) || { grade: 'C' };
 
-    let riskLevel = 'LOW';
-    if (riskPoints >= 50) riskLevel = 'CRITICAL';
-    else if (riskPoints >= 30) riskLevel = 'HIGH';
-    else if (riskPoints >= 15) riskLevel = 'MODERATE';
+    const confidence = this.ikl.getConfidence('rules_dira', {
+      matchedCount: riskVectors.length,
+      expectedCount: rules.riskVectors.length,
+    });
 
     return {
       riskScore: riskPoints,
-      riskLevel,
+      riskLevel: matchedSeverity.level,
       riskVectors,
-      readinessGrade: riis.score >= 75 ? 'A+' : riis.score >= 50 ? 'B' : 'C',
+      readinessGrade: matchedGrade.grade,
+      confidence,
+      iklVersion: this.ikl.getVersion(),
       evaluatedAt: new Date().toISOString(),
     };
   }
 
   /**
-   * Full comprehensive analysis combining RIIS and DIRA
+   * Full comprehensive analysis combining RIIS, DIRA, Persona Matching, and Strategy Selection
    */
   analyze(leadOrAssessment = {}) {
     const riis = this.evaluateRiis(leadOrAssessment);
     const dira = this.evaluateDira(leadOrAssessment, riis);
+
+    const personaMatch = this.ikl.matchPersona(leadOrAssessment, riis.score);
+    const strategyMatch = this.ikl.recommendStrategy(personaMatch.persona, dira.riskLevel);
+
     return {
       riis,
       dira,
+      persona: personaMatch.persona,
+      strategy: strategyMatch.strategy,
       compositeScore: Math.round((riis.score + (100 - dira.riskScore)) / 2),
-      recommendedTrack: riis.score >= 70 ? 'ENTERPRISE_AUTONOMOUS_OS' : 'RAPID_INTELLIGENCE_DEPLOYMENT',
+      recommendedTrack: strategyMatch.strategy.code,
+      confidence: strategyMatch.confidence,
+      iklVersion: this.ikl.getVersion(),
       analyzedAt: new Date().toISOString(),
     };
   }

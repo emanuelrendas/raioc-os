@@ -1,9 +1,16 @@
 /**
  * RAIOC OS - Executive Brief Generator
  * Transforms raw leads and DIRA/RIIS intelligence results into structured executive intelligence briefs.
+ * Consumes action plans, regulatory frameworks, tax rules, and templates from the Institutional Knowledge Layer (IKL v1.0).
  */
 
+import { ikl } from '../core/ikl/index.js';
+
 export class ExecutiveBriefGenerator {
+  constructor(options = {}) {
+    this.ikl = options.ikl || ikl;
+  }
+
   /**
    * Generates an Executive Brief for an incoming lead
    * @param {Object} lead - Lead information
@@ -17,29 +24,17 @@ export class ExecutiveBriefGenerator {
     const contactPhone = lead.phone || lead.whatsapp || '';
     const riis = intelligence.riis || { score: 70, tier: 'TIER_2_ACCELERATOR', tierLabel: 'Growth Acceleration' };
     const dira = intelligence.dira || { riskLevel: 'MODERATE', riskVectors: [] };
+    const strategy = intelligence.strategy || this.ikl.getStrategy(intelligence.recommendedTrack) || this.ikl.getStrategies()[0];
 
-    const executiveSummary = `Executive Intelligence Brief for ${companyName}. Lead score rated at RIIS ${riis.score}/100 (${riis.tierLabel}) with ${dira.riskLevel} operational risk profile. Recommended track: ${intelligence.recommendedTrack || 'RAPID_INTELLIGENCE_DEPLOYMENT'}.`;
+    const executiveSummary = `Executive Intelligence Brief for ${companyName}. Lead score rated at RIIS ${riis.score}/100 (${riis.tierLabel}) with ${dira.riskLevel} operational risk profile. Recommended track: ${intelligence.recommendedTrack || strategy.code}.`;
 
-    const actionPlan = [
-      {
-        step: 1,
-        title: 'Centralize Data Pipelines into RAIOC OS',
-        description: 'Eliminate fragmented ingestion points by routing lead and operational telemetry through Supabase event queues.',
-        timeframe: 'Day 1 - 3',
-      },
-      {
-        step: 2,
-        title: 'Activate DIRA/RIIS Automated Scoring',
-        description: 'Deploy real-time qualification algorithms to triage inbound leads instantly with 0ms manual latency.',
-        timeframe: 'Day 4 - 7',
-      },
-      {
-        step: 3,
-        title: 'Deploy Multi-Channel Autonomous Dispatch',
-        description: 'Connect WhatsApp Queue Engine, CRM webhooks, and executive briefing alerts with exponential retry recovery.',
-        timeframe: 'Week 2',
-      },
-    ];
+    // Fetch action plan from IKL
+    const actionPlan = this.ikl.generateActionPlan(strategy, dira.riskLevel);
+
+    // Fetch relevant institutional context
+    const persona = intelligence.persona || this.ikl.getPersona(strategy.targetPersonaCode);
+    const taxRules = this.ikl.getTaxRules();
+    const regulations = this.ikl.getRegulations();
 
     // WhatsApp tailored payload
     const whatsappMessage = `*RAIOC Intelligence Brief for ${contactName} (${companyName})*\n\n` +
@@ -52,11 +47,13 @@ export class ExecutiveBriefGenerator {
     const emailSubject = `RAIOC Executive Brief: ${companyName} (RIIS Score: ${riis.score}/100)`;
     const emailBody = `# RAIOC Executive Intelligence Brief\n\n` +
       `**Client:** ${companyName} (${contactName})\n` +
-      `**Evaluated At:** ${new Date().toISOString()}\n\n` +
+      `**Evaluated At:** ${new Date().toISOString()}\n` +
+      `**IKL Version:** ${this.ikl.getVersion()}\n\n` +
       `### Intelligence Assessment (RIIS & DIRA)\n` +
       `- **RIIS Score:** ${riis.score}/100 (${riis.tierLabel})\n` +
       `- **DIRA Risk Level:** ${dira.riskLevel}\n` +
-      `- **Composite Readiness:** ${intelligence.compositeScore || 75}/100\n\n` +
+      `- **Composite Readiness:** ${intelligence.compositeScore || 75}/100\n` +
+      `- **Matched Persona:** ${persona ? persona.name : 'Enterprise Operating Candidate'}\n\n` +
       `### Key Risk Vectors\n` +
       dira.riskVectors.map((v) => `- **${v.vector}** [${v.severity}]: ${v.recommendation}`).join('\n') +
       `\n\n### Strategic Action Plan\n` +
@@ -93,7 +90,14 @@ export class ExecutiveBriefGenerator {
           riisScore: riis.score,
           riskLevel: dira.riskLevel,
           lifecycleStage: 'opportunity',
+          iklVersion: this.ikl.getVersion(),
         },
+      },
+      iklMetadata: {
+        version: this.ikl.getVersion(),
+        personaCode: persona ? persona.code : null,
+        strategyCode: strategy.code,
+        provenanceKey: `strategy_${strategy.code.toLowerCase()}`,
       },
       generatedAt: new Date().toISOString(),
     };
