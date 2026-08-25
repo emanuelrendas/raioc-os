@@ -567,66 +567,78 @@
       </p>
     </div>
 
-    <!-- 4 Macro Catalyst Cards -->
+    <!-- 4 Macro Catalyst Cards (Clickable Dossier Modals) -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:24px;margin-top:40px;">
       
       <!-- Dubai South / DWC -->
-      <div style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:22px;">✈️</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;background:rgba(16,185,129,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">$35B CATALYST</span>
+      <div onclick="openProjectDossier('dubai-south')" style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;cursor:pointer;transition:all 0.25s ease;display:flex;flex-direction:column;justify-content:space-between;" onmouseover="this.style.borderColor='#10B981';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:22px;">✈️</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;background:rgba(16,185,129,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">$35B CATALYST</span>
+          </div>
+          <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Dubai South / DWC Aviation Hub</h3>
+          <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
+            Al Maktoum International (DWC) 260M passenger megahub. Creates the world's largest logistics and aerotropolis economy, driving long-term land values in Emaar South and surrounding masterplans.
+          </p>
         </div>
-        <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Dubai South / DWC Aviation Hub</h3>
-        <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
-          Al Maktoum International (DWC) 260M passenger megahub. Creates the world's largest logistics and aerotropolis economy, driving long-term land values in Emaar South and surrounding masterplans.
-        </p>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;font-family:'JetBrains Mono',monospace;font-size:11px;color:#CBD5E1;">
-          <span style="color:#64748B;">Corridor:</span> Emaar South · From AED 3.2M
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;">
+          <span style="color:#CBD5E1;"><span style="color:#64748B;">Corridor:</span> Emaar South · From AED 3.2M</span>
+          <span style="color:#10B981;font-size:10px;font-weight:700;">DOSSIER ➔</span>
         </div>
       </div>
 
       <!-- Palm Jebel Ali -->
-      <div style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:22px;">🌊</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#38BDF8;background:rgba(56,189,248,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">110KM COASTLINE</span>
+      <div onclick="openProjectDossier('palm-jebel-ali')" style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;cursor:pointer;transition:all 0.25s ease;display:flex;flex-direction:column;justify-content:space-between;" onmouseover="this.style.borderColor='#38BDF8';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:22px;">🌊</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#38BDF8;background:rgba(56,189,248,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">110KM COASTLINE</span>
+          </div>
+          <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Palm Jebel Ali Waterfront Expansion</h3>
+          <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
+            Nakheel's sovereign master-island doubling Dubai's coastline with 80+ luxury hotels and ultra-prime beachfront fronds. The definitive generational wealth preservation vehicle.
+          </p>
         </div>
-        <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Palm Jebel Ali Waterfront Expansion</h3>
-        <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
-          Nakheel's sovereign master-island doubling Dubai's coastline with 80+ luxury hotels and ultra-prime beachfront fronds. The definitive generational wealth preservation vehicle.
-        </p>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;font-family:'JetBrains Mono',monospace;font-size:11px;color:#CBD5E1;">
-          <span style="color:#64748B;">Corridor:</span> Palm Jebel Ali · From AED 18.5M
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;">
+          <span style="color:#CBD5E1;"><span style="color:#64748B;">Corridor:</span> Palm Jebel Ali · From AED 18.5M</span>
+          <span style="color:#38BDF8;font-size:10px;font-weight:700;">DOSSIER ➔</span>
         </div>
       </div>
 
       <!-- Saadiyat Island Abu Dhabi -->
-      <div style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:22px;">🏛️</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A855F7;background:rgba(168,85,247,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">CULTURAL EPICENTER</span>
+      <div onclick="openProjectDossier('saadiyat')" style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;cursor:pointer;transition:all 0.25s ease;display:flex;flex-direction:column;justify-content:space-between;" onmouseover="this.style.borderColor='#A855F7';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:22px;">🏛️</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#A855F7;background:rgba(168,85,247,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">CULTURAL EPICENTER</span>
+          </div>
+          <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Saadiyat Cultural District (Abu Dhabi)</h3>
+          <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
+            Unrivaled cultural concentration: Louvre Abu Dhabi, Guggenheim, and Zayed National Museum. Sovereign-backed capital sanctuary for global family offices.
+          </p>
         </div>
-        <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Saadiyat Cultural District (Abu Dhabi)</h3>
-        <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
-          Unrivaled cultural concentration: Louvre Abu Dhabi, Guggenheim, and Zayed National Museum. Sovereign-backed capital sanctuary for global family offices.
-        </p>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;font-family:'JetBrains Mono',monospace;font-size:11px;color:#CBD5E1;">
-          <span style="color:#64748B;">Corridor:</span> Saadiyat Lagoons · From AED 6.8M
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;">
+          <span style="color:#CBD5E1;"><span style="color:#64748B;">Corridor:</span> Saadiyat Lagoons · From AED 6.8M</span>
+          <span style="color:#A855F7;font-size:10px;font-weight:700;">DOSSIER ➔</span>
         </div>
       </div>
 
       <!-- Al Marjan Island RAK -->
-      <div style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-          <span style="font-size:22px;">🎰</span>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F59E0B;background:rgba(245,158,11,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">$3.9B WYNN RESORT</span>
+      <div onclick="openProjectDossier('al-marjan')" style="background:rgba(15,23,42,0.7);border:1px solid #1E293B;border-radius:18px;padding:28px;cursor:pointer;transition:all 0.25s ease;display:flex;flex-direction:column;justify-content:space-between;" onmouseover="this.style.borderColor='#F59E0B';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:22px;">🎰</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#F59E0B;background:rgba(245,158,11,0.1);padding:3px 8px;border-radius:4px;font-weight:700;">$3.9B WYNN RESORT</span>
+          </div>
+          <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Al Marjan Island (Ras Al Khaimah)</h3>
+          <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
+            First regulated integrated gaming destination in the GCC. Generating exceptional short-term cash yields (9.2%+) and explosive holiday tourism demand.
+          </p>
         </div>
-        <h3 style="color:#FFFFFF;font-size:18px;font-weight:700;margin-bottom:6px;">Al Marjan Island (Ras Al Khaimah)</h3>
-        <p style="font-size:12px;color:#94A3B8;line-height:1.6;">
-          First regulated integrated gaming destination in the GCC. Generating exceptional short-term cash yields (9.2%+) and explosive holiday tourism demand.
-        </p>
-        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;font-family:'JetBrains Mono',monospace;font-size:11px;color:#CBD5E1;">
-          <span style="color:#64748B;">Corridor:</span> Al Marjan Enclave · From AED 2.4M
+        <div style="margin-top:16px;padding-top:12px;border-top:1px solid #1E293B;display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;">
+          <span style="color:#CBD5E1;"><span style="color:#64748B;">Corridor:</span> Al Marjan Enclave · From AED 2.4M</span>
+          <span style="color:#F59E0B;font-size:10px;font-weight:700;">DOSSIER ➔</span>
         </div>
       </div>
 
@@ -750,6 +762,7 @@
       startingPriceAed: 'AED 1,650,000',
       startingPriceUsd: '$449,250 USD',
       netYield: '8.3% Net p.a. (Audited post-Mollak)',
+      appreciationForecast: '+38% 5-Yr Growth Forecast',
       handover: 'Q4 2028 · 80/20 Staged Plan',
       visaStatus: 'Eligible with portfolio aggregation (AED 2,000,000 threshold)',
       escrow: 'Law No. (8) of 2007 (100% Trust Account + 5% 1-Yr Retention)',
@@ -764,6 +777,7 @@
       startingPriceAed: 'AED 21,000,000',
       startingPriceUsd: '$5,718,000 USD',
       netYield: '7.6% Net p.a. (Audited post-Mollak)',
+      appreciationForecast: '+52% 5-Yr Generational Compounding',
       handover: 'Q3 2027 · 80/20 Payment Structure',
       visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
       escrow: 'Law No. (8) of 2007 (100% Trust Account + 10-Yr Decennial Liability Art. 880)',
@@ -778,6 +792,7 @@
       startingPriceAed: 'AED 25,000,000',
       startingPriceUsd: '$6,807,000 USD',
       netYield: '6.5% Net p.a. (Audited post-Mollak)',
+      appreciationForecast: '+48% 5-Yr Ultra-Prime Alpha',
       handover: 'Q4 2026 · 60/40 Payment Plan',
       visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
       escrow: 'Law No. (8) of 2007 (100% Trust Account + 5% Retention Guarantee)',
@@ -792,12 +807,77 @@
       startingPriceAed: 'AED 22,500,000',
       startingPriceUsd: '$6,126,000 USD',
       netYield: '7.2% Net p.a. (Audited post-Mollak)',
+      appreciationForecast: '+40% 5-Yr Forest Villa Appreciation',
       handover: 'Q2 2026 · 60/40 Handover Structure',
       visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
       escrow: 'Law No. (8) of 2007 (100% Trust Account + 10-Yr Structural Warranty)',
       description: 'Ultra-exclusive gated sanctuary of bespoke villas set within a private forest lagoon master development 10 minutes from Downtown Dubai and DIFC.',
       heroImg: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
       videoUrl: 'https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0'
+    },
+    'dubai-south': {
+      name: 'Dubai South / DWC Aviation Hub',
+      developer: 'Emaar Properties & Dubai South Master Development',
+      community: 'Emaar South / Aviation City Corridor',
+      catalystBadge: '$35B DWC AIRPORT CATALYST',
+      startingPriceAed: 'AED 3,200,000',
+      startingPriceUsd: '$871,200 USD',
+      netYield: '7.8% Net p.a. (Audited post-Mollak)',
+      appreciationForecast: '+45% 5-Yr Aerotropolis Compounding',
+      handover: 'Staged Deliveries 2026–2028',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'Dubai Law No. (8) of 2007 (100% Escrow Bank Account + 5% Retention Guarantee)',
+      description: 'Sovereign expansion of Al Maktoum International (DWC) into the world\'s largest 260M passenger megahub. Creates an unprecedented aerotropolis and logistics corridor driving rapid residential capital appreciation in Emaar South.',
+      heroImg: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0'
+    },
+    'palm-jebel-ali': {
+      name: 'Palm Jebel Ali Waterfront Expansion',
+      developer: 'Nakheel Sovereign Developments',
+      community: 'Palm Jebel Ali Fronds & Crown',
+      catalystBadge: '110KM NEW COASTLINE',
+      startingPriceAed: 'AED 18,500,000',
+      startingPriceUsd: '$5,036,500 USD',
+      netYield: '6.8% Net p.a. (Audited post-Mollak)',
+      appreciationForecast: '+65% 5-Yr Generational Waterfront Surge',
+      handover: 'Phased Handover from Q4 2027',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'Dubai Law No. (8) of 2007 (100% Trust Account + 10-Yr Decennial Warranty Art. 880)',
+      description: 'Nakheel\'s sovereign master-island doubling Dubai\'s coastline with 110km of pristine beaches, 80+ luxury hotels, and ultra-prime beachfront fronds. The definitive generational wealth preservation vehicle in the Middle East.',
+      heroImg: 'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0'
+    },
+    saadiyat: {
+      name: 'Saadiyat Cultural District (Abu Dhabi)',
+      developer: 'Aldar Properties / Abu Dhabi Sovereign Assets',
+      community: 'Saadiyat Lagoons & Cultural Promenade',
+      catalystBadge: 'GLOBAL CULTURAL EPICENTER',
+      startingPriceAed: 'AED 6,800,000',
+      startingPriceUsd: '$1,851,300 USD',
+      netYield: '7.1% Net p.a. (Audited ADGM Framework)',
+      appreciationForecast: '+38% 5-Yr Sovereign Capital Shielding',
+      handover: 'Q3 2027 Handover Timeline',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'Abu Dhabi Real Estate Law No. 3 of 2015 & ADGM Statutory Escrow Protection',
+      description: 'Unrivaled cultural concentration featuring Louvre Abu Dhabi, Guggenheim Abu Dhabi, and Zayed National Museum. Sovereign-backed capital sanctuary for global family offices seeking ultra-prime stability.',
+      heroImg: 'https://images.unsplash.com/photo-1578895101408-1a36b834405b?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0'
+    },
+    'al-marjan': {
+      name: 'Al Marjan Island (Ras Al Khaimah)',
+      developer: 'Marjan / Wynn Resorts Strategic Partners',
+      community: 'Al Marjan Island Enclave',
+      catalystBadge: '$3.9B WYNN RESORT & GAMING',
+      startingPriceAed: 'AED 2,400,000',
+      startingPriceUsd: '$653,400 USD',
+      netYield: '9.2% Net p.a. (Short-Term Hospitality Yield)',
+      appreciationForecast: '+55% Post-Gaming License Value Surge',
+      handover: 'Q1 2027 Ahead of Wynn Opening',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'RAK Municipality Law No. 2 of 2018 Statutory Escrow Guarantee',
+      description: 'The Arabian Gulf\'s first regulated integrated gaming destination featuring the $3.9B Wynn Al Marjan Resort. Unprecedented short-term rental yields and explosive global tourism tailwinds.',
+      heroImg: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0'
     }
   };
 
@@ -808,8 +888,11 @@
     content.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
         <div>
-          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${p.developer} · ${p.community}</span>
-          <h2 style="color:#FFFFFF;font-size:26px;font-weight:800;margin:4px 0 6px;">${p.name}</h2>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${p.developer} · ${p.community}</span>
+            ${p.catalystBadge ? `<span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#F59E0B;background:rgba(245,158,11,0.15);padding:2px 8px;border-radius:4px;border:1px solid rgba(245,158,11,0.3);font-weight:700;">${p.catalystBadge}</span>` : ''}
+          </div>
+          <h2 style="color:#FFFFFF;font-size:24px;font-weight:800;margin:4px 0 6px;">${p.name}</h2>
           <p style="color:#94A3B8;font-size:13px;line-height:1.5;">${p.description}</p>
         </div>
       </div>
@@ -829,8 +912,8 @@
           <strong style="color:#10B981;font-size:14px;">${p.netYield}</strong>
         </div>
         <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
-          <span style="color:#64748B;display:block;font-size:10px;">HANDOVER TIMELINE</span>
-          <strong style="color:#CBD5E1;font-size:12px;">${p.handover}</strong>
+          <span style="color:#64748B;display:block;font-size:10px;">CAPITAL APPRECIATION</span>
+          <strong style="color:#38BDF8;font-size:12px;">${p.appreciationForecast || '+35% to +60% Modelled'}</strong>
         </div>
         <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
           <span style="color:#64748B;display:block;font-size:10px;">STATUTORY RESIDENCY</span>
@@ -839,11 +922,11 @@
       </div>
 
       <div style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px;margin-bottom:20px;font-size:12px;color:#CBD5E1;line-height:1.6;">
-        <strong style="color:#10B981;">🛡️ Statutory Guarantee:</strong> ${p.escrow}
+        <strong style="color:#10B981;">🛡️ Statutory Guarantee & Escrow:</strong> ${p.escrow}
       </div>
 
       <div style="display:flex;gap:12px;">
-        <a href="https://wa.me/971543871702?text=${encodeURIComponent('Hello Emanuel — I am inquiring about priority allocation terms for ' + p.name + ' (' + p.developer + ').')}" target="_blank" rel="noopener" class="btn btn-solid" style="flex:1;justify-content:center;font-size:13px;">
+        <a href="https://wa.me/971543871702?text=${encodeURIComponent('Hello Emanuel — I am inquiring about sovereign allocation terms for ' + p.name + ' (' + p.developer + ').')}" target="_blank" rel="noopener" class="btn btn-solid" style="flex:1;justify-content:center;font-size:13px;">
           Request Priority Allocation on WhatsApp
         </a>
       </div>
