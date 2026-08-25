@@ -3,6 +3,7 @@
  * Coordinates the full processing loop: Ingestion -> DIRA/RIIS Scoring -> Executive Brief -> Dispatch Queue -> Telemetry.
  */
 
+import { config } from '../config/env.js';
 import { supabase } from '../db/supabase-client.js';
 import { diraRiisEngine } from '../engines/dira-riis-engine.js';
 import { executiveBriefGenerator } from '../engines/executive-brief.js';

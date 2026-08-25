@@ -19,9 +19,10 @@ export const config = {
   engine: {
     cycleIntervalMs: parseInt(process.env.CYCLE_INTERVAL_MS || '30000', 10),
     batchSize: parseInt(process.env.PROCESSING_BATCH_SIZE || '50', 10),
-    maxRetries: parseInt(process.env.QUEUE_MAX_RETRIES || '5', 10),
+    maxRetries: parseInt(process.env.QUEUE_MAX_RETRIES || '3', 10),
     baseBackoffMs: parseInt(process.env.QUEUE_BASE_BACKOFF_MS || '1000', 10),
     maxBackoffMs: parseInt(process.env.QUEUE_MAX_BACKOFF_MS || '60000', 10),
+    autoDispatchOutbound: process.env.AUTO_DISPATCH_OUTBOUND !== 'false',
   },
   smtp: {
     enabled: process.env.SMTP_ENABLED !== 'false',
