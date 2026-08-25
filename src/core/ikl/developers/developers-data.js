@@ -14,6 +14,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 1.2,
     flagshipProjects: ['Burj Khalifa', 'Dubai Hills Estate', 'Downtown Dubai', 'Emaar South'],
+    renderUrl: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Sovereign Master Communities, Ultra-Prime High-Rise Towers & Downtown District',
     provenance: {
       source: 'DFM Financial Disclosures & RERA Compliance Database',
       citation: 'Emaar Properties PJSC Audited Annual Disclosures 2026',
@@ -30,6 +32,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 2.1,
     flagshipProjects: ['Palm Jumeirah', 'Palm Jebel Ali', 'Dubai Islands'],
+    renderUrl: 'https://images.unsplash.com/photo-1580674684081-7617fbf3d745?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Sovereign Waterfront Archipelagos, Mega Coastal Fronds & Island Mansions',
     provenance: {
       source: 'Dubai Holding Master Disclosure & RERA Registry',
       citation: 'Dubai Holding Real Estate Strategic Audit 2026',
@@ -46,6 +50,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 1.8,
     flagshipProjects: ['City Walk', 'Bluewaters Island', 'Port de La Mer', 'Bvlgari Residences'],
+    renderUrl: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Low-Density European Coastal Luxury, Jumeirah Bay Islands & Branded Trophy Assets',
     provenance: {
       source: 'Dubai Land Department & RERA Developer Scorecard',
       citation: 'RERA Master Developer Audits 2026',
@@ -62,6 +68,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 0.4,
     flagshipProjects: ['Sobha Hartland', 'Sobha Hartland II', 'Sobha Siniya Island'],
+    renderUrl: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Backward-Integrated In-House Construction, Forest Lagoon Sanctuaries & Precision Craftsmanship',
     provenance: {
       source: 'Sobha Group Audits & DLD Construction Progress Monitoring',
       citation: 'DLD Project Tracking System (PTS) 2026',
@@ -78,6 +86,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 1.4,
     flagshipProjects: ['Saadiyat Cultural District', 'Yas Island', 'Haven Dubailand'],
+    renderUrl: 'https://images.unsplash.com/photo-1578895101408-1a36b834405b?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Abu Dhabi Cultural District Masterplans, Institutional Asset Governance & Biophilic Wellness Communities',
     provenance: {
       source: 'ADX Disclosures & ADGM/DLD Compliance Framework',
       citation: 'Aldar Properties PJSC Statutory Filing 2026',
@@ -94,6 +104,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 4.8,
     flagshipProjects: ['DAMAC Hills', 'DAMAC Lagoons', 'Safa Two', 'DAMAC Islands'],
+    renderUrl: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Themed Resort Lagoon Communities & High-Concept Italian Fashion Co-Branded Towers',
     provenance: {
       source: 'DLD PTS & RERA Trust Account Registry',
       citation: 'RERA Master Developer Audits 2026',
@@ -110,6 +122,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 1.5,
     flagshipProjects: ['Six Senses Residences Dubai Marina', 'Peninsula Business Bay', 'Marina Gate'],
+    renderUrl: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Trophy Waterfront High-Rises, Marina Gate Towers & Six Senses Hospitality Partnerships',
     provenance: {
       source: 'DLD PTS & Institutional Escrow Audits',
       citation: 'Select Group Portfolio Governance 2026',
@@ -126,6 +140,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 0.8,
     flagshipProjects: ['DT1', 'Wilton Terraces', 'Ocean House Palm Jumeirah', 'Ellington House'],
+    renderUrl: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Boutique Design-Led Residences, Resort Amenities & High-Yield Rental Premiums',
     provenance: {
       source: 'DLD PTS & RERA Escrow Audit',
       citation: 'RERA Trust Account Monitoring 2026',
@@ -142,6 +158,8 @@ export const developersData = [
     escrowCompliance: 'STRICT_FULL',
     averageCompletionDelayMonths: 1.1,
     flagshipProjects: ['Bugatti Residences', 'Mercedes-Benz Places', 'Burj Binghatti Jacob & Co'],
+    renderUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=1200&q=80',
+    architecturalFocus: 'Hyper-Speed Construction Cycles & Global Luxury Branded Megatowers (Bugatti, Mercedes-Benz, Jacob & Co)',
     provenance: {
       source: 'DLD PTS & RERA Fast-Track Construction Registry',
       citation: 'DLD Developer Performance Tracker 2026',
