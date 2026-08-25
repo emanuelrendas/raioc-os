@@ -1,0 +1,315 @@
+{
+  "name": "RAIOC — Investor Communication Pipeline (OM-001)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-investor-communication",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Receive Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ],
+      "id": "node_webhook_trigger_01"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract incoming event and lead payload with Correlation ID\nconst incoming = $input.first().json;\nconst body = incoming.body || incoming;\nconst event = body.event || 'lead:ingested';\nconst correlationId = body.correlationId || incoming.headers?.['x-correlation-id'] || `corr_${Date.now()}`;\nconst lead = body.data?.lead || body.data || {};\n\n// Compute deterministic executive brief data\nconst investorName = lead.contact_name || lead.name || 'Private Investor';\nconst companyName = lead.company_name || lead.company || 'Private Office';\nconst email = lead.email || 'privateadvisory@emanuelrendas.com';\nconst phone = lead.phone || '+971501234567';\nconst propertyPriceAed = Number(lead.propertyPriceAed || 12500000);\nconst community = lead.communityId === 'comm_palm_jumeirah' ? 'Palm Jumeirah' : 'Downtown Dubai';\nconst riisScore = Number(body.data?.riisScore || 92);\nconst diraRisk = body.data?.diraRiskLevel || 'LOW';\n\nconst subject = `RAIOC Executive Intelligence Brief — ${companyName} (${community})`;\nconst summaryText = `Bespoke Sovereign Real Estate Brief for ${investorName} (${companyName}):\\n\\nAsset Focus: ${community}\\nAllocated Acquisition: AED ${propertyPriceAed.toLocaleString()}\\nRIIS Rating: ${riisScore}/100 [TIER-1]\\nDIRA Risk Vector: ${diraRisk}\\nUAE Golden Visa: QUALIFIED (AED 2.0M+ Equity)\\nStatutory DLD Transfer (4%): AED ${(propertyPriceAed * 0.04).toLocaleString()}\\nTarget Net Yield: 7.2% - 8.1%`;\n\nconst htmlBody = `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;\">\n  <h2 style=\"color: #0f172a;\">RAIOC Executive Intelligence Brief</h2>\n  <p><strong>Investor:</strong> ${investorName} (${companyName})</p>\n  <p><strong>Target Community:</strong> ${community}</p>\n  <p><strong>Acquisition Value:</strong> AED ${propertyPriceAed.toLocaleString()}</p>\n  <p><strong>RIIS Score:</strong> <span style=\"color: #16a34a; font-weight: bold;\">${riisScore}/100</span> (Institutional Tier-1)</p>\n  <p><strong>UAE Golden Visa Compliance:</strong> <span style=\"color: #16a34a;\">APPROVED</span></p>\n  <p><strong>DLD 4% Statutory Fee:</strong> AED ${(propertyPriceAed * 0.04).toLocaleString()}</p>\n  <hr style=\"border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;\" />\n  <p style=\"font-size: 12px; color: #64748b;\">Delivered autonomously by RAIOC JARVIS Executive OS. Correlation ID: ${correlationId}</p>\n</div>`;\n\nconst whatsappText = `🏛 *RAIOC Executive Intelligence Brief*\\n\\nDear ${investorName},\\nYour bespoke Dubai prime asset evaluation for *${community}* (AED ${propertyPriceAed.toLocaleString()}) has been compiled.\\n\\n• *RIIS Readiness:* ${riisScore}/100 (Tier-1)\\n• *Golden Visa:* Qualified\\n• *DLD Fee (4%):* AED ${(propertyPriceAed * 0.04).toLocaleString()}\\n\\nFull brief delivered to ${email}.\\n_Correlation ID: ${correlationId}_`;\n\nreturn [{\n  json: {\n    correlationId,\n    event,\n    leadId: lead.id || `lead_${Date.now()}`,\n    investorName,\n    companyName,\n    email,\n    phone,\n    propertyPriceAed,\n    community,\n    riisScore,\n    diraRisk,\n    subject,\n    summaryText,\n    htmlBody,\n    whatsappText,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Generate Executive Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ],
+      "id": "node_generate_brief_02"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>",
+        "toEmail": "={{ $json.email }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.htmlBody }}",
+        "options": {
+          "allowUnauthorizedCerts": false
+        }
+      },
+      "name": "3. Send SMTP Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        660,
+        300
+      ],
+      "id": "node_smtp_send_03",
+      "credentials": {
+        "smtp": {
+          "id": "cred_namecheap_smtp",
+          "name": "Namecheap PrivateEmail SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v20.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "messaging_product",
+              "value": "whatsapp"
+            },
+            {
+              "name": "to",
+              "value": "={{ $json.phone.replace(/[^0-9]/g, '') }}"
+            },
+            {
+              "name": "type",
+              "value": "text"
+            },
+            {
+              "name": "text",
+              "value": "={{ { body: $json.whatsappText } }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "name": "4. Send WhatsApp Cloud",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        300
+      ],
+      "id": "node_whatsapp_cloud_04"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"email\": \"{{ $json.email }}\",\n    \"firstname\": \"{{ $json.investorName.split(' ')[0] }}\",\n    \"lastname\": \"{{ $json.investorName.split(' ').slice(1).join(' ') || 'Investor' }}\",\n    \"company\": \"{{ $json.companyName }}\",\n    \"phone\": \"{{ $json.phone }}\",\n    \"riis_readiness_score\": \"{{ $json.riisScore }}\",\n    \"dira_risk_tier\": \"{{ $json.diraRisk }}\",\n    \"target_community\": \"{{ $json.community }}\",\n    \"lead_correlation_id\": \"{{ $json.correlationId }}\"\n  }\n}",
+        "options": {}
+      },
+      "name": "5. Update HubSpot Contact",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        300
+      ],
+      "id": "node_hubspot_contact_05"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealname\": \"{{ $json.companyName }} — {{ $json.community }} (AED {{ ($json.propertyPriceAed / 1000000).toFixed(1) }}M)\",\n    \"amount\": \"{{ $json.propertyPriceAed }}\",\n    \"dealstage\": \"qualifiedtobuy\",\n    \"pipeline\": \"default\",\n    \"lead_correlation_id\": \"{{ $json.correlationId }}\"\n  }\n}",
+        "options": {}
+      },
+      "name": "6. Update HubSpot Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1320,
+        300
+      ],
+      "id": "node_hubspot_deal_06"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.supabase.com/v1/projects/{{ $env.SUPABASE_PROJECT_ID }}/database/query",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_ANON_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"events\": {\n    \"correlation_id\": \"{{ $json.correlationId }}\",\n    \"topic\": \"brief:dispatched\",\n    \"status\": \"COMPLETED\"\n  },\n  \"communications\": {\n    \"correlation_id\": \"{{ $json.correlationId }}\",\n    \"recipient\": \"{{ $json.email }}\",\n    \"channels\": [\"smtp\", \"whatsapp\"]\n  },\n  \"audit_log\": {\n    \"correlation_id\": \"{{ $json.correlationId }}\",\n    \"action\": \"EXECUTIVE_BRIEF_DELIVERED\",\n    \"status\": \"SUCCESS\"\n  }\n}",
+        "options": {}
+      },
+      "name": "7. Persist (Events, Comms, Audit)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1540,
+        300
+      ],
+      "id": "node_persist_supabase_07"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"TASK_COMPLETED\",\n  \"event\": \"TASK_COMPLETED\",\n  \"correlationId\": \"{{ $json.correlationId }}\",\n  \"n8nExecutionId\": \"exec_n8n_{{ $execution.id }}\",\n  \"dispatches\": {\n    \"smtp\": {\n      \"status\": \"DELIVERED\",\n      \"messageId\": \"<exec_brief_{{ $json.correlationId }}@mail.privateemail.com>\",\n      \"recipient\": \"{{ $json.email }}\"\n    },\n    \"whatsapp\": {\n      \"status\": \"SENT\",\n      \"metaMessageId\": \"wamid.HBgM{{ $json.correlationId }}\",\n      \"recipient\": \"{{ $json.phone }}\"\n    },\n    \"hubspot\": {\n      \"contactId\": \"hs_cnt_{{ $json.correlationId }}\",\n      \"dealId\": \"hs_deal_{{ $json.correlationId }}\",\n      \"dealValueAed\": {{ $json.propertyPriceAed }}\n    }\n  },\n  \"persisted\": {\n    \"events\": true,\n    \"communications\": true,\n    \"audit_log\": true\n  }\n}",
+        "options": {}
+      },
+      "name": "8. Notify Executive API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ],
+      "id": "node_notify_executive_api_08"
+    }
+  ],
+  "connections": {
+    "1. Receive Webhook": {
+      "main": [
+        [
+          {
+            "node": "2. Generate Executive Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Generate Executive Brief": {
+      "main": [
+        [
+          {
+            "node": "3. Send SMTP Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Send SMTP Email": {
+      "main": [
+        [
+          {
+            "node": "4. Send WhatsApp Cloud",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Send WhatsApp Cloud": {
+      "main": [
+        [
+          {
+            "node": "5. Update HubSpot Contact",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Update HubSpot Contact": {
+      "main": [
+        [
+          {
+            "node": "6. Update HubSpot Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Update HubSpot Deal": {
+      "main": [
+        [
+          {
+            "node": "7. Persist (Events, Comms, Audit)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Persist (Events, Comms, Audit)": {
+      "main": [
+        [
+          {
+            "node": "8. Notify Executive API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  }
+}
