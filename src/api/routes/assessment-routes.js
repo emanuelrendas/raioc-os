@@ -46,6 +46,9 @@ export async function handleAssessmentSubmission(payload = {}, options = {}) {
     brief.matchingProjects = memorandum.matchingProjects;
     brief.sections = memorandum.sections;
     brief.budgetAed = memorandum.budgetAed;
+    brief.multimodal = memorandum.multimodal;
+    brief.primaryVideo = memorandum.primaryVideo;
+    brief.audioBriefing = memorandum.audioBriefing;
 
     // 4. Persist to Supabase Mock/Live Store
     if (db.isMock) {

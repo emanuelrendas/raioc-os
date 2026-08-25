@@ -11,6 +11,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { ikl } from '../core/ikl/index.js';
+import { multimodalEngine } from './multimodal-engine.js';
 import { logger } from '../logging/audit-logger.js';
 
 export class MemorandumGenerator {
@@ -251,6 +252,8 @@ export class MemorandumGenerator {
       section5_DIFC.legalVehicles.map((v) => `- **${v.structure}:** ${v.purpose}`).join('\n') +
       `\n\n---\n*Confidential Document prepared by Emanuel Rendas Private Advisory (DIFC, Dubai, UAE).*`;
 
+    const multimodal = multimodalEngine.generateMultimodalPackage(lead, intelligence, matchedProjects);
+
     const durationMs = Date.now() - startTime;
     logger.info('MEMORANDUM_GEN', `Synthesized Institutional Memorandum [${memoId}] for ${companyName} in ${durationMs}ms`);
 
@@ -275,6 +278,9 @@ export class MemorandumGenerator {
         difcCommonLaw: section5_DIFC,
       },
       matchingProjects: matchedProjects,
+      multimodal,
+      primaryVideo: multimodal.primaryVideo,
+      audioBriefing: multimodal.audioBriefing,
       markdown,
       generatedAt: new Date().toISOString(),
       generationDurationMs: durationMs,

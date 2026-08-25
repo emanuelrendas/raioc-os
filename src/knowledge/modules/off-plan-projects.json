@@ -17,6 +17,16 @@
     "description": "Ultra-contemporary parkside residences overlooking Dubai Hills Championship Golf Course with bespoke wellness amenities, infinity pools, and direct green boulevard access.",
     "amenities": ["Championship Golf Course Access", "Infinity Lap Pool", "State-of-the-art Fitness Center", "Landscaped Podium Gardens", "Kids Play Area", "24/7 Concierge"],
     "coordinates": { "lat": 25.1098, "lng": 55.2443 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/S2p2fE4aXv8?autoplay=0&rel=0",
+      "video_title": "Dubai Hills Estate — Rosehill Masterplan & Architecture Flythrough",
+      "video_duration": "2:30",
+      "hero_image_url": "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -39,6 +49,16 @@
     "description": "Sophisticated high-rise sanctuary situated in Dubai Hills Estate with panoramic skyline views, direct park connectivity, and rapid capital appreciation trajectory.",
     "amenities": ["Sky Lounge", "Yoga Deck", "Resort-Style Pool", "Co-Working Executive Spaces", "Direct Park Access", "Valet & Concierge"],
     "coordinates": { "lat": 25.1125, "lng": 55.2471 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/S2p2fE4aXv8?autoplay=0&rel=0",
+      "video_title": "Hillsedge at Dubai Hills Estate — Official Cinematic Preview",
+      "video_duration": "2:15",
+      "hero_image_url": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -61,6 +81,15 @@
     "description": "Serene park-front living within Dubai Hills Estate, featuring lush green corridors, infinity pools, and prime capital appreciation potential for institutional and family wealth portfolios.",
     "amenities": ["Dubai Hills Mall Proximity", "Olympic Size Pool", "Padle Tennis Courts", "Private Residents Lounge", "Children's Splash Park"],
     "coordinates": { "lat": 25.1082, "lng": 55.2419 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/S2p2fE4aXv8?autoplay=0&rel=0",
+      "video_title": "Parkland at Dubai Hills — Parkside Luxury Residences Showcase",
+      "video_duration": "1:55",
+      "hero_image_url": "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1600565193348-f74bd3c7ccdf?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -83,6 +112,16 @@
     "description": "Waterfront elegance nestled in Dubai Creek Harbour, offering uninterrupted views of the Creek Marina, Downtown Dubai skyline, and Ras Al Khor Wildlife Sanctuary.",
     "amenities": ["Marina Promenade Access", "Infinity Edge Creek Pool", "Private Yacht Mooring Options", "Signature Dining", "Wellness Spa"],
     "coordinates": { "lat": 25.1952, "lng": 55.3512 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0",
+      "video_title": "Valia at Dubai Creek Harbour — Iconic Waterfront Living",
+      "video_duration": "2:40",
+      "hero_image_url": "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1580587771525-78b9dba3b914?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -105,6 +144,15 @@
     "description": "Ultra-luxury urban waterfront living at Dubai Creek Harbour, featuring seamless indoor-outdoor layouts, energy-efficient architecture, and state-of-the-art wellness centers.",
     "amenities": ["Creek Beach Access", "Rooftop Sky Gardens", "Private Screening Room", "Multi-Tier Fitness Center", "EV Charging Stations"],
     "coordinates": { "lat": 25.1978, "lng": 55.3541 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0",
+      "video_title": "Oria at Creek Beach — Ultra-Modern Architectural Tour",
+      "video_duration": "2:10",
+      "hero_image_url": "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -127,6 +175,15 @@
     "description": "Exclusive 5-star branded hospitality residences managed by Palace Hotels & Resorts, located along the pristine Creek canal promenade with hotel-grade services and exceptional short-term yield potential.",
     "amenities": ["Palace Hotel 5-Star Services", "Housekeeping & Room Service", "Private Waterfront Deck", "Infinity Pool overlooking Burj Khalifa", "Fine Dining Restaurants"],
     "coordinates": { "lat": 25.2011, "lng": 55.3587 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0",
+      "video_title": "Palace Residences Creek Blue — 5-Star Branded Living",
+      "video_duration": "3:05",
+      "hero_image_url": "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1578683010236-d716f9a3f461?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -149,6 +206,16 @@
     "description": "Iconic 71-story organic water-inspired super-prime tower on Palm Jumeirah with private rooftop infinity pools, 360-degree Arabian Gulf panoramas, and private sandy beach access.",
     "amenities": ["Private Sandy Beach", "Rooftop 360-Degree Infinity Pool", "Private Elevator Access", "Dedicated Chauffeur & Yacht Charter Service", "Private Spa & Wellness Suite"],
     "coordinates": { "lat": 25.1189, "lng": 55.1432 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0",
+      "video_title": "Como Residences Palm Jumeirah — Sovereign Ultra-Prime Architectural Film",
+      "video_duration": "3:45",
+      "hero_image_url": "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -171,6 +238,16 @@
     "description": "Architectural masterpiece designed by Tadao Ando with custom Armani/Casa interiors on the Palm Jumeirah Crescent, providing unprecedented bespoke ultra-luxury and private beach immersion.",
     "amenities": ["Private Beachfront", "Armani/Casa Custom Finishing", "Tadao Ando Signature Architecture", "Private Cinema", "Cigar Lounge", "Armani Spa & Wellness"],
     "coordinates": { "lat": 25.1378, "lng": 55.1294 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0",
+      "video_title": "Armani Beach Residences by Tadao Ando — Palm Jumeirah Showcase",
+      "video_duration": "4:12",
+      "hero_image_url": "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -193,6 +270,15 @@
     "description": "Waterfront high-rise in Sobha Hartland II featuring expansive crystal lagoons, skyline views of Downtown Dubai, and Sobha signature backward-integrated quality craftmanship.",
     "amenities": ["Crystal Lagoon Access", "Waterfront Boardwalk", "Wave Pool & Water Sports", "Clubhouse & Sports Courts", "International Schools Proximity"],
     "coordinates": { "lat": 25.1764, "lng": 55.3142 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/Z0oF8h2_tGk?autoplay=0&rel=0",
+      "video_title": "Sobha Skyscape at Sobha Hartland II — Crystal Lagoon Waterfront Tour",
+      "video_duration": "2:20",
+      "hero_image_url": "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"
@@ -215,6 +301,16 @@
     "description": "Elite private gated sanctuary of bespoke forest mansions in Sobha Hartland II surrounded by over 1 million sq ft of green parklands, private crystal lagoons, and grand private courtyards.",
     "amenities": ["Private Gated Community", "Direct Crystal Lagoon Beach", "Private Forest Parklands", "Grand Private Courtyard & Pool", "Dedicated Security & Concierge"],
     "coordinates": { "lat": 25.1798, "lng": 55.3189 },
+    "media": {
+      "video_url": "https://www.youtube-nocookie.com/embed/Z0oF8h2_tGk?autoplay=0&rel=0",
+      "video_title": "Sobha Estates Private Forest Mansions — Ultra-Luxury Walkthrough",
+      "video_duration": "3:30",
+      "hero_image_url": "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1600&q=80",
+      "render_gallery": [
+        "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80",
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+      ]
+    },
     "currency": "AED",
     "status": "OFF_PLAN_ACTIVE",
     "updated_at": "2026-08-25T18:00:00Z"

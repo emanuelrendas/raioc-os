@@ -145,6 +145,32 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
     }
   }
 
+  // Multimodal Media Assets (Cinematic Video Reel & Audio Briefing)
+  const primaryVideo = payload.primaryVideo || (payload.multimodal && payload.multimodal.primaryVideo) || {
+    videoUrl: matchedProjects[0]?.media?.video_url || 'https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0',
+    videoTitle: matchedProjects[0]?.media?.video_title || `${matchedProjects[0]?.name || 'Sovereign Ultra-Prime'} — Cinematic Masterplan Tour`,
+    videoDuration: matchedProjects[0]?.media?.video_duration || '3:15',
+    heroImageUrl: matchedProjects[0]?.media?.hero_image_url || 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1600&q=80',
+    projectName: matchedProjects[0]?.name || 'Como Residences',
+    developer: matchedProjects[0]?.developer || 'Nakheel / Emaar',
+    community: matchedProjects[0]?.community || 'Palm Jumeirah',
+    projectedYield: `${matchedProjects[0]?.projected_yield_pct || 8.5}% p.a.`,
+  };
+
+  const audioBriefing = payload.audioBriefing || (payload.multimodal && payload.multimodal.audioBriefing) || {
+    title: `Executive Briefing: ${companyName} Allocation Mandate`,
+    voicePersona: 'Emanuel Rendas Institutional AI Voice (International Executive)',
+    durationFormatted: '02:15',
+    durationSeconds: 135,
+    scriptText: `Welcome, ${contactName}. This is your private executive intelligence briefing for ${companyName}, prepared by Emanuel Rendas Private Advisory in Dubai. Our autonomous models have evaluated your capital allocation mandate of ${budgetFormatted}, scoring your portfolio readiness at RIIS ${riisScore} out of 100 with a low systemic risk rating. Under Dubai Law Number 8 of 2007, one hundred percent of your capital is strictly ring-fenced in RERA-monitored bank escrow accounts. Furthermore, your investment qualifies you for the 10-Year Renewable UAE Real Estate Golden Visa under Cabinet Resolution Number 65 of 2022 with DIFC Common Law asset protection.`,
+    chapters: [
+      { time: '00:00', title: `Executive Allocation Thesis & RIIS Score (${riisScore}/100)` },
+      { time: '00:35', title: 'Statutory Shielding (Dubai Law No. 8 of 2007)' },
+      { time: '01:10', title: `Target Asset Showcase (${matchedProjects[0]?.name || 'Waterfront Assets'})` },
+      { time: '01:45', title: 'UAE Golden Visa (Cabinet Res. 65/2022) & DIFC Succession' },
+    ],
+  };
+
   // Radial Gauge Calculations
   const radius = 64;
   const circumference = 2 * Math.PI * radius;
@@ -386,6 +412,57 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
       </div>
     </section>
 
+    <!-- SECTION 2.5: Executive Briefing Audio Summary (Multimodal AI Voice Player) -->
+    <section class="glass-card rounded-3xl p-6 sm:p-8 border-2 border-emerald-500/30 relative overflow-hidden emerald-glow bg-gradient-to-r from-surface-card via-brand-950/20 to-surface-canvas space-y-6">
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center space-x-4">
+          <!-- Play / Pause Button -->
+          <button id="audio-play-btn" onclick="toggleAudioBriefing()" class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-brand-500 to-brand-400 hover:from-brand-400 hover:to-brand-300 text-slate-950 flex items-center justify-center shadow-xl shadow-brand-500/30 transition-all duration-200 transform hover:scale-105 active:scale-95 flex-shrink-0 cursor-pointer">
+            <svg id="play-icon" class="w-8 h-8 ml-1 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            <svg id="pause-icon" class="w-8 h-8 fill-current hidden" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+          </button>
+          <div class="space-y-1">
+            <div class="inline-flex items-center space-x-2 px-2.5 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[10px] font-mono font-bold uppercase tracking-wider">
+              <span>● MULTIMODAL AUDIO BRIEFING</span>
+            </div>
+            <h3 class="text-lg sm:text-xl font-black text-white tracking-wide">
+              Executive Briefing Audio Summary
+            </h3>
+            <p class="text-xs text-slate-400">
+              Narrated by <strong class="text-slate-200">Emanuel Rendas AI Voice</strong> • Duration: ${escapeHtml(audioBriefing.durationFormatted || '02:15')}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center space-x-3 self-end md:self-center">
+          <div class="flex items-center space-x-1" id="audio-waveform">
+            <span class="w-1 h-3 bg-emerald-400/40 rounded-full animate-pulse"></span>
+            <span class="w-1 h-6 bg-emerald-400/60 rounded-full animate-pulse delay-75"></span>
+            <span class="w-1 h-8 bg-emerald-400 rounded-full animate-pulse delay-150"></span>
+            <span class="w-1 h-4 bg-emerald-400/50 rounded-full animate-pulse delay-100"></span>
+            <span class="w-1 h-2 bg-emerald-400/30 rounded-full animate-pulse"></span>
+          </div>
+          <span id="audio-time-display" class="font-mono text-xs text-emerald-400 font-bold">00:00 / ${escapeHtml(audioBriefing.durationFormatted || '02:15')}</span>
+        </div>
+      </div>
+
+      <!-- Scrubber & Chapters -->
+      <div class="space-y-3 pt-2 border-t border-white/5">
+        <div class="w-full bg-surface-canvas/80 h-2 rounded-full overflow-hidden relative cursor-pointer" onclick="seekAudio(event)">
+          <div id="audio-progress-bar" class="bg-gradient-to-r from-emerald-500 to-brand-400 h-full w-0 transition-all duration-200"></div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px] font-mono">
+          ${(audioBriefing.chapters || []).map((ch, i) => `
+          <button onclick="jumpChapter(${i})" class="p-2 rounded-lg bg-surface-canvas/50 hover:bg-emerald-500/10 border border-white/5 text-left text-slate-300 hover:text-white transition-colors cursor-pointer">
+            <span class="text-emerald-400 font-bold block">${escapeHtml(ch.time)}</span>
+            <span class="truncate block">${escapeHtml(ch.title)}</span>
+          </button>
+          `).join('')}
+        </div>
+      </div>
+    </section>
+
     <!-- SECTION 3: Golden Visa Legal Stamp (Cabinet Res. 65/2022) & Statutory Escrow Guarantees (Law 8/2007) -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
       
@@ -450,6 +527,35 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
       </section>
 
     </div>
+
+    <!-- SECTION 3.5: Cinematic Masterplan & Asset Video Showcase -->
+    <section class="glass-card rounded-3xl p-6 sm:p-8 md:p-10 border-2 border-emerald-500/20 relative overflow-hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div>
+          <span class="text-xs uppercase font-mono font-bold tracking-widest text-emerald-400 block mb-1">CINEMATIC MASTERPLAN TOUR</span>
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">4K Architectural & Masterplan Showcase</h2>
+        </div>
+        <div class="flex items-center space-x-2 text-xs font-mono text-slate-400">
+          <span class="px-2.5 py-1 rounded-full bg-surface-canvas border border-white/10 text-emerald-400 font-bold">4K ULTRA HD</span>
+          <span>${escapeHtml(primaryVideo.videoDuration || '3:00')}</span>
+        </div>
+      </div>
+
+      <div class="relative w-full rounded-2xl overflow-hidden bg-slate-950 border border-white/10 shadow-2xl aspect-video">
+        <iframe 
+          class="w-full h-full border-0" 
+          src="${escapeHtml(primaryVideo.videoUrl)}" 
+          title="${escapeHtml(primaryVideo.videoTitle || 'Cinematic Asset Tour')}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+          allowfullscreen>
+        </iframe>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-2 text-xs font-mono text-slate-400">
+        <span class="text-slate-300 font-semibold">${escapeHtml(primaryVideo.videoTitle || 'Institutional Asset Video Showcase')}</span>
+        <span class="text-emerald-400 font-bold">Projected Net Yield: ${escapeHtml(primaryVideo.projectedYield || '8.5% p.a.')}</span>
+      </div>
+    </section>
 
     <!-- SECTION 4: Target Asset Cards (Manus Off-Plan Projects) -->
     <section class="space-y-6">
@@ -697,6 +803,88 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
       </div>
     </div>
   </footer>
+
+  <!-- Audio Briefing Voice Synthesis & Playback Script -->
+  <script>
+    const audioScriptText = ${JSON.stringify(audioBriefing.scriptText || '')};
+    let isAudioPlaying = false;
+    let synthUtterance = null;
+    let progressInterval = null;
+    let elapsedSeconds = 0;
+    const totalSeconds = ${audioBriefing.durationSeconds || 135};
+
+    function toggleAudioBriefing() {
+      if (!isAudioPlaying) {
+        startAudio();
+      } else {
+        pauseAudio();
+      }
+    }
+
+    function startAudio() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        synthUtterance = new SpeechSynthesisUtterance(audioScriptText);
+        synthUtterance.rate = 0.96;
+        synthUtterance.pitch = 0.98;
+        synthUtterance.lang = 'en-GB';
+
+        const voices = window.speechSynthesis.getVoices();
+        const preferredVoice = voices.find(v => v.lang.includes('en-GB') || v.name.includes('UK') || v.name.includes('Daniel') || v.name.includes('Arthur') || v.name.includes('George'));
+        if (preferredVoice) synthUtterance.voice = preferredVoice;
+
+        synthUtterance.onend = () => {
+          pauseAudio();
+          elapsedSeconds = 0;
+          updateProgressUI();
+        };
+
+        window.speechSynthesis.speak(synthUtterance);
+      }
+
+      isAudioPlaying = true;
+      document.getElementById('play-icon')?.classList.add('hidden');
+      document.getElementById('pause-icon')?.classList.remove('hidden');
+
+      clearInterval(progressInterval);
+      progressInterval = setInterval(() => {
+        if (elapsedSeconds < totalSeconds) {
+          elapsedSeconds++;
+          updateProgressUI();
+        } else {
+          pauseAudio();
+        }
+      }, 1000);
+    }
+
+    function pauseAudio() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.pause();
+      }
+      isAudioPlaying = false;
+      document.getElementById('play-icon')?.classList.remove('hidden');
+      document.getElementById('pause-icon')?.classList.add('hidden');
+      clearInterval(progressInterval);
+    }
+
+    function updateProgressUI() {
+      const pct = Math.min(100, (elapsedSeconds / totalSeconds) * 100);
+      const bar = document.getElementById('audio-progress-bar');
+      if (bar) bar.style.width = pct + '%';
+      
+      const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+      const secs = String(elapsedSeconds % 60).padStart(2, '0');
+      const disp = document.getElementById('audio-time-display');
+      if (disp) disp.innerText = mins + ':' + secs + ' / ${escapeHtml(audioBriefing.durationFormatted || '02:15')}';
+    }
+
+    function jumpChapter(index) {
+      const offsets = [0, 35, 70, 105];
+      elapsedSeconds = offsets[index] || 0;
+      updateProgressUI();
+      if (!isAudioPlaying) startAudio();
+    }
+  </script>
 
 </body>
 </html>`;

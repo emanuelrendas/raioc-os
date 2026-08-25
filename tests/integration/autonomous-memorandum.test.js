@@ -128,4 +128,55 @@ describe('INTEGRATION: Autonomous Institutional Memorandum Generator', () => {
     assert.ok(duration < 50, `Generator took ${duration}ms, expected < 50ms`);
   });
 
+  test('5. Tier 1/2 leads (RIIS >= 70) receive full multimodal video package and audio briefing metadata', async () => {
+    const payload = {
+      name: 'Princess Ameera Al-Sabah',
+      email: 'ameera@alsabah-investments.kw',
+      phone: '+96590001234',
+      company: 'Al-Sabah Sovereign Holdings',
+      budget_aed: 30000000,
+      strategic_focus: 'off_plan_appreciation',
+    };
+
+    const res = await routeApiRequest('/api/assessment', 'POST', payload);
+    assert.strictEqual(res.status, 200);
+
+    const brief = res.body.executiveBrief;
+    assert.ok(brief.multimodal, 'Multimodal package must be present');
+    assert.strictEqual(brief.multimodal.qualified, true);
+    assert.strictEqual(brief.multimodal.tier, 'MULTIMODAL_TIER_1');
+
+    // Video Reel validation
+    const primaryVideo = brief.primaryVideo;
+    assert.ok(primaryVideo, 'Primary video must be present');
+    assert.ok(primaryVideo.videoUrl.includes('youtube') || primaryVideo.videoUrl.includes('http'));
+    assert.ok(primaryVideo.videoTitle);
+    assert.ok(primaryVideo.videoDuration);
+
+    // Audio Briefing validation
+    const audioBriefing = brief.audioBriefing;
+    assert.ok(audioBriefing, 'Audio briefing must be present');
+    assert.ok(audioBriefing.scriptText.includes('Dubai Law Number 8 of 2007'));
+    assert.ok(audioBriefing.scriptText.includes('Resolution Number 65 of 2022'));
+    assert.strictEqual(audioBriefing.chapters.length >= 4, true);
+  });
+
+  test('6. Public viewer /brief/:id renders multimodal video showcase and audio briefing player', async () => {
+    const memo = memorandumGenerator.generate({
+      company: 'Emirates Sovereign Capital',
+      name: 'His Excellency Mohammed Al-Falasi',
+      budget_aed: 22000000,
+    });
+
+    const res = await routeApiRequest(`/brief/${memo.id}`, 'GET');
+    assert.strictEqual(res.status, 200);
+
+    const html = res.body;
+    assert.ok(html.includes('MULTIMODAL AUDIO BRIEFING'));
+    assert.ok(html.includes('Executive Briefing Audio Summary'));
+    assert.ok(html.includes('CINEMATIC MASTERPLAN TOUR'));
+    assert.ok(html.includes('4K Architectural &amp; Masterplan Showcase') || html.includes('4K Architectural & Masterplan Showcase'));
+    assert.ok(html.includes('toggleAudioBriefing()'));
+  });
+
 });

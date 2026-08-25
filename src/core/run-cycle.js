@@ -83,6 +83,9 @@ export async function run_cycle(options = {}) {
         brief.matchingProjects = memorandum.matchingProjects;
         brief.sections = memorandum.sections;
         brief.budgetAed = memorandum.budgetAed;
+        brief.multimodal = memorandum.multimodal;
+        brief.primaryVideo = memorandum.primaryVideo;
+        brief.audioBriefing = memorandum.audioBriefing;
 
         // Save Executive Brief to Supabase
         await db.saveExecutiveBrief(brief);
