@@ -117,4 +117,14 @@ export const config = {
     flushIntervalMs: parseInt(process.env.TELEMETRY_FLUSH_INTERVAL_MS || '10000', 10),
     apmSampleRate: parseFloat(process.env.APM_SAMPLE_RATE || '1.0'),
   },
+  gemini: {
+    enabled: process.env.GEMINI_ENABLED !== 'false',
+    apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    timeoutMs: parseInt(process.env.GEMINI_TIMEOUT_MS || '8000', 10),
+  },
+  googleAi: {
+    apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_API_KEY || '',
+    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+  },
 };

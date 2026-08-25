@@ -20,6 +20,7 @@ import { renderCommandCenterHtml } from '../../dashboard/command-center-html.js'
 import { emailAdapter } from '../../adapters/email-adapter.js';
 import { supabase } from '../../db/supabase-client.js';
 import { jarvis } from '../../agents/specialists/jarvis-orchestrator.js';
+import { geminiAdapter } from '../../adapters/gemini-adapter.js';
 import { kpiCollector } from '../../operational/kpi-collector.js';
 import { sharedMemory } from '../../memory/shared-memory.js';
 import { businessIntelligenceBus } from '../../events/business-intelligence-bus.js';
@@ -391,8 +392,8 @@ export async function handleTelemetryRequest(path, context = {}) {
     };
   }
 
-  // 2f. Executive Interactive AI Chat: POST /api/executive/chat
-  if (path === '/api/executive/chat' || normalized === 'chat') {
+  // 2f. Executive Interactive AI Chat: POST /api/executive/chat or POST /api/chat
+  if (path === '/api/executive/chat' || path === '/api/chat' || normalized === 'chat') {
     const body = context.body || {};
     const message = body.message || body.prompt || body.query;
     if (!message || typeof message !== 'string' || !message.trim()) {
@@ -405,6 +406,8 @@ export async function handleTelemetryRequest(path, context = {}) {
       };
     }
 
+    const correlationId = context.headers?.['x-correlation-id'] || `corr_chat_${Date.now()}`;
+    const aiOutcome = await geminiAdapter.generateResponse(message.trim(), { correlationId, ...(body.context || {}) });
     const report = await jarvis.executeObjective(message.trim(), body.context || {});
 
     sharedMemory.logConversationMessage({
@@ -413,7 +416,7 @@ export async function handleTelemetryRequest(path, context = {}) {
       message: message.trim(),
     });
 
-    const responseText = `JARVIS Executive Directive Processed: Mandate "${message.trim()}" decomposed into ${report.planSummary?.totalTasks || 1} operational tasks. Status: ${report.status}. Impact Score: ${report.executiveDecision?.priorityScore || 85}/100.`;
+    const responseText = aiOutcome.text || `JARVIS Executive Directive Processed: Mandate "${message.trim()}" decomposed into ${report.planSummary?.totalTasks || 1} operational tasks. Status: ${report.status}. Impact Score: ${report.executiveDecision?.priorityScore || 85}/100.`;
 
     sharedMemory.logConversationMessage({
       sender: 'JARVIS',
@@ -427,6 +430,8 @@ export async function handleTelemetryRequest(path, context = {}) {
         success: true,
         sender: 'JARVIS',
         message: responseText,
+        aiModel: aiOutcome.model || 'gemini-2.5-flash',
+        aiProvider: aiOutcome.provider || 'google_ai_studio',
         reportId: report.reportId,
         status: report.status,
         priority: report.executiveDecision?.priorityScore || 85,
