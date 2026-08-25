@@ -298,8 +298,10 @@
               <input id="d-name" type="text" autocomplete="name" required></div>
             <div class="fld"><label for="d-email">Email</label>
               <input id="d-email" type="email" autocomplete="email" placeholder="you@example.com" required></div>
-            <div class="fld"><label for="d-wa">WhatsApp <span>optional</span></label>
-              <input id="d-wa" type="tel" autocomplete="tel" placeholder="+351 …"></div>
+            <div class="fld"><label for="d-wa">Phone Number / WhatsApp <span style="color:#10B981;">*</span></label>
+              <input id="d-wa" type="tel" autocomplete="tel" placeholder="+971 50 123 4567" required>
+              <small style="font-size:11px;color:#9CA3AF;display:block;margin-top:4px;">Include international format (e.g. +971, +44, +351, +1)</small>
+            </div>
             <label class="d-consent"><input type="checkbox" id="d-consent" required>
               <span>I am happy for Emanuel to contact me about this assessment.</span></label>
             <button type="submit" class="btn btn-solid" id="d-submit" style="width:100%;justify-content:center;">Get the blueprint</button>

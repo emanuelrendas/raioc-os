@@ -30,6 +30,7 @@ export class SupabaseClient {
       executions: new Map(),
       workflow_runs: new Map(),
       notifications: [],
+      off_plan_projects: [],
     };
   }
 
@@ -224,6 +225,71 @@ export class SupabaseClient {
     } catch (err) {
       logger.error('SUPABASE', `Failed to fetch executive brief ${id}`, { error: err.message });
       return null;
+    }
+  }
+
+  async upsertOffPlanProjects(projects = []) {
+    const list = Array.isArray(projects) ? projects : [projects];
+    if (this.isMock) {
+      for (const proj of list) {
+        const idx = this.mockStore.off_plan_projects.findIndex((p) => p.id === proj.id || p.name === proj.name);
+        if (idx >= 0) {
+          this.mockStore.off_plan_projects[idx] = {
+            ...this.mockStore.off_plan_projects[idx],
+            ...proj,
+            updated_at: new Date().toISOString(),
+          };
+        } else {
+          this.mockStore.off_plan_projects.push({
+            ...proj,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+      }
+      return this.mockStore.off_plan_projects;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/off_plan_projects`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(list),
+      });
+      if (!res.ok) {
+        logger.warn('SUPABASE', `Batch upsert off_plan_projects note: ${res.statusText}`);
+      }
+      const data = await res.json().catch(() => list);
+      return data;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to upsert off_plan_projects', { error: err.message });
+      return list;
+    }
+  }
+
+  async fetchOffPlanProjects() {
+    if (this.isMock) {
+      return this.mockStore.off_plan_projects;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/off_plan_projects?order=starting_price_aed.asc`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`Supabase fetchOffPlanProjects error: ${res.statusText}`);
+      return await res.json();
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch off_plan_projects', { error: err.message });
+      return [];
     }
   }
 

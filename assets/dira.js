@@ -178,6 +178,23 @@
     const note = document.getElementById('d-note');
     const btn  = document.getElementById('d-submit');
 
+    const rawPhone = val('d-wa');
+    // Normalize and validate international phone string (E.164 format)
+    let cleanPhone = rawPhone.replace(/[\s\-\(\)\.]/g, '');
+    if (cleanPhone && !cleanPhone.startsWith('+')) {
+      cleanPhone = '+' + cleanPhone;
+    }
+
+    if (!cleanPhone || !/^\+[1-9]\d{6,14}$/.test(cleanPhone)) {
+      if (note) {
+        note.hidden = false;
+        note.textContent = 'Please enter a valid international phone number with country code (e.g. +971 50 123 4567, +44, +351, +1).';
+        note.classList.add('warn');
+      }
+      document.getElementById('d-wa')?.focus();
+      return;
+    }
+
     if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
 
     const q = new URLSearchParams(location.search);
@@ -189,7 +206,10 @@
         capital_band:     answers.capital_band,
         strategic_focus:  answers.strategic_focus,
         tax_jurisdiction: answers.tax_jurisdiction,
-        name: val('d-name'), email: val('d-email'), whatsapp: val('d-wa'),
+        name: val('d-name'), 
+        email: val('d-email'), 
+        phone: cleanPhone,
+        whatsapp: cleanPhone,
         consent,
         session_id: (() => { try { return sessionStorage.getItem('er_sid'); } catch { return null; } })(),
         referrer_url: document.referrer || null,
