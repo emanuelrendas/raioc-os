@@ -72,6 +72,7 @@ import { businessIntelligenceBus, BusinessDomains } from './events/business-inte
 import { executiveSelfHealingLayer } from './operational/executive-self-healing.js';
 import { autonomousDailyOperations } from './operational/autonomous-daily-operations.js';
 import { renderCommandCenterHtml } from './dashboard/command-center-html.js';
+import { renderExecutiveBriefHtml } from './site/brief-viewer-html.js';
 
 export {
   run_cycle,
@@ -154,6 +155,7 @@ export {
   executiveSelfHealingLayer,
   autonomousDailyOperations,
   renderCommandCenterHtml,
+  renderExecutiveBriefHtml,
 };
 
 // If started directly, boot Always-On Production Supervisor

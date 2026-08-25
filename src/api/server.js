@@ -15,6 +15,8 @@ import { handleDldRequest } from './routes/dld-routes.js';
 import { handleFxRequest } from './routes/fx-routes.js';
 import { handleEventRequest } from './routes/event-routes.js';
 import { handleIntakeRequest } from './routes/intake-routes.js';
+import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
+import { supabase } from '../db/supabase-client.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
 import { metricsCollector } from '../monitoring/metrics-collector.js';
 import { agentEventBus } from '../events/agent-event-bus.js';
@@ -32,8 +34,19 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
   return await correlationTracer.runWithContext({ correlationId }, async () => {
     let response;
 
+    // 0. Dynamic Executive Brief Public Viewer (/brief/:id, /api/brief/:id)
+    if ((url.startsWith('/brief') || url.startsWith('/api/brief/')) && method === 'GET') {
+      const briefId = url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0];
+      const briefRecord = await supabase.fetchExecutiveBriefById(briefId);
+      const html = renderExecutiveBriefHtml(briefRecord || { id: briefId, companyName: 'Private Sovereign Client' });
+      response = {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        body: html,
+      };
+    }
     // 1. Dashboard UI, Executive Telemetry & Connectors (/dashboard, /api/dashboard/*, /api/executive/*, /api/telemetry/*, /health, /api/health, /api/test-email)
-    if (url === '/dashboard' || url === '/api/test-email' || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
+    else if (url === '/dashboard' || url === '/api/test-email' || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
       response = await handleTelemetryRequest(url, { headers, query, body });
     }
     // 2. DLD Market Data

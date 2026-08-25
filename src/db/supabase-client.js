@@ -196,6 +196,37 @@ export class SupabaseClient {
     }
   }
 
+  async fetchExecutiveBriefById(id) {
+    if (!id) return null;
+
+    if (this.isMock) {
+      return (
+        this.mockStore.executive_briefs.find(
+          (b) => b.id === id || b.lead_id === id || (b.raw_payload && b.raw_payload.id === id)
+        ) || null
+      );
+    }
+
+    try {
+      const res = await fetch(
+        `${this.url}/rest/v1/executive_briefs?or=(id.eq.${encodeURIComponent(id)},lead_id.eq.${encodeURIComponent(id)})&limit=1`,
+        {
+          headers: {
+            apikey: this.key,
+            Authorization: `Bearer ${this.key}`,
+            'Content-Type': 'application/json',
+          },
+        }
+      );
+      if (!res.ok) throw new Error(`Supabase fetchExecutiveBriefById error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || null;
+    } catch (err) {
+      logger.error('SUPABASE', `Failed to fetch executive brief ${id}`, { error: err.message });
+      return null;
+    }
+  }
+
   async enqueueDispatch(task) {
     const record = {
       id: task.id || `task_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,

@@ -9,6 +9,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { routeApiRequest } from '../src/api/server.js';
 import { renderCommandCenterHtml } from '../src/dashboard/command-center-html.js';
+import { renderExecutiveBriefHtml } from '../src/site/brief-viewer-html.js';
+import { supabase } from '../src/db/supabase-client.js';
 import { sitePages } from '../src/site/site-pages.js';
 
 export default async function handler(req, res) {
@@ -25,7 +27,18 @@ export default async function handler(req, res) {
   // Clean duplicate /api prefixes if any occurred from rewrites (e.g. /api/api/health -> /api/health)
   url = url.replace(/^\/api\/api\//, '/api/');
 
-  // 1. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard'
+  // 1. Brief Viewer (/brief/:id, /api/brief/:id)
+  if ((url.startsWith('/brief') || url.startsWith('/api/brief/')) && method === 'GET') {
+    const briefId = url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0];
+    const briefRecord = await supabase.fetchExecutiveBriefById(briefId);
+    const briefHtml = renderExecutiveBriefHtml(briefRecord || { id: briefId, companyName: 'Private Sovereign Investor' });
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
+    res.status(200);
+    return typeof res.send === 'function' ? res.send(briefHtml) : res.end(briefHtml);
+  }
+
+  // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard'
   if (host.includes('dashboard') || url === '/dashboard' || url === '/dashboard/' || url === '/dashboard.html' || url === '/api/dashboard/ui') {
     let dashHtml = '';
     try {
