@@ -7,6 +7,7 @@ import { config } from '../config/env.js';
 import { supabase } from '../db/supabase-client.js';
 import { diraRiisEngine } from '../engines/dira-riis-engine.js';
 import { executiveBriefGenerator } from '../engines/executive-brief.js';
+import { memorandumGenerator } from '../engines/memorandum-generator.js';
 import { queueEngine } from '../engines/queue-engine.js';
 import { whatsAppAdapter } from '../adapters/whatsapp-adapter.js';
 import { emailAdapter } from '../adapters/email-adapter.js';
@@ -71,8 +72,17 @@ export async function run_cycle(options = {}) {
         // Execute DIRA & RIIS intelligence assessment
         const intelligence = diraRiisEngine.analyze(lead);
 
+        // Generate Autonomous Institutional Investment Memorandum
+        const memorandum = memorandumGenerator.generate(lead, intelligence);
+
         // Generate Executive Brief
         const brief = executiveBriefGenerator.generate(lead, intelligence);
+        brief.memorandum = memorandum;
+        brief.memorandumId = memorandum.id;
+        brief.memorandumMarkdown = memorandum.markdown;
+        brief.matchingProjects = memorandum.matchingProjects;
+        brief.sections = memorandum.sections;
+        brief.budgetAed = memorandum.budgetAed;
 
         // Save Executive Brief to Supabase
         await db.saveExecutiveBrief(brief);

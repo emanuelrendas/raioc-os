@@ -68,6 +68,83 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
     ];
   }
 
+  // Matched Projects from Memorandum or Tiered Allocation
+  const memorandum = briefRecord.memorandum || payload.memorandum || (payload.sections ? payload : null);
+  let matchedProjects = (memorandum && memorandum.matchingProjects && memorandum.matchingProjects.length > 0)
+    ? memorandum.matchingProjects
+    : (briefRecord.matchingProjects || payload.matchingProjects || []);
+
+  if (!Array.isArray(matchedProjects) || matchedProjects.length === 0) {
+    const budgetNum = typeof budgetRaw === 'number' ? budgetRaw : parseInt(String(budgetRaw).replace(/[^\d]/g, ''), 10) || 5000000;
+    if (budgetNum >= 15000000) {
+      matchedProjects = [
+        {
+          name: 'Como Residences',
+          developer: 'Nakheel',
+          community: 'Palm Jumeirah',
+          starting_price_aed: 21000000,
+          projected_yield_pct: 7.9,
+          payment_plan: '80/20 (20% Booking, 60% Construction, 20% Handover)',
+          tier: 'SOVEREIGN_ULTRA_PRIME',
+          golden_visa_eligible: true
+        },
+        {
+          name: 'Armani Beach Residences',
+          developer: 'Arada',
+          community: 'Palm Jumeirah',
+          starting_price_aed: 25000000,
+          projected_yield_pct: 7.5,
+          payment_plan: '60/40 (25% Booking, 35% Construction, 40% Handover)',
+          tier: 'SOVEREIGN_ULTRA_PRIME',
+          golden_visa_eligible: true
+        },
+        {
+          name: 'Sobha Estates',
+          developer: 'Sobha Realty',
+          community: 'Sobha Hartland II',
+          starting_price_aed: 22500000,
+          projected_yield_pct: 7.8,
+          payment_plan: '60/40 (20% Booking, 40% Construction, 40% Handover)',
+          tier: 'SOVEREIGN_ULTRA_PRIME',
+          golden_visa_eligible: true
+        }
+      ];
+    } else {
+      matchedProjects = [
+        {
+          name: 'Palace Creek Blue',
+          developer: 'Emaar Properties',
+          community: 'Dubai Creek Harbour',
+          starting_price_aed: 2450000,
+          projected_yield_pct: 9.1,
+          payment_plan: '80/20 on Handover',
+          tier: 'BRANDED_HOSPITALITY',
+          golden_visa_eligible: true
+        },
+        {
+          name: 'Valia',
+          developer: 'Emaar Properties',
+          community: 'Dubai Creek Harbour',
+          starting_price_aed: 2100000,
+          projected_yield_pct: 8.8,
+          payment_plan: '80/20 on Handover',
+          tier: 'WATERFRONT_CAPITAL',
+          golden_visa_eligible: true
+        },
+        {
+          name: 'Rosehill',
+          developer: 'Emaar Properties',
+          community: 'Dubai Hills Estate',
+          starting_price_aed: 1650000,
+          projected_yield_pct: 8.4,
+          payment_plan: '80/20 on Handover',
+          tier: 'PREMIUM_GROWTH',
+          golden_visa_eligible: true
+        }
+      ];
+    }
+  }
+
   // Radial Gauge Calculations
   const radius = 64;
   const circumference = 2 * Math.PI * radius;
@@ -387,146 +464,106 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        <!-- Asset 1: Waterfront Sky Villa (Palm Jumeirah / Como / Armani) -->
-        <div class="glass-card rounded-3xl p-6 flex flex-col justify-between border border-white/10 hover:border-emerald-500/40 transition-all duration-300 group">
-          <div class="space-y-4">
-            <div class="relative h-48 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-700 overflow-hidden border border-white/10 flex items-center justify-center text-center p-4">
-              <div class="absolute inset-0 bg-brand-900/20 group-hover:bg-brand-900/10 transition-colors"></div>
-              <div class="relative z-10">
-                <span class="text-xs font-mono text-emerald-400 uppercase tracking-widest font-bold block mb-1">PALM JUMEIRAH</span>
-                <h4 class="text-xl font-bold text-white">Waterfront Sky Villa</h4>
-                <span class="text-xs text-slate-400 font-mono mt-1 block">Private Beach & Marina Berth</span>
+        ${matchedProjects.slice(0, 3).map((p, idx) => {
+          const isPrimary = idx === (matchedProjects.length > 1 ? 1 : 0);
+          const priceFormatted = p.startingPriceFormatted || (p.starting_price_aed ? `AED ${p.starting_price_aed.toLocaleString('en-US')}` : 'AED 2,500,000');
+          const yieldFormatted = p.projectedYield || (p.projected_yield_pct ? `${p.projected_yield_pct}% p.a.` : '8.6% p.a.');
+          const paymentPlan = p.paymentPlan || p.payment_plan || '80/20 on Handover';
+          const community = p.community || 'Dubai Waterfront';
+          const name = p.name || 'Prime Waterfront Residence';
+          const developer = p.developer || 'Emaar / Nakheel';
+
+          return `
+          <div class="glass-card rounded-3xl p-6 flex flex-col justify-between ${isPrimary ? 'border-2 border-emerald-500/40 relative overflow-hidden emerald-glow' : 'border border-white/10 hover:border-emerald-500/40'} transition-all duration-300 group">
+            ${isPrimary ? `
+            <div class="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-brand-600 text-black text-[10px] font-extrabold uppercase font-mono px-4 py-1 rounded-bl-xl tracking-wider">
+              PRIMARY RECOMMENDATION
+            </div>` : ''}
+
+            <div class="space-y-4 ${isPrimary ? 'mt-2' : ''}">
+              <div class="relative h-48 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-700 overflow-hidden border border-white/10 flex items-center justify-center text-center p-4">
+                <div class="absolute inset-0 bg-brand-900/20 group-hover:bg-brand-900/10 transition-colors"></div>
+                <div class="relative z-10">
+                  <span class="text-xs font-mono text-emerald-400 uppercase tracking-widest font-bold block mb-1">${escapeHtml(community.toUpperCase())}</span>
+                  <h4 class="text-xl font-bold text-white">${escapeHtml(name)}</h4>
+                  <span class="text-xs text-slate-400 font-mono mt-1 block">${escapeHtml(developer)}</span>
+                </div>
+                <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-300 text-[10px] font-mono font-bold">
+                  10-YR VISA
+                </div>
               </div>
-              <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-300 text-[10px] font-mono font-bold">
-                10-YR VISA
+
+              <div>
+                <div class="flex justify-between items-baseline mb-2">
+                  <span class="text-xs text-slate-400">Entry Allocation:</span>
+                  <span class="text-lg font-black text-white font-mono">${escapeHtml(priceFormatted)}</span>
+                </div>
+                <div class="flex justify-between items-baseline text-xs text-slate-400 pb-3 border-b border-surface-border">
+                  <span>Payment Plan:</span>
+                  <span class="font-mono text-emerald-400 font-semibold">${escapeHtml(paymentPlan)}</span>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
+                  <span class="text-slate-500 text-[10px] block">PROJ. NET YIELD</span>
+                  <span class="text-emerald-400 font-bold">${escapeHtml(yieldFormatted)}</span>
+                </div>
+                <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
+                  <span class="text-slate-500 text-[10px] block">ESCROW LAW 8/07</span>
+                  <span class="text-emerald-400 font-bold">100% PROTECTED</span>
+                </div>
               </div>
             </div>
 
-            <div>
-              <div class="flex justify-between items-baseline mb-2">
-                <span class="text-xs text-slate-400">Allocation Value:</span>
-                <span class="text-lg font-black text-white font-mono">AED 28,500,000</span>
-              </div>
-              <div class="flex justify-between items-baseline text-xs text-slate-400 pb-3 border-b border-surface-border">
-                <span>Payment Plan:</span>
-                <span class="font-mono text-emerald-400 font-semibold">60/40 Linked</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
-                <span class="text-slate-500 text-[10px] block">PROJ. NET YIELD</span>
-                <span class="text-emerald-400 font-bold">8.8% p.a.</span>
-              </div>
-              <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
-                <span class="text-slate-500 text-[10px] block">5-YR CAPITAL GAIN</span>
-                <span class="text-emerald-400 font-bold">+54.0%</span>
-              </div>
-            </div>
+            <a href="#booking" class="mt-6 w-full py-3 rounded-xl ${isPrimary ? 'bg-brand-500 hover:bg-brand-400 text-black font-extrabold' : 'bg-surface-accent/60 hover:bg-emerald-500 hover:text-black text-slate-200 font-bold'} text-xs tracking-wider uppercase text-center transition-all duration-200 border border-white/10">
+              ${isPrimary ? 'Lock Allocation Priority' : 'Request Full Prospectus'}
+            </a>
           </div>
-
-          <a href="#booking" class="mt-6 w-full py-3 rounded-xl bg-surface-accent/60 hover:bg-emerald-500 hover:text-black text-slate-200 font-bold text-xs tracking-wider uppercase text-center transition-all duration-200 border border-white/10">
-            Request Full Prospectus
-          </a>
-        </div>
-
-        <!-- Asset 2: Bulgari Lighthouse Estate (Jumeirah Bay Island) -->
-        <div class="glass-card rounded-3xl p-6 flex flex-col justify-between border-2 border-emerald-500/40 relative overflow-hidden emerald-glow group">
-          <div class="absolute top-0 right-0 bg-gradient-to-l from-emerald-500 to-brand-600 text-black text-[10px] font-extrabold uppercase font-mono px-4 py-1 rounded-bl-xl tracking-wider">
-            PRIMARY RECOMMENDATION
-          </div>
-
-          <div class="space-y-4 mt-2">
-            <div class="relative h-48 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-700 overflow-hidden border border-white/10 flex items-center justify-center text-center p-4">
-              <div class="absolute inset-0 bg-brand-900/30 group-hover:bg-brand-900/10 transition-colors"></div>
-              <div class="relative z-10">
-                <span class="text-xs font-mono text-gold-400 uppercase tracking-widest font-bold block mb-1">JUMEIRAH BAY ISLAND</span>
-                <h4 class="text-xl font-bold text-white">Bulgari Lighthouse Estate</h4>
-                <span class="text-xs text-slate-400 font-mono mt-1 block">Ultra Prime Sovereign Tier</span>
-              </div>
-              <div class="absolute top-3 left-3 px-2.5 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-300 text-[10px] font-mono font-bold">
-                10-YR VISA
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between items-baseline mb-2">
-                <span class="text-xs text-slate-400">Allocation Value:</span>
-                <span class="text-lg font-black text-white font-mono">AED 45,000,000</span>
-              </div>
-              <div class="flex justify-between items-baseline text-xs text-slate-400 pb-3 border-b border-surface-border">
-                <span>Payment Plan:</span>
-                <span class="font-mono text-emerald-400 font-semibold">70/30 Milestone</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
-                <span class="text-slate-500 text-[10px] block">PROJ. NET YIELD</span>
-                <span class="text-emerald-400 font-bold">9.2% p.a.</span>
-              </div>
-              <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
-                <span class="text-slate-500 text-[10px] block">5-YR CAPITAL GAIN</span>
-                <span class="text-emerald-400 font-bold">+68.5%</span>
-              </div>
-            </div>
-          </div>
-
-          <a href="#booking" class="mt-6 w-full py-3 rounded-xl bg-brand-500 hover:bg-brand-400 text-black font-extrabold text-xs tracking-wider uppercase text-center transition-all duration-200 shadow-lg shadow-brand-500/25">
-            Lock Allocation Priority
-          </a>
-        </div>
-
-        <!-- Asset 3: Parkway Vistas Mansion (Dubai Hills Estate) -->
-        <div class="glass-card rounded-3xl p-6 flex flex-col justify-between border border-white/10 hover:border-emerald-500/40 transition-all duration-300 group">
-          <div class="space-y-4">
-            <div class="relative h-48 rounded-2xl bg-gradient-to-tr from-slate-900 via-slate-800 to-slate-700 overflow-hidden border border-white/10 flex items-center justify-center text-center p-4">
-              <div class="absolute inset-0 bg-brand-900/20 group-hover:bg-brand-900/10 transition-colors"></div>
-              <div class="relative z-10">
-                <span class="text-xs font-mono text-emerald-400 uppercase tracking-widest font-bold block mb-1">DUBAI HILLS ESTATE</span>
-                <h4 class="text-xl font-bold text-white">Parkway Vistas Mansion</h4>
-                <span class="text-xs text-slate-400 font-mono mt-1 block">Full Championship Golf View</span>
-              </div>
-              <div class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-gold-500/20 border border-gold-500/40 text-gold-300 text-[10px] font-mono font-bold">
-                10-YR VISA
-              </div>
-            </div>
-
-            <div>
-              <div class="flex justify-between items-baseline mb-2">
-                <span class="text-xs text-slate-400">Allocation Value:</span>
-                <span class="text-lg font-black text-white font-mono">AED 22,000,000</span>
-              </div>
-              <div class="flex justify-between items-baseline text-xs text-slate-400 pb-3 border-b border-surface-border">
-                <span>Payment Plan:</span>
-                <span class="font-mono text-emerald-400 font-semibold">80/20 on Handover</span>
-              </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
-              <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
-                <span class="text-slate-500 text-[10px] block">PROJ. NET YIELD</span>
-                <span class="text-emerald-400 font-bold">8.4% p.a.</span>
-              </div>
-              <div class="p-2.5 rounded-xl bg-surface-canvas/60 border border-white/5">
-                <span class="text-slate-500 text-[10px] block">INTERNAL RATE (IRR)</span>
-                <span class="text-emerald-400 font-bold">19.4%</span>
-              </div>
-            </div>
-          </div>
-
-          <a href="#booking" class="mt-6 w-full py-3 rounded-xl bg-surface-accent/60 hover:bg-emerald-500 hover:text-black text-slate-200 font-bold text-xs tracking-wider uppercase text-center transition-all duration-200 border border-white/10">
-            Request Full Prospectus
-          </a>
-        </div>
-
-      </div>
-    </section>
+          `;
+        }).join('')}
       </div>
     </section>
 
-    <!-- SECTION 5: Net Yield Matrix & Sovereign Tax Shield -->
+    <!-- SECTION 5: DIFC Common Law Asset Shielding & Generational Succession -->
+    <section class="glass-card rounded-3xl p-8 md:p-10 border-2 border-blue-500/30 relative overflow-hidden bg-gradient-to-br from-blue-950/30 via-surface-card to-surface-canvas space-y-6">
+      <div class="flex items-start space-x-5">
+        <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-700 p-0.5 shadow-xl shadow-blue-500/20 flex-shrink-0">
+          <div class="w-full h-full bg-slate-950 rounded-[14px] flex flex-col items-center justify-center p-2 text-center">
+            <svg class="w-6 h-6 text-blue-400 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            <span class="text-[7px] font-mono font-extrabold text-blue-400 uppercase tracking-tighter">DIFC LAW</span>
+          </div>
+        </div>
+        <div class="space-y-1.5">
+          <div class="inline-flex items-center space-x-2 text-blue-400 text-xs font-mono font-bold tracking-widest uppercase">
+            <span>🏛 DIFC COMMON LAW JURISDICTION & ASSET SHIELDING</span>
+          </div>
+          <h3 class="text-xl font-black text-white tracking-wide">
+            DIFC Special Purpose Vehicles (SPV) & Testamentary Wills
+          </h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            Assets held under DIFC Common Law structures are ring-fenced from international civil litigation and statutory forced heirship. DIFC Wills & Probate Registry guarantees 100% testamentary freedom and seamless multi-generational wealth succession.
+          </p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+        <div class="p-4 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+          <span class="text-xs font-bold text-white block">DIFC SPV / Prescribed Co.</span>
+          <span class="text-[11px] text-slate-400 block">Corporate veil holding real estate titles with zero commercial liability exposure.</span>
+        </div>
+        <div class="p-4 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+          <span class="text-xs font-bold text-white block">DIFC Wills & Probate</span>
+          <span class="text-[11px] text-slate-400 block">Full English Common Law probate registry ensuring zero delay and direct inheritance.</span>
+        </div>
+        <div class="p-4 rounded-xl bg-surface-canvas/60 border border-white/5 space-y-1">
+          <span class="text-xs font-bold text-white block">DIFC Family Foundation</span>
+          <span class="text-[11px] text-slate-400 block">Perpetual estate planning structure for family offices and sovereign estates.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION 6: Net Yield Matrix & Sovereign Tax Shield -->
     <section class="glass-card rounded-3xl p-8 md:p-12 border border-white/10 space-y-8">
       <div class="space-y-2">
         <span class="text-xs uppercase font-mono font-bold tracking-widest text-emerald-400 block">SOVEREIGN WEALTH PRESERVATION</span>

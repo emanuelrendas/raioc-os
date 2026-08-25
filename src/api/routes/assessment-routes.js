@@ -5,6 +5,7 @@
 
 import { diraRiisEngine } from '../../engines/dira-riis-engine.js';
 import { executiveBriefGenerator } from '../../engines/executive-brief.js';
+import { memorandumGenerator } from '../../engines/memorandum-generator.js';
 import { supabase } from '../../db/supabase-client.js';
 import { run_cycle } from '../../core/run-cycle.js';
 import { logger } from '../../logging/audit-logger.js';
@@ -23,6 +24,10 @@ export async function handleAssessmentSubmission(payload = {}, options = {}) {
       ai_maturity: payload.ai_maturity || payload.automation_level || 'manual',
       timeline: payload.timeline || payload.urgency || 'immediate',
       data_stack: payload.data_stack || payload.tech_stack || 'cloud',
+      capital_band: payload.capital_band || payload.budget || payload.budget_aed || '5M+',
+      budget_aed: payload.budget_aed || payload.budget || payload.capital_band || '5M+',
+      strategic_focus: payload.strategic_focus || payload.strategicFocus || 'off_plan_appreciation',
+      tax_jurisdiction: payload.tax_jurisdiction || payload.taxJurisdiction || 'INTERNATIONAL',
       status: 'pending',
       created_at: new Date().toISOString(),
     };
@@ -30,10 +35,19 @@ export async function handleAssessmentSubmission(payload = {}, options = {}) {
     // 1. Run IKL-backed DIRA & RIIS Intelligence Evaluation
     const intelligence = diraRiisEngine.analyze(leadRecord);
 
-    // 2. Generate Executive Brief
-    const brief = executiveBriefGenerator.generate(leadRecord, intelligence);
+    // 2. Generate Autonomous Institutional Investment Memorandum
+    const memorandum = memorandumGenerator.generate(leadRecord, intelligence);
 
-    // 3. Persist to Supabase Mock/Live Store
+    // 3. Generate Executive Brief
+    const brief = executiveBriefGenerator.generate(leadRecord, intelligence);
+    brief.memorandum = memorandum;
+    brief.memorandumId = memorandum.id;
+    brief.memorandumMarkdown = memorandum.markdown;
+    brief.matchingProjects = memorandum.matchingProjects;
+    brief.sections = memorandum.sections;
+    brief.budgetAed = memorandum.budgetAed;
+
+    // 4. Persist to Supabase Mock/Live Store
     if (db.isMock) {
       db.mockStore.leads.push(leadRecord);
     }
@@ -89,6 +103,7 @@ export async function handleAssessmentSubmission(payload = {}, options = {}) {
         persona: intelligence.persona,
         recommendedStrategy: intelligence.strategy,
         executiveBrief: brief,
+        memorandum: brief.memorandum,
         actionPlan: brief.actionPlan,
         iklVersion: intelligence.iklVersion,
       },
