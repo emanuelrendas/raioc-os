@@ -9,6 +9,124 @@ import { config } from '../config/env.js';
 import { logger } from '../logging/audit-logger.js';
 import { supabase } from '../db/supabase-client.js';
 
+/**
+ * Escapes raw HTML entities to prevent Telegram parse errors
+ * @param {string|null|undefined} text 
+ * @returns {string}
+ */
+export function escapeTelegramHtml(text) {
+  if (text === null || text === undefined) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Sanitizes an HTML string so that only Telegram-supported tags remain intact,
+ * and any unescaped rogue characters (<, >, &) that would break Telegram HTML parsing are escaped.
+ * @param {string|null|undefined} htmlText 
+ * @returns {string}
+ */
+export function sanitizeTelegramHtml(htmlText) {
+  if (htmlText === null || htmlText === undefined) return '';
+  const str = String(htmlText);
+
+  // Supported Telegram HTML tags:
+  // <b>, </b>, <strong>, </strong>, <i>, </i>, <em>, </em>, <u>, </u>, <ins>, </ins>,
+  // <s>, </s>, <strike>, </strike>, <del>, </del>, <span>, </span>, <tg-spoiler>, </tg-spoiler>,
+  // <a href="...">, </a>, <code>, </code>, <pre>, </pre>, <blockquote>, </blockquote>
+  const validTagRegex = /<\/?(?:b|strong|i|em|u|ins|s|strike|del|span|tg-spoiler|code|pre|blockquote)\b[^>]*>|<a\s+(?:href="[^"]*"|href='[^']*')[^>]*>|<\/a>/gi;
+  
+  const tokens = [];
+  const tokenized = str.replace(validTagRegex, (match) => {
+    const placeholder = `__TG_TAG_${tokens.length}__`;
+    tokens.push(match);
+    return placeholder;
+  });
+
+  // Escape raw ampersands not part of valid character entities
+  let sanitized = tokenized.replace(/&(?!(?:amp|lt|gt|quot|#\d+|#x[0-9a-fA-F]+);)/g, '&amp;');
+  // Escape raw < and >
+  sanitized = sanitized.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  // Restore valid tags
+  tokens.forEach((tag, idx) => {
+    sanitized = sanitized.replace(`__TG_TAG_${idx}__`, tag);
+  });
+
+  return sanitized;
+}
+
+/**
+ * Extracts and sanitizes Telegram-ready fields from payload data
+ * @param {string} event 
+ * @param {Object} payload 
+ * @param {string} correlationId 
+ * @returns {Object} Standardized Telegram payload fields
+ */
+export function extractTelegramFields(event, payload = {}, correlationId = '') {
+  const lead = payload.lead || payload.leadData || payload.data || payload;
+  const intelligence = payload.intelligence || {};
+  const brief = payload.brief || {};
+  const riis = intelligence.riis || brief.riis || {};
+  const dira = intelligence.dira || brief.dira || {};
+
+  // 1. Full name
+  const rawFullName = lead.name || lead.contactName || lead.full_name || payload.full_name || payload.name || 'Private Client';
+  const fullName = escapeTelegramHtml(rawFullName);
+
+  // 2. Budget formatted
+  let rawBudget = lead.budgetAed ?? payload.budgetAed ?? lead.budget_aed ?? payload.budget_aed;
+  let budgetFormatted = '';
+  if (rawBudget !== undefined && rawBudget !== null && !isNaN(Number(rawBudget)) && Number(rawBudget) > 0) {
+    budgetFormatted = `AED ${Number(rawBudget).toLocaleString()}`;
+  } else {
+    const fallbackBudget = lead.budget_formatted || payload.budget_formatted || lead.budget || payload.budget || 'AED 15,000,000+';
+    budgetFormatted = escapeTelegramHtml(fallbackBudget);
+  }
+
+  // 3. Message text
+  let messageText = '';
+  const providedText = payload.text || payload.message || lead.message || lead.notes;
+  if (providedText) {
+    messageText = sanitizeTelegramHtml(providedText);
+  } else if (event === 'QUALIFIED_LEAD' || event === 'LEAD_INGESTED') {
+    const company = escapeTelegramHtml(lead.company || lead.companyName || lead.company_name || 'Enterprise Candidate');
+    const email = escapeTelegramHtml(lead.email || lead.contactEmail || 'N/A');
+    const phone = escapeTelegramHtml(lead.phone || lead.contactPhone || lead.whatsapp || 'N/A');
+    const riisScore = riis.score !== undefined ? riis.score : (brief.riisScore || intelligence.score || 85);
+    const tierLabel = escapeTelegramHtml(riis.tierLabel || brief.diraTier || 'Institutional Tier');
+    const riskLevel = escapeTelegramHtml(dira.riskLevel || brief.diraRiskLevel || 'MODERATE');
+    const strategy = escapeTelegramHtml(intelligence.recommendedTrack || brief.strategyCode || lead.timeline || 'Immediate Deployment');
+
+    messageText = `🚀 <b>VIP NOTIFICATION: ${escapeTelegramHtml(event)}</b>\n\n` +
+      `👤 <b>Name:</b> ${fullName}\n` +
+      `🏢 <b>Company:</b> ${company}\n` +
+      `📧 <b>Email:</b> ${email}\n` +
+      `📱 <b>Phone:</b> ${phone}\n` +
+      `💰 <b>Budget:</b> ${budgetFormatted}\n` +
+      `📊 <b>RIIS Score:</b> <code>${riisScore}/100</code> (${tierLabel})\n` +
+      `🛡️ <b>DIRA Risk:</b> <code>${riskLevel}</code>\n` +
+      `⚡ <b>Recommended Track:</b> ${strategy}\n` +
+      `🆔 <b>Correlation ID:</b> <code>${escapeTelegramHtml(correlationId)}</code>`;
+  } else {
+    messageText = `📢 <b>RAIOC EVENT: ${escapeTelegramHtml(event)}</b>\n\n` +
+      `👤 <b>Lead:</b> ${fullName}\n` +
+      `💰 <b>Budget:</b> ${budgetFormatted}\n` +
+      `🆔 <b>Correlation ID:</b> <code>${escapeTelegramHtml(correlationId)}</code>`;
+  }
+
+  return {
+    text: messageText,
+    message: messageText,
+    full_name: fullName,
+    budget_formatted: budgetFormatted,
+    parse_mode: 'HTML',
+  };
+}
+
 export class N8nAdapter {
   constructor(options = {}) {
     this.webhookUrl = options.webhookUrl || process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || config.n8n?.webhookUrl || '';
@@ -44,11 +162,18 @@ export class N8nAdapter {
     const timestamp = new Date().toISOString();
     const correlationId = options.correlationId || payload.correlationId || `corr_n8n_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
+    const tgFields = extractTelegramFields(event, payload, correlationId);
+
     const eventPayload = {
       event,
       timestamp,
       correlationId,
       source: 'raioc-os',
+      text: tgFields.text,
+      message: tgFields.message,
+      full_name: tgFields.full_name,
+      budget_formatted: tgFields.budget_formatted,
+      parse_mode: tgFields.parse_mode,
       data: payload,
     };
 

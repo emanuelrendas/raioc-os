@@ -318,4 +318,51 @@ describe('INTEGRATION: n8n Webhook Egress & Telegram VIP Bridge', () => {
     assert.ok(telegramMessageText.includes('Sheikh Hamdan Bin Mohammed'));
     assert.ok(telegramMessageText.includes('Dubai Future Investments'));
   });
+
+  // --- 6. Standardized Telegram Keys & HTML Sanitization ---
+
+  test('6. n8n payload always includes standardized keys (text, message, full_name, budget_formatted, parse_mode: HTML) and sanitizes raw HTML', async () => {
+    let capturedBody = null;
+    process.env.N8N_OUTBOUND_SECRET = 'test_sanitize_secret_123';
+    process.env.N8N_OUTBOUND_WEBHOOK_URL = 'https://n8n.emanuelrendas.com/webhook/test-sanitize';
+
+    globalThis.fetch = async (url, opts) => {
+      capturedBody = JSON.parse(opts.body);
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ status: 'OK' }),
+      };
+    };
+
+    // Test with unescaped raw HTML (e.g. angle brackets, unescaped ampersand, unclosed tags)
+    const rawPayload = {
+      name: 'Count Maximillian & Co <Investor>',
+      budgetAed: 28000000,
+      message: 'Looking for yield > 8% & < 10% in Palm Jumeirah <b>luxury</b> developments <script>alert(1)</script>',
+      company: 'Global Capital <AG>',
+    };
+
+    const outcome = await dispatchN8nEvent('QUALIFIED_LEAD', rawPayload);
+
+    assert.strictEqual(outcome.success, true);
+    assert.ok(capturedBody);
+    
+    // Check top-level standardized fields
+    assert.strictEqual(capturedBody.parse_mode, 'HTML');
+    assert.strictEqual(capturedBody.full_name, 'Count Maximillian &amp; Co &lt;Investor&gt;');
+    assert.strictEqual(capturedBody.budget_formatted, 'AED 28,000,000');
+    assert.ok(typeof capturedBody.text === 'string');
+    assert.ok(typeof capturedBody.message === 'string');
+    assert.strictEqual(capturedBody.text, capturedBody.message);
+
+    // Verify raw dangerous/unsupported HTML tags and unescaped brackets are sanitized
+    assert.ok(!capturedBody.text.includes('<script>'));
+    assert.ok(!capturedBody.text.includes('</script>'));
+    assert.ok(capturedBody.text.includes('&lt;script&gt;alert(1)&lt;/script&gt;'));
+    assert.ok(capturedBody.text.includes('&gt; 8% &amp; &lt; 10%'));
+    // Valid Telegram <b> tag is preserved
+    assert.ok(capturedBody.text.includes('<b>luxury</b>'));
+  });
 });
+
