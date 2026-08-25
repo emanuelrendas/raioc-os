@@ -1,0 +1,102 @@
+[
+  {
+    "id": "macro_dwc_dubai_south",
+    "corridor_name": "Dubai South / DWC Aviation Megahub",
+    "region": "Dubai",
+    "master_developers": ["Emaar Properties", "Dubai South Aviation City"],
+    "anchor_catalyst": "Al Maktoum International Airport (DWC) $35B expansion (260M passenger annual capacity)",
+    "time_horizon": "2026 - 2034",
+    "investment_thesis": "Global supply chain center of gravity and the largest airport in the world driving exponential residential and logistics land value appreciation.",
+    "key_projects": [
+      {
+        "id": "proj_macro_emaar_south",
+        "name": "Greenway at Emaar South",
+        "developer": "Emaar Properties",
+        "starting_price_aed": 3200000,
+        "starting_price_usd": 871250,
+        "projected_yield_pct": 8.5,
+        "tier": "TIER_MACRO_INFRASTRUCTURE_ALPHA"
+      }
+    ]
+  },
+  {
+    "id": "macro_palm_jebel_ali",
+    "corridor_name": "Palm Jebel Ali Sovereign Waterfront",
+    "region": "Dubai",
+    "master_developers": ["Nakheel", "Dubai Holding"],
+    "anchor_catalyst": "110km of new pristine coastline, doubling Dubai's ultra-luxury beach frontage with 80+ planned luxury hotels",
+    "time_horizon": "2026 - 2030",
+    "investment_thesis": "Scarcity of prime beachfront real estate in Dubai makes Palm Jebel Ali the definitive multi-decade capital preservation play for sovereign wealth and ultra-HNW allocators.",
+    "key_projects": [
+      {
+        "id": "proj_macro_palm_jebel_ali",
+        "name": "Palm Jebel Ali Beach Collection",
+        "developer": "Nakheel",
+        "starting_price_aed": 18500000,
+        "starting_price_usd": 5037440,
+        "projected_yield_pct": 7.5,
+        "tier": "TIER_MACRO_INFRASTRUCTURE_ALPHA"
+      }
+    ]
+  },
+  {
+    "id": "macro_saadiyat_abu_dhabi",
+    "corridor_name": "Saadiyat Cultural District (Abu Dhabi)",
+    "region": "Abu Dhabi",
+    "master_developers": ["Aldar Properties", "DCT Abu Dhabi"],
+    "anchor_catalyst": "Global cultural concentration: Louvre Abu Dhabi, Guggenheim Abu Dhabi, Zayed National Museum, and Natural History Museum",
+    "time_horizon": "2025 - 2029",
+    "investment_thesis": "Sovereign-backed cultural capital attracting family offices, ultra-wealthy permanent residents, and prime international capital seeking tax-neutral haven status.",
+    "key_projects": [
+      {
+        "id": "proj_macro_saadiyat_lagoons",
+        "name": "Saadiyat Lagoons & Cultural Enclave",
+        "developer": "Aldar Properties",
+        "starting_price_aed": 6800000,
+        "starting_price_usd": 1851600,
+        "projected_yield_pct": 7.8,
+        "tier": "TIER_MACRO_INFRASTRUCTURE_ALPHA"
+      }
+    ]
+  },
+  {
+    "id": "macro_al_marjan_rak",
+    "corridor_name": "Al Marjan Island (Ras Al Khaimah)",
+    "region": "Ras Al Khaimah",
+    "master_developers": ["Marjan", "Wynn Resorts", "RAK Properties"],
+    "anchor_catalyst": "$3.9B Wynn Al Marjan Island Integrated Gaming Resort (first regulated gaming in GCC)",
+    "time_horizon": "2025 - 2028",
+    "investment_thesis": "Unprecedented hospitality and tourism catalyst transforming RAK into the Monaco of the Middle East, generating peak short-term yields and steep capital growth.",
+    "key_projects": [
+      {
+        "id": "proj_macro_al_marjan_wynn",
+        "name": "Al Marjan Wynn Gaming Enclave",
+        "developer": "Marjan / RAK Properties",
+        "starting_price_aed": 2400000,
+        "starting_price_usd": 653500,
+        "projected_yield_pct": 9.2,
+        "tier": "TIER_MACRO_INFRASTRUCTURE_ALPHA"
+      }
+    ]
+  },
+  {
+    "id": "macro_creek_harbour_expansion",
+    "corridor_name": "Dubai Creek Harbour & Blue Line Corridor",
+    "region": "Dubai",
+    "master_developers": ["Emaar Properties", "RTA"],
+    "anchor_catalyst": "Dubai Metro Blue Line direct infrastructure connectivity & 7.4M sqm master-developed downtown expansion",
+    "time_horizon": "2026 - 2029",
+    "investment_thesis": "Emaar's flagship future downtown with pedestrian promenades, marine transport, and rapid transport links to DXB and Downtown Dubai.",
+    "key_projects": [
+      {
+        "id": "proj_macro_creek_waters",
+        "name": "Creek Waters & Island Promenade",
+        "developer": "Emaar Properties",
+        "starting_price_aed": 2100000,
+        "starting_price_usd": 571800,
+        "projected_yield_pct": 8.8,
+        "tier": "TIER_MACRO_INFRASTRUCTURE_ALPHA"
+      }
+    ]
+  }
+]

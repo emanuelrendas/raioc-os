@@ -70,20 +70,30 @@ export class MemorandumGenerator {
     const all = [...this.projects];
     if (all.length === 0) return [];
 
-    // High budget (>= 15M AED): Ultra-prime Palm Jumeirah & Forest Mansions
+    // Macro infrastructure focus or macro corridor matching
+    if (strategicFocus === 'macro_infrastructure_growth' || strategicFocus === 'macro_growth_corridors') {
+      const macro = all.filter((p) => p.tier === 'TIER_MACRO_INFRASTRUCTURE_ALPHA');
+      if (macro.length > 0) {
+        if (budgetAed >= 15000000) return macro.filter((p) => p.starting_price_aed >= 10000000).concat(macro.slice(0, 2));
+        if (budgetAed >= 5000000) return macro.filter((p) => p.starting_price_aed >= 3000000).concat(macro.slice(0, 2));
+        return macro.filter((p) => p.starting_price_aed <= 5000000).concat(macro.slice(0, 2));
+      }
+    }
+
+    // High budget (>= 15M AED): Ultra-prime Palm Jumeirah, Palm Jebel Ali & Forest Mansions
     if (budgetAed >= 15000000) {
-      const prime = all.filter((p) => p.tier === 'SOVEREIGN_ULTRA_PRIME' || p.starting_price_aed >= 15000000);
+      const prime = all.filter((p) => p.tier === 'SOVEREIGN_ULTRA_PRIME' || p.tier === 'TIER_MACRO_INFRASTRUCTURE_ALPHA' || p.starting_price_aed >= 15000000);
       return prime.length > 0 ? prime : all.slice(0, 3);
     }
 
-    // Mid budget (5M to 15M AED): Balanced Waterfront & Branded Hospitality
+    // Mid budget (5M to 15M AED): Balanced Waterfront & Branded Hospitality & Saadiyat
     if (budgetAed >= 5000000) {
-      const mid = all.filter((p) => (p.tier === 'WATERFRONT_CAPITAL' || p.tier === 'BRANDED_HOSPITALITY' || p.starting_price_aed >= 2000000));
+      const mid = all.filter((p) => (p.tier === 'WATERFRONT_CAPITAL' || p.tier === 'BRANDED_HOSPITALITY' || p.tier === 'TIER_MACRO_INFRASTRUCTURE_ALPHA' || p.starting_price_aed >= 2000000));
       return mid.length > 0 ? mid : all.slice(0, 3);
     }
 
-    // Standard budget (<= 5M AED): High-yield growth corridors (Dubai Hills, Dubai Creek)
-    const standard = all.filter((p) => p.starting_price_aed <= 2500000);
+    // Standard budget (<= 5M AED): High-yield growth corridors (Dubai Hills, Dubai Creek, Emaar South, RAK)
+    const standard = all.filter((p) => p.starting_price_aed <= 3500000);
     return standard.length > 0 ? standard : all.slice(0, 3);
   }
 
