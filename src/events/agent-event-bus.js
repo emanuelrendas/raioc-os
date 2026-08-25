@@ -28,6 +28,7 @@ export const AgentEvents = {
   CRM_SYNCED: 'crm:synced',
   MEETING_SCHEDULED: 'meeting:scheduled',
   CYCLE_AUDITED: 'cycle:audited',
+  TELEGRAM_MESSAGE_SENT: 'telegram:message:sent',
 };
 
 export class AgentEventBus {

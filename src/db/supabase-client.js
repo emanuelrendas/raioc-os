@@ -629,6 +629,77 @@ export class SupabaseClient {
     }
   }
 
+  async recordCommunication(comm) {
+    const record = {
+      id: comm.id || `comm_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      type: comm.type || 'telegram',
+      recipient: comm.recipient,
+      message: comm.message,
+      correlation_id: comm.correlationId || comm.correlation_id || null,
+      status: comm.status || 'SENT',
+      message_id: comm.messageId || comm.message_id || null,
+      metadata: comm.metadata || {},
+      created_at: comm.timestamp || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      if (!this.mockStore.communications) this.mockStore.communications = [];
+      this.mockStore.communications.unshift(record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/communications`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : null;
+    } catch (err) {
+      return record;
+    }
+  }
+
+  async recordAuditLog(log) {
+    const record = {
+      id: log.id || `audit_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      category: log.category || 'SYSTEM',
+      action: log.action || 'EVENT',
+      entity_id: log.entityId || log.entity_id || null,
+      message: log.message,
+      correlation_id: log.correlationId || log.correlation_id || null,
+      metadata: log.metadata || {},
+      created_at: log.timestamp || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      if (!this.mockStore.audit_logs) this.mockStore.audit_logs = [];
+      this.mockStore.audit_logs.unshift(record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/audit_log`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : null;
+    } catch (err) {
+      return record;
+    }
+  }
+
   getOperationalStoreSnapshot() {
     return {
       agents: Array.from(this.mockStore.agent_status.values()),
@@ -636,6 +707,8 @@ export class SupabaseClient {
       executions: Array.from(this.mockStore.executions.values()),
       workflows: Array.from(this.mockStore.workflow_runs.values()),
       notifications: this.mockStore.notifications,
+      communications: this.mockStore.communications || [],
+      auditLogs: this.mockStore.audit_logs || [],
     };
   }
 }

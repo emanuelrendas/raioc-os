@@ -24,6 +24,7 @@ import { googleCalendarClient } from './integrations/google/calendar-client.js';
 import { whatsAppBusinessClient } from './integrations/whatsapp/whatsapp-business-client.js';
 import { crmSyncClient } from './integrations/crm/crm-sync-client.js';
 import { n8nWebhookClient } from './integrations/n8n/n8n-webhook-client.js';
+import { telegramClient, sendTelegramMessage } from './connectors/telegram-client.js';
 import { gitHubClient } from './integrations/github/github-client.js';
 import { vercelClient } from './integrations/vercel/vercel-client.js';
 import { openAiClient } from './integrations/openai/openai-client.js';
@@ -94,6 +95,8 @@ export {
   whatsAppBusinessClient,
   crmSyncClient,
   n8nWebhookClient,
+  telegramClient,
+  sendTelegramMessage,
   gitHubClient,
   vercelClient,
   openAiClient,

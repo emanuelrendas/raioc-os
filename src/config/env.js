@@ -94,8 +94,14 @@ export const config = {
     webhookSecret: process.env.N8N_WEBHOOK_SECRET || 'raioc_n8n_hmac_secret',
     timeoutMs: parseInt(process.env.N8N_TIMEOUT_MS || '10000', 10),
   },
+  telegram: {
+    enabled: process.env.TELEGRAM_ENABLED !== 'false',
+    botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    chatId: process.env.TELEGRAM_CHAT_ID || '',
+    timeoutMs: parseInt(process.env.TELEGRAM_TIMEOUT_MS || '10000', 10),
+  },
   telemetry: {
-    enabled: process.env.TELEMETRY_ENABLED !== 'false',
+    enabled: process.env.TELEGRAM_ENABLED !== 'false',
     flushIntervalMs: parseInt(process.env.TELEMETRY_FLUSH_INTERVAL_MS || '10000', 10),
     apmSampleRate: parseFloat(process.env.APM_SAMPLE_RATE || '1.0'),
   },
