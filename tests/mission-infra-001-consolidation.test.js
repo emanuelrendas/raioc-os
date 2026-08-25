@@ -1,4 +1,4 @@
-﻿import fs from 'node:fs';
+import fs from 'node:fs';
 import path from 'node:path';
 import { describe, test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -82,8 +82,8 @@ describe('MISSION INFRA-001 — Consolidated Website + Serverless + Backend Veri
     assert.ok(Array.isArray(v.headers), 'headers must be an array');
 
     const dashboardRewrite = v.rewrites.find(r => r.source === '/dashboard');
-    assert.ok(dashboardRewrite, 'Must have /dashboard rewrite to /api/index.js');
-    assert.strictEqual(dashboardRewrite.destination, '/api/index.js');
+    assert.ok(dashboardRewrite, 'Must have /dashboard rewrite to /api/dashboard.js');
+    assert.strictEqual(dashboardRewrite.destination, '/api/dashboard.js');
   });
 
   test('5. Execute serverless handlers locally with mock requests', async () => {
@@ -125,12 +125,28 @@ describe('MISSION INFRA-001 — Consolidated Website + Serverless + Backend Veri
     assert.strictEqual(rStatus._get().status, 200);
     assert.strictEqual(rStatus._get().body.runtimeStatus, 'OPERATIONAL');
 
-    // Index -> /dashboard
+    // 6. Dedicated api/dashboard.js -> serves Command Center UI
+    const dashMod = await import('../api/dashboard.js');
+    const rDashDirect = mockRes();
+    await dashMod.default({ method: 'GET', headers: {} }, rDashDirect);
+    assert.strictEqual(rDashDirect._get().status, 200);
+    assert.ok(typeof rDashDirect._get().body === 'string');
+    assert.ok(rDashDirect._get().body.includes('Command Center') || rDashDirect._get().body.includes('RAIOC'));
+
+    // 7. api/index.js on '/' -> MUST serve index.html (public website), NEVER the dashboard
     const indexMod = await import('../api/index.js');
-    const rDash = mockRes();
-    await indexMod.default({ url: '/dashboard', method: 'GET', headers: {} }, rDash);
-    assert.strictEqual(rDash._get().status, 200);
-    assert.ok(typeof rDash._get().body === 'string');
-    assert.ok(rDash._get().body.includes('Command Center') || rDash._get().body.includes('RAIOC'));
+    const rRoot = mockRes();
+    await indexMod.default({ url: '/', method: 'GET', headers: {} }, rRoot);
+    assert.strictEqual(rRoot._get().status, 200);
+    assert.ok(typeof rRoot._get().body === 'string');
+    assert.ok(rRoot._get().body.includes('Emanuel Rendas — Private Real Estate Advisory'), 'Root / must be the public website');
+    assert.ok(!rRoot._get().body.includes('Command Center UI') && !rRoot._get().body.includes('RAIOC COMMAND CENTER'), 'Root / must NOT be the dashboard');
+
+    // 8. api/index.js on '/dashboard' -> serves Command Center UI
+    const rDashViaIndex = mockRes();
+    await indexMod.default({ url: '/dashboard', method: 'GET', headers: {} }, rDashViaIndex);
+    assert.strictEqual(rDashViaIndex._get().status, 200);
+    assert.ok(typeof rDashViaIndex._get().body === 'string');
+    assert.ok(rDashViaIndex._get().body.includes('Command Center') || rDashViaIndex._get().body.includes('RAIOC'));
   });
 });

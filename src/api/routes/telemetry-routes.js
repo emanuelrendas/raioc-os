@@ -528,7 +528,7 @@ export async function handleTelemetryRequest(path, context = {}) {
   }
 
   // 4. Executive Command Center UI (HTML)
-  if (path === '/' || path === '/dashboard' || path === '/api/dashboard/ui') {
+  if (path === '/dashboard' || path === '/api/dashboard/ui') {
     return {
       status: 200,
       headers: { 'Content-Type': 'text/html' },
@@ -537,7 +537,7 @@ export async function handleTelemetryRequest(path, context = {}) {
   }
 
   // 5. Full Executive Dashboard Snapshot (JSON)
-  if (normalized === 'overview' || normalized === '') {
+  if (normalized === 'overview' || normalized === 'status') {
     return {
       status: 200,
       body: executiveDashboard.getDashboardData(),
