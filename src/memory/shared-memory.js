@@ -125,6 +125,10 @@ export class SharedMemory {
     return entry;
   }
 
+  logConversationMessage(payload = {}) {
+    return this.recordMessage(payload.sender, payload.recipient, payload.message, payload.correlationId);
+  }
+
   getConversationHistory(filter = {}) {
     let result = [...this.conversationHistory];
     if (filter.correlationId) {
