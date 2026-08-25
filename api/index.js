@@ -18,7 +18,7 @@ export default async function handler(req, res) {
   const query = req.query || {};
   const method = req.method || 'GET';
   const body = req.body || {};
-  const host = (headers.host || headers['x-forwarded-host'] || '').toLowerCase();
+  const host = (headers['x-forwarded-host'] || headers.host || '').toLowerCase();
 
   // Extract and normalize incoming requested URL from query parameter, route matches, or headers
   let url = query.__path || headers['x-matched-path'] || req.url || '/';
@@ -60,20 +60,22 @@ export default async function handler(req, res) {
 
   // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard'
   if (host.includes('dashboard') || url === '/dashboard' || url === '/dashboard/' || url === '/dashboard.html' || url === '/api/dashboard/ui') {
-    let dashHtml = '';
-    try {
-      const candidates = [
-        path.resolve('public/dashboard.html'),
-        path.resolve('dashboard.html'),
-      ];
-      for (const p of candidates) {
-        if (fs.existsSync(p)) {
-          dashHtml = fs.readFileSync(p, 'utf8');
-          break;
+    let dashHtml = (sitePages && sitePages.dashboard) ? sitePages.dashboard : '';
+    if (!dashHtml) {
+      try {
+        const candidates = [
+          path.resolve('public/dashboard.html'),
+          path.resolve('dashboard.html'),
+        ];
+        for (const p of candidates) {
+          if (fs.existsSync(p)) {
+            dashHtml = fs.readFileSync(p, 'utf8');
+            break;
+          }
         }
+      } catch {
+        // fallback
       }
-    } catch {
-      // fallback
     }
     if (!dashHtml) {
       dashHtml = renderCommandCenterHtml();
