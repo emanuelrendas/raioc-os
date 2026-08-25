@@ -72,7 +72,7 @@ export class PropertyCalculators {
    * @returns {Object} Golden Visa qualification assessment with IKL provenance
    */
   calculateGoldenVisaEligibility(params = {}) {
-    const equity = Number(params.totalPropertyEquityAed || params.equity || 0);
+    const equity = Number(params.totalPropertyEquityAed || params.equity || params.propertyValue || params.purchasePrice || params.propertyValueAed || params.purchasePriceAed || 0);
     const propertyCount = Number(params.propertyCount || 1);
 
     // Fetch statutory Golden Visa regulation from IKL

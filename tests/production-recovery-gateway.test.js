@@ -201,4 +201,38 @@ describe('PRODUCTION RECOVERY: 100% Endpoint Verification via Single Gateway (ap
     assert.ok(typeof out.body === 'string');
     assert.ok(out.body.includes('Emanuel Rendas — Private Real Estate Advisory'));
   });
+
+  test('19. AI Tool: /api/opal/roi', async () => {
+    const res = createMockRes();
+    const payload = { purchasePriceAed: 28000000, unitSizeSqft: 4500, expectedAnnualRentAed: 2100000, serviceChargePerSqft: 22 };
+    await handler({ url: '/api/opal/roi', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.success, true);
+    assert.strictEqual(out.body.statutoryShield.goldenVisaEligible, true);
+    assert.strictEqual(out.body.statutoryShield.goldenVisaThresholdAed, 2000000);
+    assert.ok(out.body.financialMetrics.netYieldPct);
+  });
+
+  test('20. AI Tool: /api/mixboard/board', async () => {
+    const res = createMockRes();
+    const payload = { budgetAed: 20000000, clientName: 'Count Maximillian von Bern' };
+    await handler({ url: '/api/mixboard/board', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.success, true);
+    assert.ok(out.body.moodboard.heroImage);
+    assert.ok(out.body.moodboard.curatedAssets.length > 0);
+  });
+
+  test('21. AI Tool: /api/flow/teaser', async () => {
+    const res = createMockRes();
+    const payload = { budgetAed: 25000000, projectName: 'Como Residences' };
+    await handler({ url: '/api/flow/teaser', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.success, true);
+    assert.ok(out.body.videoReel.videoUrl);
+    assert.ok(out.body.directWhatsAppBookingUrl);
+  });
 });

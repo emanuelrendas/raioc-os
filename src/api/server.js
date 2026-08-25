@@ -15,6 +15,7 @@ import { handleDldRequest } from './routes/dld-routes.js';
 import { handleFxRequest } from './routes/fx-routes.js';
 import { handleEventRequest } from './routes/event-routes.js';
 import { handleIntakeRequest } from './routes/intake-routes.js';
+import { handleAiToolsRequest } from './routes/ai-tools-routes.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
 import { supabase } from '../db/supabase-client.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
@@ -73,19 +74,23 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/calculators')) {
       response = await handleCalculatorRequest(url, body);
     }
-    // 8. Assessment Submission
+    // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow)
+    else if (url.startsWith('/api/opal') || url.startsWith('/api/mixboard') || url.startsWith('/api/flow')) {
+      response = await handleAiToolsRequest(url, method, body);
+    }
+    // 9. Assessment Submission
     else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {
       response = await handleAssessmentSubmission(body);
     }
-    // 9. Lead Submission
+    // 10. Lead Submission
     else if (url.startsWith('/api/lead') || url.startsWith('/api/brief')) {
       response = await handleLeadSubmission(body);
     }
-    // 10. Webhook Endpoints (n8n & WhatsApp)
+    // 11. Webhook Endpoints (n8n & WhatsApp)
     else if (url.startsWith('/api/webhooks')) {
       response = await handleWebhookRequest(url, method, body, query, headers);
     }
-    // 11. Shared Agent API
+    // 12. Shared Agent API
     else if (url.startsWith('/api/agents')) {
       response = await handleAgentRequest(url, method, body, headers);
     } else {

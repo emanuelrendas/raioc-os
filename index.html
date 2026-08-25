@@ -413,11 +413,11 @@
       </p>
     </div>
 
-    <!-- Verified Manus Off-Plan Projects Grid -->
+    <!-- Verified Manus Off-Plan Projects Grid (Clickable Dossier Modals) -->
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;margin:40px 0 48px;">
       
       <!-- Rosehill by Emaar -->
-      <div style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-col;justify-content:space-between;transition:border-color 0.2s;">
+      <div onclick="openProjectDossier('rosehill')" style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;cursor:pointer;" onmouseover="this.style.borderColor='#10B981';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">EMAAR PROPERTIES</span>
@@ -441,7 +441,7 @@
       </div>
 
       <!-- Como Residences by Nakheel -->
-      <div style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-col;justify-content:space-between;transition:border-color 0.2s;">
+      <div onclick="openProjectDossier('como')" style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;cursor:pointer;" onmouseover="this.style.borderColor='#10B981';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">NAKHEEL</span>
@@ -465,7 +465,7 @@
       </div>
 
       <!-- Armani Beach Residences by Arada -->
-      <div style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-col;justify-content:space-between;transition:border-color 0.2s;">
+      <div onclick="openProjectDossier('armani')" style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;cursor:pointer;" onmouseover="this.style.borderColor='#10B981';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">ARADA</span>
@@ -489,7 +489,7 @@
       </div>
 
       <!-- Sobha Estates by Sobha Realty -->
-      <div style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-col;justify-content:space-between;transition:border-color 0.2s;">
+      <div onclick="openProjectDossier('sobha')" style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:18px;padding:24px;display:flex;flex-direction:column;justify-content:space-between;transition:all 0.25s ease;cursor:pointer;" onmouseover="this.style.borderColor='#10B981';this.style.transform='translateY(-3px)'" onmouseout="this.style.borderColor='#1E293B';this.style.transform='translateY(0)'">
         <div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
             <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">SOBHA REALTY</span>
@@ -512,6 +512,14 @@
         </div>
       </div>
 
+    </div>
+
+    <!-- Project Dossier Interactive Modal Container -->
+    <div id="project-dossier-modal" style="display:none;position:fixed;inset:0;background:rgba(5,6,8,0.85);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeProjectDossier()">
+      <div style="background:#0B0F17;border:1px solid #1E293B;border-radius:24px;max-width:680px;width:100%;max-height:90vh;overflow-y:auto;padding:32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);position:relative;">
+        <button onclick="closeProjectDossier()" style="position:absolute;top:20px;right:20px;background:rgba(30,41,59,0.6);border:1px solid #334155;color:#94A3B8;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+        <div id="project-dossier-content"></div>
+      </div>
     </div>
 
     <!-- Statutory Protection Trust Grid -->
@@ -733,6 +741,122 @@
 
 <script src="/assets/site.js?v=20260823c" defer></script>
 <script src="/assets/dira.js?v=20260823c" defer></script>
+<script>
+  const PROJECT_DOSSIERS = {
+    rosehill: {
+      name: 'Rosehill',
+      developer: 'Emaar Properties',
+      community: 'Dubai Hills Estate',
+      startingPriceAed: 'AED 1,650,000',
+      startingPriceUsd: '$449,250 USD',
+      netYield: '8.3% Net p.a. (Audited post-Mollak)',
+      handover: 'Q4 2028 · 80/20 Staged Plan',
+      visaStatus: 'Eligible with portfolio aggregation (AED 2,000,000 threshold)',
+      escrow: 'Law No. (8) of 2007 (100% Trust Account + 5% 1-Yr Retention)',
+      description: 'Prime park-facing residential tower located within Dubai Hills Estate masterplan. High rental occupancy zone with rapid institutional liquidity.',
+      heroImg: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0'
+    },
+    como: {
+      name: 'Como Residences',
+      developer: 'Nakheel',
+      community: 'Palm Jumeirah Trunk',
+      startingPriceAed: 'AED 21,000,000',
+      startingPriceUsd: '$5,718,000 USD',
+      netYield: '7.6% Net p.a. (Audited post-Mollak)',
+      handover: 'Q3 2027 · 80/20 Payment Structure',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'Law No. (8) of 2007 (100% Trust Account + 10-Yr Decennial Liability Art. 880)',
+      description: 'Sovereign 71-storey organic architectural landmark offering 360-degree Arabian Gulf panoramas, private elevator access, and multi-generational wealth ring-fencing.',
+      heroImg: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0'
+    },
+    armani: {
+      name: 'Armani Beach Residences',
+      developer: 'Arada',
+      community: 'Palm Jumeirah Crescent',
+      startingPriceAed: 'AED 25,000,000',
+      startingPriceUsd: '$6,807,000 USD',
+      netYield: '6.5% Net p.a. (Audited post-Mollak)',
+      handover: 'Q4 2026 · 60/40 Payment Plan',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'Law No. (8) of 2007 (100% Trust Account + 5% Retention Guarantee)',
+      description: 'Bespoke Tadao Ando architectural masterpiece on the Eastern Crescent of Palm Jumeirah. Fully branded Armani/Casa interiors with ultra-exclusive private beach access.',
+      heroImg: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/gU66dF31gM0?autoplay=0&rel=0'
+    },
+    sobha: {
+      name: 'Sobha Estates',
+      developer: 'Sobha Realty',
+      community: 'Sobha Hartland II',
+      startingPriceAed: 'AED 22,500,000',
+      startingPriceUsd: '$6,126,000 USD',
+      netYield: '7.2% Net p.a. (Audited post-Mollak)',
+      handover: 'Q2 2026 · 60/40 Handover Structure',
+      visaStatus: '10-Year Renewable Golden Visa (Cabinet Res. 65/2022 Qualified)',
+      escrow: 'Law No. (8) of 2007 (100% Trust Account + 10-Yr Structural Warranty)',
+      description: 'Ultra-exclusive gated sanctuary of bespoke villas set within a private forest lagoon master development 10 minutes from Downtown Dubai and DIFC.',
+      heroImg: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+      videoUrl: 'https://www.youtube-nocookie.com/embed/5a2X4P3M0bQ?autoplay=0&rel=0'
+    }
+  };
+
+  function openProjectDossier(id) {
+    const p = PROJECT_DOSSIERS[id];
+    if (!p) return;
+    const content = document.getElementById('project-dossier-content');
+    content.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
+        <div>
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${p.developer} · ${p.community}</span>
+          <h2 style="color:#FFFFFF;font-size:26px;font-weight:800;margin:4px 0 6px;">${p.name}</h2>
+          <p style="color:#94A3B8;font-size:13px;line-height:1.5;">${p.description}</p>
+        </div>
+      </div>
+      
+      <div style="border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #1E293B;">
+        <img src="${p.heroImg}" alt="${p.name}" style="width:100%;height:220px;object-fit:cover;display:block;">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:11px;">
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">ENTRY TICKET</span>
+          <strong style="color:#FFFFFF;font-size:14px;">${p.startingPriceAed}</strong>
+          <span style="color:#64748B;display:block;font-size:10px;">${p.startingPriceUsd}</span>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">AUDITED NET YIELD</span>
+          <strong style="color:#10B981;font-size:14px;">${p.netYield}</strong>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">HANDOVER TIMELINE</span>
+          <strong style="color:#CBD5E1;font-size:12px;">${p.handover}</strong>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">STATUTORY RESIDENCY</span>
+          <strong style="color:#F59E0B;font-size:12px;">${p.visaStatus}</strong>
+        </div>
+      </div>
+
+      <div style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px;margin-bottom:20px;font-size:12px;color:#CBD5E1;line-height:1.6;">
+        <strong style="color:#10B981;">🛡️ Statutory Guarantee:</strong> ${p.escrow}
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <a href="https://wa.me/971543871702?text=${encodeURIComponent('Hello Emanuel — I am inquiring about priority allocation terms for ' + p.name + ' (' + p.developer + ').')}" target="_blank" rel="noopener" class="btn btn-solid" style="flex:1;justify-content:center;font-size:13px;">
+          Request Priority Allocation on WhatsApp
+        </a>
+      </div>
+    `;
+    const modal = document.getElementById('project-dossier-modal');
+    modal.style.display = 'flex';
+  }
+
+  function closeProjectDossier() {
+    const modal = document.getElementById('project-dossier-modal');
+    modal.style.display = 'none';
+  }
+</script>
 
 </body>
 </html>
