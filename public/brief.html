@@ -1,90 +1,10 @@
-/**
- * RAIOC OS - Dynamic Executive Brief Public Viewer (Landing Page Generator)
- * Renders an institutional, dark-mode, high-converting public viewer for executive briefs at /brief/:id.
- * Aesthetic: #0B0F17 deep luxury canvas, #10B981 emerald accents, and #F59E0B gold Golden Visa badge.
- */
-
-/**
- * Escapes HTML entities
- */
-function escapeHtml(text) {
-  if (text === null || text === undefined) return '';
-  return String(text)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-/**
- * Compiles and renders the complete standalone HTML page for an Executive Brief
- * @param {Object} briefRecord - Executive Brief database record or generator output
- * @returns {string} Full HTML document string
- */
-export function renderExecutiveBriefHtml(briefRecord = {}) {
-  const payload = briefRecord.raw_payload || briefRecord;
-  const briefId = briefRecord.id || payload.id || `brief_${Date.now()}`;
-  const leadId = briefRecord.lead_id || payload.leadId || 'N/A';
-  const companyName = briefRecord.company_name || payload.companyName || payload.company || 'Private Sovereign Client';
-  const contactName = payload.contactName || payload.name || payload.contact_name || companyName;
-  const contactEmail = payload.contactEmail || payload.email || 'confidential@sovereign-advisory.ae';
-  const contactPhone = payload.contactPhone || payload.phone || '+971 50 000 0000';
-  
-  const riisScore = Number(briefRecord.riis_score || payload.riisScore || (payload.riis && payload.riis.score) || 92);
-  const diraTier = briefRecord.dira_tier || payload.diraTier || (payload.riis && payload.riis.tierLabel) || 'SOVEREIGN_INSTITUTIONAL';
-  const diraRisk = payload.diraRiskLevel || (payload.dira && payload.dira.riskLevel) || 'LOW';
-  
-  const executiveSummary = briefRecord.executive_summary || payload.executiveSummary || payload.executive_summary || 
-    `Institutional capital allocation brief for ${companyName}. RIIS score rated at ${riisScore}/100 with ${diraRisk} operational risk profile and full UAE Golden Visa eligibility.`;
-
-  const budgetRaw = payload.budgetAed || payload.budget_aed || payload.budget || 25000000;
-  const budgetFormatted = typeof budgetRaw === 'number' 
-    ? `AED ${budgetRaw.toLocaleString('en-US')}` 
-    : String(budgetRaw).startsWith('AED') ? budgetRaw : `AED ${budgetRaw}`;
-
-  const generatedDate = briefRecord.created_at 
-    ? new Date(briefRecord.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-    : new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
-
-  // Action plan items
-  let actionPlan = briefRecord.action_plan || payload.actionPlan || [];
-  if (!Array.isArray(actionPlan) || actionPlan.length === 0) {
-    actionPlan = [
-      {
-        title: 'Sovereign Asset Allocation & Off-Plan Reservation',
-        timeframe: 'Days 1 - 7',
-        description: 'Direct priority allocation in tier-1 waterfront developments with developer price lock and institutional payment terms.',
-      },
-      {
-        title: 'UAE Golden Visa Legal Filing (Cabinet Res. 65/2022)',
-        timeframe: 'Days 8 - 14',
-        description: 'Submission of 10-Year residency dossier under executive property investor stream with zero corporate tax drag.',
-      },
-      {
-        title: 'Autonomous Portfolio Intelligence & Yield Activation',
-        timeframe: 'Days 15 - 30',
-        description: 'Onboarding to RAIOC OS intelligence center for real-time asset tracking, rental yields, and secondary market liquidity.',
-      },
-    ];
-  }
-
-  // Radial Gauge Calculations
-  const radius = 64;
-  const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (riisScore / 100) * circumference;
-
-  // WhatsApp concierge pre-filled message
-  const waMessage = encodeURIComponent(
-    `Hello Emanuel, I have reviewed my RAIOC Executive Brief (${briefId}) for ${companyName} (RIIS Score: ${riisScore}/100). I would like to schedule a private advisory session regarding off-plan allocations and the UAE Golden Visa framework.`
-  );
-
-  return `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en" class="dark scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Executive Brief: ${escapeHtml(companyName)} | Emanuel Rendas Private Advisory</title>
-  <meta name="description" content="Confidential Sovereign Intelligence Brief for ${escapeHtml(companyName)}. RIIS Score: ${riisScore}/100. UAE Golden Visa Qualified.">
+  <title>Executive Brief: Al-Nahyan Sovereign Family Office | Emanuel Rendas Private Advisory</title>
+  <meta name="description" content="Confidential Sovereign Intelligence Brief for Al-Nahyan Sovereign Family Office. RIIS Score: 96/100. UAE Golden Visa Qualified.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -213,14 +133,14 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
       <div class="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-8">
         <div class="space-y-4 max-w-2xl">
           <div class="inline-flex items-center space-x-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold tracking-wider uppercase">
-            <span>● PROVENANCE KEY: STRATEGY_${escapeHtml(diraTier).toUpperCase()}</span>
+            <span>● PROVENANCE KEY: STRATEGY_SOVEREIGN_ULTRA_PRIME</span>
           </div>
           <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-white tracking-tight leading-tight">
             Executive Intelligence Brief:<br>
-            <span class="emerald-shimmer">${escapeHtml(companyName)}</span>
+            <span class="emerald-shimmer">Al-Nahyan Sovereign Family Office</span>
           </h1>
           <p class="text-slate-400 text-base md:text-lg leading-relaxed">
-            Prepared exclusively for <strong class="text-white">${escapeHtml(contactName)}</strong>. Tailored sovereign asset portfolio, off-plan capital allocations, and UAE Golden Visa qualification dossier.
+            Prepared exclusively for <strong class="text-white">His Excellency Investment Director</strong>. Tailored sovereign asset portfolio, off-plan capital allocations, and UAE Golden Visa qualification dossier.
           </p>
         </div>
 
@@ -228,15 +148,15 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
         <div class="glass-panel p-6 rounded-2xl border border-white/10 space-y-3 min-w-[280px]">
           <div class="flex justify-between items-center text-xs text-slate-400 pb-2 border-b border-surface-border">
             <span>Dossier ID:</span>
-            <span class="font-mono text-emerald-400 font-bold">${escapeHtml(briefId)}</span>
+            <span class="font-mono text-emerald-400 font-bold">brief_sample_vip</span>
           </div>
           <div class="flex justify-between items-center text-xs text-slate-400 pb-2 border-b border-surface-border">
             <span>Evaluation Date:</span>
-            <span class="font-mono text-white">${escapeHtml(generatedDate)}</span>
+            <span class="font-mono text-white">25 Aug 2026</span>
           </div>
           <div class="flex justify-between items-center text-xs text-slate-400 pb-2 border-b border-surface-border">
             <span>Capital Allocation:</span>
-            <span class="font-mono text-gold-400 font-extrabold text-sm">${escapeHtml(budgetFormatted)}</span>
+            <span class="font-mono text-gold-400 font-extrabold text-sm">AED 35,000,000</span>
           </div>
           <div class="flex justify-between items-center text-xs text-slate-400">
             <span>Status:</span>
@@ -257,19 +177,19 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
         
         <div class="relative flex items-center justify-center">
           <svg class="w-48 h-48 transform -rotate-90" viewBox="0 0 160 160">
-            <circle class="radial-circle-bg" cx="80" cy="80" r="${radius}" stroke-width="12" fill="transparent" />
-            <circle class="radial-circle-progress" cx="80" cy="80" r="${radius}" stroke-width="12" fill="transparent"
-              stroke-dasharray="${circumference}" stroke-dashoffset="${strokeDashoffset}" />
+            <circle class="radial-circle-bg" cx="80" cy="80" r="64" stroke-width="12" fill="transparent" />
+            <circle class="radial-circle-progress" cx="80" cy="80" r="64" stroke-width="12" fill="transparent"
+              stroke-dasharray="402.1238596594935" stroke-dashoffset="16.084954386379763" />
           </svg>
           <div class="absolute inset-0 flex flex-col items-center justify-center">
-            <span class="text-5xl font-black text-white font-mono tracking-tight">${riisScore}</span>
+            <span class="text-5xl font-black text-white font-mono tracking-tight">96</span>
             <span class="text-xs text-slate-400 font-mono uppercase tracking-wider">/ 100 INDEX</span>
           </div>
         </div>
 
         <div class="mt-6 space-y-1">
           <div class="inline-block px-3 py-1 rounded-full bg-brand-500/20 border border-brand-500/30 text-emerald-400 font-mono font-bold text-xs">
-            ${escapeHtml(diraTier.replace(/_/g, ' '))}
+            SOVEREIGN ULTRA PRIME
           </div>
           <p class="text-xs text-slate-400 mt-2">Optimal Capital Deployment Alignment</p>
         </div>
@@ -281,11 +201,11 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
           <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-bold text-white tracking-wide">Autonomous Assessment Matrix</h3>
             <span class="px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 font-mono text-xs font-semibold">
-              DIRA LEVEL: ${escapeHtml(diraRisk)} RISK
+              DIRA LEVEL: LOW RISK
             </span>
           </div>
           <p class="text-slate-300 text-sm md:text-base leading-relaxed bg-surface-canvas/60 p-5 rounded-2xl border border-white/5">
-            "${escapeHtml(executiveSummary)}"
+            "Institutional capital allocation brief for Al-Nahyan Sovereign Family Office. RIIS score rated at 96/100 with LOW operational risk profile and full UAE Golden Visa eligibility."
           </p>
         </div>
 
@@ -594,22 +514,52 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
       </div>
 
       <div class="space-y-4">
-        ${actionPlan.map((step, idx) => `
+        
         <div class="p-6 rounded-2xl bg-surface-canvas/60 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div class="flex items-start space-x-4">
             <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 text-emerald-400 font-mono font-bold flex items-center justify-center flex-shrink-0">
-              0${idx + 1}
+              01
             </div>
             <div>
-              <h4 class="text-lg font-bold text-white">${escapeHtml(step.title)}</h4>
-              <p class="text-sm text-slate-300 mt-1">${escapeHtml(step.description)}</p>
+              <h4 class="text-lg font-bold text-white">Sovereign Asset Allocation &amp; Off-Plan Reservation</h4>
+              <p class="text-sm text-slate-300 mt-1">Direct priority allocation in tier-1 waterfront developments with developer price lock and institutional payment terms.</p>
             </div>
           </div>
           <span class="px-4 py-1.5 rounded-full bg-surface-accent border border-surface-border text-xs font-mono font-bold text-slate-300 self-start md:self-center flex-shrink-0">
-            ${escapeHtml(step.timeframe)}
+            Days 1 - 7
           </span>
         </div>
-        `).join('')}
+        
+        <div class="p-6 rounded-2xl bg-surface-canvas/60 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start space-x-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 text-emerald-400 font-mono font-bold flex items-center justify-center flex-shrink-0">
+              02
+            </div>
+            <div>
+              <h4 class="text-lg font-bold text-white">UAE Golden Visa Legal Filing (Cabinet Res. 65/2022)</h4>
+              <p class="text-sm text-slate-300 mt-1">Submission of 10-Year residency dossier under executive property investor stream with zero corporate tax drag.</p>
+            </div>
+          </div>
+          <span class="px-4 py-1.5 rounded-full bg-surface-accent border border-surface-border text-xs font-mono font-bold text-slate-300 self-start md:self-center flex-shrink-0">
+            Days 8 - 14
+          </span>
+        </div>
+        
+        <div class="p-6 rounded-2xl bg-surface-canvas/60 border border-white/5 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div class="flex items-start space-x-4">
+            <div class="w-10 h-10 rounded-xl bg-brand-500/20 border border-brand-500/40 text-emerald-400 font-mono font-bold flex items-center justify-center flex-shrink-0">
+              03
+            </div>
+            <div>
+              <h4 class="text-lg font-bold text-white">Autonomous Portfolio Intelligence &amp; Yield Activation</h4>
+              <p class="text-sm text-slate-300 mt-1">Onboarding to RAIOC OS intelligence center for real-time asset tracking, rental yields, and secondary market liquidity.</p>
+            </div>
+          </div>
+          <span class="px-4 py-1.5 rounded-full bg-surface-accent border border-surface-border text-xs font-mono font-bold text-slate-300 self-start md:self-center flex-shrink-0">
+            Days 15 - 30
+          </span>
+        </div>
+        
       </div>
     </section>
 
@@ -636,7 +586,7 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
         </a>
 
         <!-- Direct WhatsApp Concierge -->
-        <a href="https://wa.me/971509876543?text=${waMessage}" target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto flex-1 px-8 py-5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-black font-extrabold text-base shadow-xl shadow-green-500/25 transition-all duration-200 transform hover:-translate-y-1 flex items-center justify-center space-x-3">
+        <a href="https://wa.me/971509876543?text=Hello%20Emanuel%2C%20I%20have%20reviewed%20my%20RAIOC%20Executive%20Brief%20(brief_sample_vip)%20for%20Al-Nahyan%20Sovereign%20Family%20Office%20(RIIS%20Score%3A%2096%2F100).%20I%20would%20like%20to%20schedule%20a%20private%20advisory%20session%20regarding%20off-plan%20allocations%20and%20the%20UAE%20Golden%20Visa%20framework." target="_blank" rel="noopener noreferrer" class="w-full sm:w-auto flex-1 px-8 py-5 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] text-black font-extrabold text-base shadow-xl shadow-green-500/25 transition-all duration-200 transform hover:-translate-y-1 flex items-center justify-center space-x-3">
           <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg>
           <span>WhatsApp VIP Concierge</span>
         </a>
@@ -662,5 +612,4 @@ export function renderExecutiveBriefHtml(briefRecord = {}) {
   </footer>
 
 </body>
-</html>`;
-}
+</html>
