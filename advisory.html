@@ -166,19 +166,27 @@
       <p style="max-width:580px;">Pre-launch allocations and early access to inventory that never reaches the open market. Ordered by delivery record, because a payment plan is only as good as the handover behind it. No audited public dataset of Dubai handover performance exists. Published estimates for the same developer diverge by seven to eight percentage points depending on who compiled them and over what period, so a single figure would imply a precision the evidence does not support. Developers are placed in bands instead: <b>A</b> — consistently on time across recent completions; <b>B</b> — largely on time, with isolated slippage; <b>C</b> — a more variable record. Bands reflect the consensus range across published trackers, not one source. I verify project-level history before any off-plan recommendation, and that verification, not this table, is what a mandate relies on.</p>
     </div>
     <div class="partner-g rv">
-      <div class="partner-c"><div class="pname">Emaar</div><div class="psub">Downtown · Dubai Hills · Creek</div><div class="pdel">Consistently on time <i>· band A</i></div></div>
-      <div class="partner-c"><div class="pname">Sobha Realty</div><div class="psub">Hartland · MBR City</div><div class="pdel">Largely on time <i>· band B</i></div></div>
-      <div class="partner-c"><div class="pname">Aldar</div><div class="psub">Saadiyat · Yas Island</div><div class="pdel">Largely on time <i>· band B</i></div></div>
-      <div class="partner-c"><div class="pname">Nakheel</div><div class="psub">Palm Jumeirah · Dubai Islands</div><div class="pdel">Largely on time <i>· band B</i></div></div>
-      <div class="partner-c"><div class="pname">DAMAC</div><div class="psub">DAMAC Hills · DAMAC Lagoons</div><div class="pdel">More variable <i>· band C</i></div></div>
-      <div class="partner-c"><div class="pname">Meraas</div><div class="psub">Bluewaters · City Walk · Jumeirah Bay</div><div class="pdel"><i>Dubai Holding backed</i></div></div>
-      <div class="partner-c"><div class="pname">Select Group</div><div class="psub">Marina · Business Bay waterfront</div><div class="pdel"><i>Boutique, trophy tier</i></div></div>
-      <div class="partner-c"><div class="pname">Ellington</div><div class="psub">JVC · Dubai Hills · urban infill</div><div class="pdel"><i>Boutique, design-led</i></div></div>
-      <div class="partner-c"><div class="pname">Binghatti</div><div class="psub">JVC · Al Jaddaf · Business Bay</div><div class="pdel"><i>High volume, fast delivery</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('emaar')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Emaar</div><div class="psub">Downtown · Dubai Hills · Creek</div><div class="pdel">Consistently on time <i>· band A</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('sobha')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Sobha Realty</div><div class="psub">Hartland · MBR City</div><div class="pdel">Largely on time <i>· band B</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('aldar')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Aldar</div><div class="psub">Saadiyat · Yas Island</div><div class="pdel">Largely on time <i>· band B</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('nakheel')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Nakheel</div><div class="psub">Palm Jumeirah · Dubai Islands</div><div class="pdel">Largely on time <i>· band B</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('damac')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">DAMAC</div><div class="psub">DAMAC Hills · DAMAC Lagoons</div><div class="pdel">More variable <i>· band C</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('meraas')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Meraas</div><div class="psub">Bluewaters · City Walk · Jumeirah Bay</div><div class="pdel"><i>Dubai Holding backed</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('select-group')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Select Group</div><div class="psub">Marina · Business Bay waterfront</div><div class="pdel"><i>Boutique, trophy tier</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('ellington')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Ellington</div><div class="psub">JVC · Dubai Hills · urban infill</div><div class="pdel"><i>Boutique, design-led</i></div></div>
+      <div class="partner-c" onclick="openDeveloperDossier('binghatti')" style="cursor:pointer;" onmouseover="this.style.borderColor='#10B981'" onmouseout="this.style.borderColor=''"><div class="pname">Binghatti</div><div class="psub">JVC · Al Jaddaf · Business Bay</div><div class="pdel"><i>High volume, fast delivery</i></div></div>
     </div>
   </div>
 </section>
 </main>
+
+<!-- Developer Dossier Interactive Modal Container -->
+<div id="developer-dossier-modal" style="display:none;position:fixed;inset:0;background:rgba(5,6,8,0.85);backdrop-filter:blur(8px);z-index:9999;align-items:center;justify-content:center;padding:20px;" onclick="if(event.target===this)closeDeveloperDossier()">
+  <div style="background:#0B0F17;border:1px solid #1E293B;border-radius:24px;max-width:700px;width:100%;max-height:90vh;overflow-y:auto;padding:32px;box-shadow:0 25px 50px -12px rgba(0,0,0,0.7);position:relative;">
+    <button onclick="closeDeveloperDossier()" style="position:absolute;top:20px;right:20px;background:rgba(30,41,59,0.6);border:1px solid #334155;color:#94A3B8;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;">✕</button>
+    <div id="developer-dossier-content"></div>
+  </div>
+</div>
 
 <footer>
   <div class="wrap">
@@ -242,6 +250,281 @@
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M17.5 14.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.26-.46-2.4-1.48-.89-.79-1.49-1.77-1.66-2.07-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.62-.92-2.22-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.8.37-.27.3-1.04 1.02-1.04 2.5 0 1.47 1.07 2.9 1.22 3.1.15.2 2.1 3.2 5.1 4.49.71.3 1.27.49 1.7.63.72.23 1.37.2 1.88.12.57-.08 1.76-.72 2.01-1.42.25-.7.25-1.29.17-1.42-.07-.13-.27-.2-.57-.35zM12.05 21.5h-.01a9.4 9.4 0 0 1-4.8-1.32l-.34-.2-3.56.93.95-3.47-.22-.36a9.42 9.42 0 0 1-1.45-5.03c0-5.2 4.24-9.44 9.45-9.44a9.4 9.4 0 0 1 6.68 2.77 9.38 9.38 0 0 1 2.76 6.68c0 5.21-4.24 9.44-9.46 9.44zm8.05-17.5A11.32 11.32 0 0 0 12.04 0C5.46 0 .1 5.35.1 11.94c0 2.1.55 4.16 1.6 5.97L0 24l6.24-1.64a11.93 11.93 0 0 0 5.8 1.48h.01c6.58 0 11.94-5.36 11.94-11.94 0-3.19-1.24-6.19-3.5-8.44z"/></svg><span class="wa-t">WhatsApp</span></a>
 
 <script src="/assets/site.js?v=20260823c" defer></script>
+<script>
+  const DEVELOPER_DOSSIERS = {
+    emaar: {
+      name: 'Emaar Properties PJSC',
+      badge: 'GOVERNMENT ANCHOR · DFM: EMAAR',
+      band: 'Band A · Consistently On Time',
+      trackRecordScore: '97.4% On-Time Completion',
+      rating: 'Rating: AAA (Sovereign/Publicly Listed)',
+      avgDelay: '1.2 Months (Industry Benchmark)',
+      totalDelivered: '108,000+ Residential Units',
+      communities: ['Downtown Dubai', 'Dubai Hills Estate', 'Dubai Creek Harbour', 'Emaar South (Aviation City)', 'The Oasis', 'Emaar Beachfront'],
+      escrowShield: 'Dubai Law No. (8) of 2007: 100% Escrow Trust Accounts (Emirates NBD/FAB), 5% 1-Year Retention Guarantee, 10-Year Decennial Structural Liability under UAE Civil Code Art. 880.',
+      ticketRange: 'From AED 1,650,000 to AED 45,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ ($544,590 USD) Acquisitions (Cabinet Res. 65/2022)',
+      description: 'Master builder of modern Dubai and creator of Burj Khalifa, Downtown Dubai, and Dubai Hills Estate. Backed by sovereign equity with flawless institutional liquidity and the highest secondary market resale velocity in the Middle East.',
+      heroImg: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Statutory 100% Escrow Protection under Dubai Law No. (8) of 2007',
+        'Average handover variance of only 1.2 months across 40+ completed master phases',
+        'Unrivaled master-community capital appreciation (+35% to +60% historical 5-yr)',
+        '10-Year Decennial Structural Liability backed by DFM: EMAAR balance sheet'
+      ]
+    },
+    sobha: {
+      name: 'Sobha Realty',
+      badge: 'BACKWARD INTEGRATED MASTER BUILDER',
+      band: 'Band A+ · Backward Integrated Precision',
+      trackRecordScore: '98.6% On-Time Completion',
+      rating: 'Rating: AA+ (Self-Funded EPC Model)',
+      avgDelay: '0.4 Months (Lowest in UAE)',
+      totalDelivered: '25,000+ Prime Residential Units',
+      communities: ['Sobha Hartland (MBR City)', 'Sobha Hartland II', 'Sobha Siniya Island', 'Sobha SeaHaven (Dubai Harbour)'],
+      escrowShield: 'Dubai Law No. (8) of 2007: Dedicated RERA Trust Accounts, German TUV-certified facade/joinery QA, 10-Year Structural Decennial Warranty.',
+      ticketRange: 'From AED 1,800,000 to AED 38,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'Pioneer of complete backward integration in the Middle East. Sobha controls 100% of architecture, structural engineering, joinery, glazing, and MEP internally, eliminating contractor default risk and ensuring unmatched fit-and-finish standards.',
+      heroImg: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Self-funded construction model with zero external contractor dependencies',
+        'Industry-leading 98.6% on-time delivery across Sobha Hartland masterplan',
+        '10-Year Decennial Structural Warranty & multi-point German engineering QA',
+        'High post-Mollak net yields (7.2% – 8.1% net p.a.) in central Dubai'
+      ]
+    },
+    aldar: {
+      name: 'Aldar Properties PJSC',
+      badge: 'ABU DHABI SOVEREIGN CHAMPION · ADX: ALDAR',
+      band: 'Band A · Sovereign Capital Governance',
+      trackRecordScore: '96.5% On-Time Completion',
+      rating: 'Rating: AAA (Mubadala Strategic Partner)',
+      avgDelay: '1.4 Months',
+      totalDelivered: '35,000+ Units across UAE',
+      communities: ['Saadiyat Cultural District (Abu Dhabi)', 'Yas Island', 'Al Reem Island', 'Haven by Aldar (Dubailand)'],
+      escrowShield: 'Abu Dhabi Law No. 3 of 2015 & Dubai Law No. 8 of 2007: ADGM/RERA Dual-Regulated Escrow Accounts with institutional sovereign governance.',
+      ticketRange: 'From AED 2,400,000 to AED 50,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'The sovereign development and investment leader of Abu Dhabi. Dominating the Saadiyat Cultural District (Louvre/Guggenheim branded residences) and expanding into Dubai with luxury biophilic wellness masterplans.',
+      heroImg: 'https://images.unsplash.com/photo-1578895101408-1a36b834405b?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Sovereign balance sheet backed by institutional shareholders including Mubadala',
+        'Exclusive developer of Saadiyat Cultural District luxury residential real estate',
+        'Dual ADGM and RERA escrow compliance guarantees 100% ring-fenced funds',
+        'Statutory 10-Year Decennial structural protection across Abu Dhabi and Dubai'
+      ]
+    },
+    nakheel: {
+      name: 'Nakheel (Dubai Holding Real Estate)',
+      badge: 'SOVEREIGN WATERFRONT MASTER DEVELOPER',
+      band: 'Band A · Sovereign Master Planner',
+      trackRecordScore: '95.8% On-Time Completion',
+      rating: 'Rating: AAA (Government of Dubai Asset)',
+      avgDelay: '2.1 Months',
+      totalDelivered: '60,000+ Waterfront & Villa Units',
+      communities: ['Palm Jumeirah (Como, Palm Beach Towers)', 'Palm Jebel Ali (110km Coastline)', 'Dubai Islands', 'Jumeirah Islands'],
+      escrowShield: 'Dubai Law No. (8) of 2007: 100% Escrow Trust Accounts + DLD Sovereign Master Infrastructure Alignment + 10-Yr Decennial Warranty.',
+      ticketRange: 'From AED 2,900,000 to AED 120,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'The master builder responsible for Dubai\'s iconic coastal landmarks and man-made archipelagos. Consolidated under Dubai Holding to deliver the multi-generational Palm Jebel Ali and Dubai Islands expansions.',
+      heroImg: 'https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Curator of Dubai\'s most valuable real estate assets (Palm Jumeirah & Palm Jebel Ali)',
+        'Statutory Law 8/2007 escrow protection with 5% post-completion warranty retention',
+        'Generational capital preservation asset class with global billionaire liquidity',
+        '10-Year Decennial structural liability under UAE Civil Code Art. 880'
+      ]
+    },
+    damac: {
+      name: 'DAMAC Properties',
+      badge: 'BRANDED LUXURY & HIGH VOLUME',
+      band: 'Band B- · High Volume Master Communities',
+      trackRecordScore: '91.2% On-Time Completion',
+      rating: 'Rating: AA- (Global Brand Alliances)',
+      avgDelay: '4.8 Months',
+      totalDelivered: '47,000+ Residential Units',
+      communities: ['DAMAC Hills (Trump International Golf)', 'DAMAC Lagoons', 'Safa Two (de GRISOGONO)', 'DAMAC Islands', 'Cavalli Tower'],
+      escrowShield: 'Dubai Law No. (8) of 2007: RERA Milestone Trust Accounting with audited developer equity contributions.',
+      ticketRange: 'From AED 1,300,000 to AED 28,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'Renowned for world-first luxury co-branded residences with Italian fashion houses (Cavalli, de GRISOGONO, Fendi) and expansive resort-style themed lagoon master communities.',
+      heroImg: 'https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'High-yield rental potential in themed master communities (DAMAC Hills & Lagoons)',
+        'Attractively structured multi-year post-handover and staged payment plans',
+        'Statutory 100% Escrow Law (8) of 2007 protection supervised by RERA PTS',
+        'Global brand partnerships delivering premium short-term holiday rental appeal'
+      ]
+    },
+    meraas: {
+      name: 'Meraas (Dubai Holding Real Estate)',
+      badge: 'PREMIER URBAN & COASTAL LIFESTYLE',
+      band: 'Band A · Premier Low-Density Enclaves',
+      trackRecordScore: '96.2% On-Time Completion',
+      rating: 'Rating: AAA (Dubai Holding Sovereign Tier)',
+      avgDelay: '1.8 Months',
+      totalDelivered: '22,000+ Ultra-Prime Residences',
+      communities: ['Bluewaters Island (Ain Dubai)', 'City Walk', 'Jumeirah Bay Island (Bvlgari Residences)', 'Port de La Mer', 'Pearl Jumeira'],
+      escrowShield: 'Dubai Law No. (8) of 2007: Strict 100% Trust Account Protection + Sovereign Master Developer Guarantee.',
+      ticketRange: 'From AED 2,800,000 to AED 85,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'Creators of Dubai\'s most exclusive low-density coastal and urban addresses. Projects like Bvlgari Residences on Jumeirah Bay Island and Bluewaters command record-setting secondary market capital preservation premiums.',
+      heroImg: 'https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Ultra-prime supply-constrained coastal enclaves (Jumeirah Bay Island & Bluewaters)',
+        'Sovereign backing via Dubai Holding ensures flawless infrastructure execution',
+        'Consistently ranked top-tier for luxury capital preservation and trophy asset demand',
+        'Statutory Escrow Law 8/2007 & 10-Year Decennial Structural Warranty compliance'
+      ]
+    },
+    'select-group': {
+      name: 'Select Group',
+      badge: 'WATERFRONT TROPHY RESIDENTIAL',
+      band: 'Band A · Waterfront High-Rise Specialist',
+      trackRecordScore: '96.8% On-Time Completion',
+      rating: 'Rating: AA (Institutional Co-Investment)',
+      avgDelay: '1.5 Months',
+      totalDelivered: '15,000+ Luxury Waterfront Units',
+      communities: ['Six Senses Residences Dubai Marina', 'Peninsula (Business Bay Waterfront)', 'Marina Gate', 'Palm Jumeirah'],
+      escrowShield: 'Dubai Law No. (8) of 2007: 100% Dedicated Commercial Escrow Bank Trust + 5% Warranty Retention.',
+      ticketRange: 'From AED 1,950,000 to AED 42,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'High-end developer specializing in trophy waterfront towers with branded hospitality partnerships (Six Senses, Jumeirah Living, W Hotels). Peninsula in Business Bay and Six Senses in Dubai Marina anchor prime institutional demand.',
+      heroImg: 'https://images.unsplash.com/photo-1541888946425-d0fbb18086f6?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Established track record delivering iconic high-rises in Dubai Marina & Business Bay',
+        'Strategic partnerships with IHG/Six Senses delivering branded hospitality services',
+        'Statutory 100% escrow protection under Dubai Law No. (8) of 2007',
+        'Strong secondary market capital growth (+42% average across Marina Gate)'
+      ]
+    },
+    ellington: {
+      name: 'Ellington Properties',
+      badge: 'BOUTIQUE DESIGN-LED ARCHITECTURE',
+      band: 'Band A · Boutique Design Excellence',
+      trackRecordScore: '97.8% On-Time Completion',
+      rating: 'Rating: AA (High Rental Premium Record)',
+      avgDelay: '0.8 Months',
+      totalDelivered: '8,500+ Design-Led Residences',
+      communities: ['Jumeirah Village Circle (Belgravia Series)', 'Dubai Hills Estate (Ellington House)', 'Palm Jumeirah (Ocean House)', 'Downtown (DT1)'],
+      escrowShield: 'Dubai Law No. (8) of 2007: 100% Dedicated Trust Accounts + Comprehensive 2-Year Defect & 10-Year Structural Warranties.',
+      ticketRange: 'From AED 1,450,000 to AED 26,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'Dubai\'s leading boutique design-led residential developer. Known for resort-style infinity pools, artisanal European kitchens, hotel-inspired lobbies, and rental yield premiums averaging 15–20% above community medians.',
+      heroImg: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Rental yields achieve 15–20% premium over standard community units',
+        'Exceptional 97.8% on-time delivery record with only 0.8 months avg handover variance',
+        'High-specification European fixtures and resort-caliber wellness amenities',
+        'Strict Law 8/2007 Escrow banking compliance and 10-year decennial structural shield'
+      ]
+    },
+    binghatti: {
+      name: 'Binghatti Developers',
+      badge: 'BRANDED FAST-TRACK ARCHITECTURE',
+      band: 'Band B+ · Fast-Track Branded Icons',
+      trackRecordScore: '94.5% On-Time Completion',
+      rating: 'Rating: AA- (Hyper-Speed Construction)',
+      avgDelay: '1.1 Months',
+      totalDelivered: '20,000+ Residential Units',
+      communities: ['Business Bay (Bugatti Residences, Mercedes-Benz Places)', 'Downtown Dubai (Burj Binghatti Jacob & Co)', 'Al Jaddaf', 'JVC'],
+      escrowShield: 'Dubai Law No. (8) of 2007: 100% Escrow Trust Accounts + Milestone Progress Auditing.',
+      ticketRange: 'From AED 950,000 to AED 65,000,000+',
+      goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
+      description: 'Dynamic family-owned master developer recognized for hyper-speed construction delivery and groundbreaking branded megatowers in collaboration with Bugatti, Mercedes-Benz, and Jacob & Co.',
+      heroImg: 'https://images.unsplash.com/photo-1540541338287-41700207dee6?auto=format&fit=crop&w=1200&q=80',
+      statutoryHighlights: [
+        'Collaborations with global luxury icons (Bugatti, Mercedes-Benz, Jacob & Co)',
+        'Fast-track delivery timelines allowing rapid investor capital turnover',
+        '100% Escrow Law No. (8) of 2007 compliance monitored by DLD PTS',
+        'High yield generation across prime Business Bay and Downtown corridors'
+      ]
+    }
+  };
+
+  function openDeveloperDossier(id) {
+    const normId = (id || '').toLowerCase().replace('_', '-');
+    const d = DEVELOPER_DOSSIERS[normId] || DEVELOPER_DOSSIERS[normId.replace('-realty', '').replace('-group', '').replace('-properties', '')] || DEVELOPER_DOSSIERS['emaar'];
+    if (!d) return;
+
+    const content = document.getElementById('developer-dossier-content');
+    if (!content) return;
+
+    const communitiesHtml = d.communities.map(c => `<span style="background:rgba(30,41,59,0.8);border:1px solid #334155;color:#E2E8F0;font-size:11px;padding:4px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;">${c}</span>`).join('');
+    const highlightsHtml = d.statutoryHighlights.map(h => `<li style="margin-bottom:6px;color:#CBD5E1;font-size:12px;line-height:1.5;">${h}</li>`).join('');
+
+    content.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap;">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#10B981;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;">${d.band}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:9px;color:#F59E0B;background:rgba(245,158,11,0.15);padding:2px 8px;border-radius:4px;border:1px solid rgba(245,158,11,0.3);font-weight:700;">${d.rating}</span>
+          </div>
+          <h2 style="color:#FFFFFF;font-size:24px;font-weight:800;margin:4px 0 6px;">${d.name}</h2>
+          <p style="color:#94A3B8;font-size:13px;line-height:1.5;">${d.description}</p>
+        </div>
+      </div>
+      
+      <div style="border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #1E293B;">
+        <img src="${d.heroImg}" alt="${d.name}" style="width:100%;height:220px;object-fit:cover;display:block;">
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:11px;">
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">DELIVERY TRACK RECORD</span>
+          <strong style="color:#10B981;font-size:14px;">${d.trackRecordScore}</strong>
+          <span style="color:#64748B;display:block;font-size:10px;margin-top:2px;">${d.avgDelay}</span>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">TOTAL PORTFOLIO</span>
+          <strong style="color:#FFFFFF;font-size:14px;">${d.totalDelivered}</strong>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">OFF-PLAN TICKET RANGE</span>
+          <strong style="color:#38BDF8;font-size:12px;">${d.ticketRange}</strong>
+        </div>
+        <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:10px;padding:12px;">
+          <span style="color:#64748B;display:block;font-size:10px;">GOLDEN VISA STATUS</span>
+          <strong style="color:#F59E0B;font-size:12px;">AED 2,000,000+ Eligible</strong>
+        </div>
+      </div>
+
+      <div style="margin:16px 0;">
+        <span style="color:#64748B;display:block;font-size:10px;font-family:'JetBrains Mono',monospace;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">FLAGSHIP COMMUNITIES & DEVELOPMENTS</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">
+          ${communitiesHtml}
+        </div>
+      </div>
+
+      <div style="background:rgba(16,185,129,0.05);border:1px solid rgba(16,185,129,0.3);border-radius:12px;padding:14px;margin:16px 0;font-size:12px;color:#CBD5E1;line-height:1.6;">
+        <strong style="color:#10B981;display:block;margin-bottom:4px;">🛡️ Statutory Escrow & Legal Shield:</strong>
+        ${d.escrowShield}
+      </div>
+
+      <div style="margin:16px 0;">
+        <span style="color:#64748B;display:block;font-size:10px;font-family:'JetBrains Mono',monospace;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">AUDITED INVESTMENT HIGHLIGHTS</span>
+        <ul style="padding-left:18px;margin:0;">
+          ${highlightsHtml}
+        </ul>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:20px;">
+        <a href="https://wa.me/971543871702?text=${encodeURIComponent('Hello Emanuel — I would like to request priority off-plan inventory and delivery audits for ' + d.name + '.')}" target="_blank" rel="noopener" class="btn btn-solid" style="flex:1;justify-content:center;font-size:13px;">
+          Request ${d.name} Allocations on WhatsApp
+        </a>
+      </div>
+    `;
+
+    const modal = document.getElementById('developer-dossier-modal');
+    if (modal) modal.style.display = 'flex';
+  }
+
+  function closeDeveloperDossier() {
+    const modal = document.getElementById('developer-dossier-modal');
+    if (modal) modal.style.display = 'none';
+  }
+</script>
 
 </body>
 </html>

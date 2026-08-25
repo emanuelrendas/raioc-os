@@ -193,13 +193,23 @@ describe('PRODUCTION RECOVERY: 100% Endpoint Verification via Single Gateway (ap
     assert.ok(out.body.runtimeStatus === 'OPERATIONAL' || out.body.runtimeStatus === 'HEALTHY');
   });
 
-  test('18. Public Website Root: emanuelrendas.com', async () => {
+  test('18. Public Website Root: emanuelrendas.com & Developer Dossiers', async () => {
     const res = createMockRes();
     await handler({ url: '/', method: 'GET', headers: { host: 'www.emanuelrendas.com' } }, res);
     const out = res._get();
     assert.strictEqual(out.status, 200);
     assert.ok(typeof out.body === 'string');
     assert.ok(out.body.includes('Emanuel Rendas — Private Real Estate Advisory'));
+    assert.ok(out.body.includes('id="developer-dossier-modal"'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'emaar\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'sobha\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'aldar\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'nakheel\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'damac\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'meraas\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'select-group\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'ellington\')'));
+    assert.ok(out.body.includes('openDeveloperDossier(\'binghatti\')'));
   });
 
   test('19. AI Tool: /api/opal/roi', async () => {
