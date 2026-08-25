@@ -20,16 +20,36 @@ export default async function handler(req, res) {
   const body = req.body || {};
   const host = (headers.host || headers['x-forwarded-host'] || '').toLowerCase();
 
-  // Extract actual requested URL from query parameter or matched path header
+  // Extract and normalize incoming requested URL from query parameter, route matches, or headers
   let url = query.__path || headers['x-matched-path'] || req.url || '/';
-  url = url.split('?')[0]; // strip query string for route matching
 
-  // Clean duplicate /api prefixes if any occurred from rewrites (e.g. /api/api/health -> /api/health)
+  // Check if Vercel matched a named parameter 'id' or route matches header for /brief/:id
+  let matchedBriefId = null;
+  if (query.id) {
+    matchedBriefId = Array.isArray(query.id) ? query.id.join('/') : String(query.id);
+  } else if (headers['x-now-route-matches']) {
+    const rm = String(headers['x-now-route-matches']);
+    const match = rm.match(/id=([^&]+)/) || rm.match(/1=([^&]+)/);
+    if (match) matchedBriefId = decodeURIComponent(match[1]);
+  }
+
+  if (matchedBriefId && (matchedBriefId.startsWith('brief') || String(req.url).includes('/brief') || headers['x-matched-path']?.includes('/brief'))) {
+    url = `/brief/${matchedBriefId}`;
+  }
+
+  url = url.split('?')[0]; // strip query string for route matching
   url = url.replace(/^\/api\/api\//, '/api/');
 
-  // 1. Brief Viewer (/brief/:id, /api/brief/:id)
-  if ((url.startsWith('/brief') || url.startsWith('/api/brief/')) && method === 'GET') {
-    const briefId = url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0];
+  // 1. Brief Viewer (/brief/:id, /api/brief/:id, or any request with brief id)
+  const isBriefRequest = url.startsWith('/brief') || url.startsWith('/api/brief') || url.includes('/brief/') || Boolean(matchedBriefId && matchedBriefId.startsWith('brief'));
+  if (isBriefRequest && method === 'GET') {
+    let briefId = matchedBriefId;
+    if (!briefId) {
+      const match = url.match(/\/brief\/([^\/\?]+)/);
+      briefId = match ? match[1] : url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0];
+    }
+    briefId = (briefId || '').trim();
+
     const briefRecord = await supabase.fetchExecutiveBriefById(briefId);
     const briefHtml = renderExecutiveBriefHtml(briefRecord || { id: briefId, companyName: 'Private Sovereign Investor' });
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
@@ -87,6 +107,17 @@ export default async function handler(req, res) {
 
   // 3. Static Web Pages & Assets on public website (www.emanuelrendas.com / emanuelrendas.com)
   if (!host.startsWith('api.') && !host.startsWith('dashboard.')) {
+    // Hard guard: Never fall back to static pages or index.html for brief routes
+    if (url.startsWith('/brief') || url.includes('/brief/')) {
+      const briefId = url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0] || 'default';
+      const briefRecord = await supabase.fetchExecutiveBriefById(briefId);
+      const briefHtml = renderExecutiveBriefHtml(briefRecord || { id: briefId, companyName: 'Private Sovereign Investor' });
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
+      res.status(200);
+      return typeof res.send === 'function' ? res.send(briefHtml) : res.end(briefHtml);
+    }
+
     let cleanKey = url.replace(/^\//, '').replace(/\.html$/, '').split('?')[0].toLowerCase();
     if (cleanKey === '' || cleanKey === 'index') cleanKey = 'index';
 
