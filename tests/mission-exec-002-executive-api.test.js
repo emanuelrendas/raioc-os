@@ -95,4 +95,84 @@ describe('MISSION ID: EXEC-002 — Production Executive API Endpoints', () => {
       delete process.env.N8N_WEBHOOK_URL;
     }
   });
+
+  test('4. Validates N8N_WEBHOOK_URL and marks n8n as CONNECTED when webhook responds with HTTP 200 to health check', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalN8n = process.env.N8N_WEBHOOK_URL;
+    const originalSecret = process.env.N8N_WEBHOOK_SECRET;
+
+    process.env.N8N_WEBHOOK_URL = 'https://n8n.emanuelrendas.com/webhook/raioc-event-bus';
+    process.env.N8N_WEBHOOK_SECRET = 'raioc_n8n_test_secret';
+
+    let probedMethod = '';
+    let probedUrl = '';
+    let probeHeaders = {};
+
+    globalThis.fetch = async (url, opts) => {
+      probedUrl = url;
+      probedMethod = opts.method;
+      probeHeaders = opts.headers || {};
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+        json: async () => ({ status: 'HEALTHY', message: 'Webhook active' }),
+      };
+    };
+
+    try {
+      const res = await routeApiRequest('/api/executive/connectors', 'GET');
+      assert.strictEqual(res.status, 200);
+
+      const n8n = res.body.connectors.n8n;
+      assert.strictEqual(n8n.status, 'CONNECTED');
+      assert.strictEqual(n8n.authenticated, true);
+      assert.strictEqual(n8n.endpointUrl, 'https://n8n.emanuelrendas.com/webhook/raioc-event-bus');
+      assert.strictEqual(typeof n8n.latencyMs, 'number');
+      assert.strictEqual(probedUrl, 'https://n8n.emanuelrendas.com/webhook/raioc-event-bus');
+      assert.strictEqual(probedMethod, 'POST');
+      assert.ok(probeHeaders['X-N8N-Signature']);
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalN8n) process.env.N8N_WEBHOOK_URL = originalN8n;
+      else delete process.env.N8N_WEBHOOK_URL;
+
+      if (originalSecret) process.env.N8N_WEBHOOK_SECRET = originalSecret;
+      else delete process.env.N8N_WEBHOOK_SECRET;
+    }
+  });
+
+  test('5. n8n health check falls back to HEAD probe if POST probe fails and marks CONNECTED on success', async () => {
+    const originalFetch = globalThis.fetch;
+    const originalN8n = process.env.N8N_WEBHOOK_URL;
+
+    process.env.N8N_WEBHOOK_URL = 'https://n8n.emanuelrendas.com/webhook/raioc-event-bus';
+
+    let callCount = 0;
+    globalThis.fetch = async (url, opts) => {
+      callCount++;
+      if (opts.method === 'POST') {
+        throw new Error('POST method not allowed on this webhook');
+      }
+      return {
+        ok: true,
+        status: 200,
+        statusText: 'OK',
+      };
+    };
+
+    try {
+      const res = await routeApiRequest('/api/executive/connectors', 'GET');
+      assert.strictEqual(res.status, 200);
+
+      const n8n = res.body.connectors.n8n;
+      assert.strictEqual(n8n.status, 'CONNECTED');
+      assert.strictEqual(n8n.authenticated, true);
+      assert.strictEqual(callCount, 2); // 1 POST then 1 HEAD fallback
+    } finally {
+      globalThis.fetch = originalFetch;
+      if (originalN8n) process.env.N8N_WEBHOOK_URL = originalN8n;
+      else delete process.env.N8N_WEBHOOK_URL;
+    }
+  });
 });

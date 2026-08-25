@@ -23,6 +23,7 @@ import { jarvis } from '../../agents/specialists/jarvis-orchestrator.js';
 import { kpiCollector } from '../../operational/kpi-collector.js';
 import { sharedMemory } from '../../memory/shared-memory.js';
 import { businessIntelligenceBus } from '../../events/business-intelligence-bus.js';
+import { secretsManager } from '../../config/secrets-manager.js';
 
 /**
  * Real production connector prober with strict Zero Mock Policy.
@@ -188,6 +189,7 @@ async function probeExecutiveConnectors() {
 
   // 6. n8n
   const n8nUrl = process.env.N8N_WEBHOOK_URL || config.n8n?.webhookUrl;
+  const n8nSecret = process.env.N8N_WEBHOOK_SECRET || config.n8n?.webhookSecret;
   if (!n8nUrl) {
     connectors.n8n = {
       status: 'DISCONNECTED',
@@ -196,18 +198,52 @@ async function probeExecutiveConnectors() {
     };
   } else {
     try {
+      // Validate URL format
+      new URL(n8nUrl);
+
       const t0 = Date.now();
-      const res = await fetch(n8nUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ event: 'ping', timestamp: new Date().toISOString() }),
-        signal: AbortSignal.timeout(3000),
-      });
+      const pingPayload = {
+        event: 'healthcheck',
+        type: 'ping',
+        source: 'raioc_executive_connectors_probe',
+        timestamp: new Date().toISOString(),
+      };
+
+      let signature = '';
+      if (n8nSecret) {
+        signature = `sha256=${secretsManager.generateHmacSignature(pingPayload, n8nSecret)}`;
+      }
+
+      // 1. Probe with POST health check
+      let res;
+      try {
+        res = await fetch(n8nUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(signature ? { 'X-N8N-Signature': signature } : {}),
+            'X-Timestamp': pingPayload.timestamp,
+            'X-Event-Type': 'ping',
+          },
+          body: JSON.stringify(pingPayload),
+          signal: AbortSignal.timeout(4000),
+        });
+      } catch (postErr) {
+        // 2. Fallback to HEAD probe if POST failed or timed out
+        res = await fetch(n8nUrl, {
+          method: 'HEAD',
+          signal: AbortSignal.timeout(4000),
+        });
+      }
+
+      const isConnected = res.ok || (res.status >= 200 && res.status < 300);
+
       connectors.n8n = {
-        status: res.ok ? 'CONNECTED' : 'HTTP_ERROR',
+        status: isConnected ? 'CONNECTED' : (res.status === 401 || res.status === 403 ? 'AUTH_FAILED' : 'HTTP_ERROR'),
+        httpStatus: res.status,
         latencyMs: Date.now() - t0,
         endpointUrl: n8nUrl,
-        authenticated: res.ok,
+        authenticated: isConnected,
         lastChecked: new Date().toISOString(),
       };
     } catch (err) {
