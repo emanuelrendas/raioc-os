@@ -235,4 +235,97 @@ describe('PRODUCTION RECOVERY: 100% Endpoint Verification via Single Gateway (ap
     assert.ok(out.body.videoReel.videoUrl);
     assert.ok(out.body.directWhatsAppBookingUrl);
   });
+
+  test('22. Social Agent: /api/social/brand/generate', async () => {
+    const res = createMockRes();
+    const payload = { topic: 'dubai-south', format: 'video_script' };
+    await handler({ url: '/api/social/brand/generate', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.ok(out.body.hook);
+    assert.ok(out.body.script.scenes.length > 0);
+    assert.strictEqual(out.body.topic, 'dubai-south');
+    assert.ok(out.body.statutoryAnchors.goldenVisa.includes('AED 2,000,000'));
+  });
+
+  test('23. Social Agent: /api/social/engage/process', async () => {
+    const res = createMockRes();
+    const payload = { platform: 'instagram', author: 'investor_switzerland', text: 'Is this eligible for the 10-year Golden Visa program?' };
+    await handler({ url: '/api/social/engage/process', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.analysis.intent, 'INQUIRY_GOLDEN_VISA');
+    assert.strictEqual(out.body.isHighIntentLead, true);
+    assert.ok(out.body.suggestedReply.includes('Cabinet Resolution No. 65 of 2022'));
+  });
+
+  test('24. Social Agent: /api/social/dm/process', async () => {
+    const res = createMockRes();
+    const payload = {
+      platform: 'instagram',
+      senderHandle: 'geneva_family_office',
+      messageText: 'Hello Emanuel, looking to allocate 25M AED in Palm Jebel Ali for wealth preservation and golden visa.',
+      extractedData: { name: 'Marc de Bellevue', email: 'marc@bellevue-capital.ch' },
+    };
+    await handler({ url: '/api/social/dm/process', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.evaluation.tier, 1);
+    assert.ok(out.body.replyMessage.includes('Dubai Law No. (8) of 2007'));
+    assert.ok(out.body.whatsappVipUrl.includes('wa.me'));
+  });
+
+  test('25. Social Agent: /api/social/analytics', async () => {
+    const res = createMockRes();
+    await handler({ url: '/api/social/analytics', method: 'GET', headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.ok(out.body.totalImpressions > 0);
+    assert.ok(out.body.channelBreakdown.instagram);
+    assert.strictEqual(out.body.meshStatus, 'HEALTHY');
+  });
+
+  test('26. Social Webhooks: Meta/Instagram Challenge & Ingestion', async () => {
+    const resGet = createMockRes();
+    await handler({
+      url: '/api/webhooks/instagram',
+      method: 'GET',
+      query: { 'hub.mode': 'subscribe', 'hub.verify_token': 'raioc_meta_verify_token', 'hub.challenge': 'meta_challenge_9988' },
+      headers: {},
+    }, resGet);
+    const outGet = resGet._get();
+    assert.strictEqual(outGet.status, 200);
+    assert.strictEqual(outGet.body, 'meta_challenge_9988');
+
+    const resPost = createMockRes();
+    const payload = {
+      entry: [{
+        changes: [{
+          field: 'comments',
+          value: { id: 'ig_c_123', text: 'What is the audited net yield on Como Residences?', from: { username: 'investor_lux' } },
+        }],
+      }],
+    };
+    await handler({ url: '/api/webhooks/instagram', method: 'POST', body: payload, headers: {} }, resPost);
+    const outPost = resPost._get();
+    assert.strictEqual(outPost.status, 200);
+    assert.strictEqual(outPost.body.status, 'PROCESSED');
+    assert.strictEqual(outPost.body.provider, 'meta_instagram');
+  });
+
+  test('27. Social Webhooks: TikTok Event Ingestion', async () => {
+    const res = createMockRes();
+    const payload = {
+      event: 'tiktok_comment',
+      comment_id: 'tt_12345',
+      user_name: 'crypto_founder',
+      comment: 'How does escrow protection work under Dubai Law 8 for off-plan?',
+    };
+    await handler({ url: '/api/webhooks/tiktok', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.status, 'PROCESSED');
+    assert.strictEqual(out.body.provider, 'tiktok');
+  });
 });
+

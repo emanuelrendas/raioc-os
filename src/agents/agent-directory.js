@@ -10,6 +10,10 @@ import { lexComplianceAgent } from './specialists/lex-compliance-agent.js';
 import { heliosCalendarAgent } from './specialists/helios-calendar-agent.js';
 import { hermesCrmAgent } from './specialists/hermes-crm-agent.js';
 import { sentinelHealthAgent } from './specialists/sentinel-health-agent.js';
+import { brandContentAgent } from './agent-brand.js';
+import { commentWatchdogAgent } from './agent-engage.js';
+import { dmConversionAgent } from './agent-dm.js';
+import { socialAnalyticsAgent } from './agent-analytics.js';
 import { logger } from '../logging/audit-logger.js';
 
 export class AgentDirectory {
@@ -26,6 +30,10 @@ export class AgentDirectory {
     this.registerAgent(heliosCalendarAgent);
     this.registerAgent(hermesCrmAgent);
     this.registerAgent(sentinelHealthAgent);
+    this.registerAgent(brandContentAgent);
+    this.registerAgent(commentWatchdogAgent);
+    this.registerAgent(dmConversionAgent);
+    this.registerAgent(socialAnalyticsAgent);
   }
 
   registerAgent(agent) {

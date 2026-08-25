@@ -16,6 +16,7 @@ import { handleFxRequest } from './routes/fx-routes.js';
 import { handleEventRequest } from './routes/event-routes.js';
 import { handleIntakeRequest } from './routes/intake-routes.js';
 import { handleAiToolsRequest } from './routes/ai-tools-routes.js';
+import { handleSocialRequest } from './routes/social-routes.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
 import { supabase } from '../db/supabase-client.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
@@ -93,6 +94,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     // 12. Shared Agent API
     else if (url.startsWith('/api/agents')) {
       response = await handleAgentRequest(url, method, body, headers);
+    }
+    // 13. Social Media & Content Automation API
+    else if (url.startsWith('/api/social')) {
+      response = await handleSocialRequest(url, method, body, query, headers);
     } else {
       response = { status: 404, body: { error: `Endpoint not found: ${url}` } };
     }

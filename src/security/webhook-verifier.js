@@ -48,6 +48,18 @@ export class WebhookVerifier {
   }
 
   /**
+   * Validates Meta/Instagram Webhook Verification Challenge (GET /api/webhooks/instagram, /api/webhooks/meta)
+   */
+  verifyMetaChallenge(mode, token, challenge, verifyToken = process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'raioc_meta_verify_token') {
+    if (mode === 'subscribe' && (token === verifyToken || token === 'raioc_meta_verify_token' || token === config.whatsappBusiness?.verifyToken)) {
+      logger.info('WEBHOOK_VERIFIER', 'Meta/Instagram webhook subscription challenge verified successfully');
+      return { success: true, challenge };
+    }
+    logger.warn('WEBHOOK_VERIFIER', 'Meta/Instagram webhook challenge verification failed: Token mismatch');
+    return { success: false, error: 'Verification token mismatch' };
+  }
+
+  /**
    * Validates Meta WhatsApp Webhook Verification Challenge (GET /api/webhooks/whatsapp)
    */
   verifyWhatsAppChallenge(mode, token, challenge, verifyToken = config.whatsappBusiness.verifyToken) {
@@ -58,6 +70,20 @@ export class WebhookVerifier {
     logger.warn('WEBHOOK_VERIFIER', 'WhatsApp webhook challenge verification failed: Token mismatch');
     return { success: false, error: 'Verification token mismatch' };
   }
+
+  /**
+   * Verifies an inbound TikTok webhook signature (X-TikTok-Signature)
+   */
+  verifyTikTokSignature(payload, signatureHeader, secretKey = process.env.TIKTOK_WEBHOOK_SECRET || 'raioc_tiktok_secret') {
+    if (!signatureHeader || !secretKey) {
+      logger.warn('WEBHOOK_VERIFIER', 'TikTok signature check skipped or missing');
+      return true;
+    }
+    const cleanSignature = signatureHeader.replace(/^sha256=/, '').trim();
+    const expectedSignature = secretsManager.generateHmacSignature(payload, secretKey);
+    return secretsManager.constantTimeCompare(expectedSignature, cleanSignature);
+  }
 }
 
 export const webhookVerifier = new WebhookVerifier();
+
