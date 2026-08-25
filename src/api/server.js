@@ -11,6 +11,10 @@ import { handleLeadSubmission } from './routes/lead-routes.js';
 import { handleTelemetryRequest } from './routes/telemetry-routes.js';
 import { handleWebhookRequest } from './routes/webhook-routes.js';
 import { handleAgentRequest } from './routes/agent-routes.js';
+import { handleDldRequest } from './routes/dld-routes.js';
+import { handleFxRequest } from './routes/fx-routes.js';
+import { handleEventRequest } from './routes/event-routes.js';
+import { handleIntakeRequest } from './routes/intake-routes.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
 import { metricsCollector } from '../monitoring/metrics-collector.js';
 import { agentEventBus } from '../events/agent-event-bus.js';
@@ -32,27 +36,43 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     if (url === '/dashboard' || url === '/api/test-email' || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
       response = await handleTelemetryRequest(url, { headers, query, body });
     }
-    // 2. IKL Endpoints
+    // 2. DLD Market Data
+    else if (url === '/api/dld' || url.startsWith('/api/dld/')) {
+      response = await handleDldRequest();
+    }
+    // 3. FX Exchange Rates
+    else if (url === '/api/fx' || url.startsWith('/api/fx/')) {
+      response = await handleFxRequest();
+    }
+    // 4. Telemetry / Event Tracking
+    else if (url === '/api/event' || url.startsWith('/api/event/')) {
+      response = await handleEventRequest(method, body);
+    }
+    // 5. Multi-channel Intake
+    else if (url === '/api/intake' || url.startsWith('/api/intake/')) {
+      response = await handleIntakeRequest(method, body);
+    }
+    // 6. IKL Endpoints
     else if (url.startsWith('/api/ikl')) {
       response = await handleIklRequest(url, query);
     }
-    // 3. Calculator Endpoints
+    // 7. Calculator Endpoints
     else if (url.startsWith('/api/calculators')) {
       response = await handleCalculatorRequest(url, body);
     }
-    // 4. Assessment Submission
+    // 8. Assessment Submission
     else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {
       response = await handleAssessmentSubmission(body);
     }
-    // 5. Lead Submission
+    // 9. Lead Submission
     else if (url.startsWith('/api/lead') || url.startsWith('/api/brief')) {
       response = await handleLeadSubmission(body);
     }
-    // 6. Webhook Endpoints (n8n & WhatsApp)
+    // 10. Webhook Endpoints (n8n & WhatsApp)
     else if (url.startsWith('/api/webhooks')) {
       response = await handleWebhookRequest(url, method, body, query, headers);
     }
-    // 7. Shared Agent API
+    // 11. Shared Agent API
     else if (url.startsWith('/api/agents')) {
       response = await handleAgentRequest(url, method, body, headers);
     } else {

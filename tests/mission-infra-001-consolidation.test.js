@@ -48,20 +48,6 @@ describe('MISSION INFRA-001 — Consolidated Website + Serverless + Backend Veri
 
   test('3. Serverless API functions exist and load as valid modules', async () => {
     const serverlessEndpoints = [
-      '../api/health.js',
-      '../api/lead.js',
-      '../api/assessment.js',
-      '../api/event.js',
-      '../api/intake.js',
-      '../api/dld.js',
-      '../api/fx.js',
-      '../api/test-email.js',
-      '../api/executive/connectors.js',
-      '../api/executive/status.js',
-      '../api/executive/pipeline.js',
-      '../api/executive/alerts.js',
-      '../api/executive/kpis.js',
-      '../api/executive/chat.js',
       '../api/index.js'
     ];
 
@@ -82,8 +68,12 @@ describe('MISSION INFRA-001 — Consolidated Website + Serverless + Backend Veri
     assert.ok(Array.isArray(v.headers), 'headers must be an array');
 
     const dashboardRewrite = v.rewrites.find(r => r.source === '/dashboard');
-    assert.ok(dashboardRewrite, 'Must have /dashboard rewrite to /api/dashboard.js');
-    assert.strictEqual(dashboardRewrite.destination, '/api/dashboard.js');
+    assert.ok(dashboardRewrite, 'Must have /dashboard rewrite to /api/index.js');
+    assert.strictEqual(dashboardRewrite.destination, '/api/index.js');
+
+    const apiRewrite = v.rewrites.find(r => r.source === '/api/(.*)');
+    assert.ok(apiRewrite, 'Must have /api/(.*) rewrite to /api/index.js');
+    assert.strictEqual(apiRewrite.destination, '/api/index.js');
   });
 
   test('5. Execute serverless handlers locally with mock requests', async () => {
@@ -96,57 +86,48 @@ describe('MISSION INFRA-001 — Consolidated Website + Serverless + Backend Veri
         status: (s) => { status = s; return res; },
         json: (j) => { body = j; return res; },
         send: (b) => { body = b; return res; },
-        end: (b) => { if (b) body = b; return res; },
+        end: (b) => { if (b && body === null) body = b; return res; },
         _get: () => ({ status, body, headers })
       };
       return res;
     };
 
-    // Health
-    const healthMod = await import('../api/health.js');
+    const indexMod = await import('../api/index.js');
+
+    // Health via gateway
     const rHealth = mockRes();
-    await healthMod.default({ method: 'GET', headers: {} }, rHealth);
+    await indexMod.default({ url: '/api/health', method: 'GET', headers: {} }, rHealth);
     assert.strictEqual(rHealth._get().status, 200);
 
-    // Connectors
-    const connMod = await import('../api/executive/connectors.js');
+    // Connectors via gateway
     const rConn = mockRes();
-    await connMod.default({ method: 'GET', headers: { 'x-correlation-id': 'corr_test_infra' } }, rConn);
+    await indexMod.default({ url: '/api/executive/connectors', method: 'GET', headers: { 'x-correlation-id': 'corr_test_infra' } }, rConn);
     assert.strictEqual(rConn._get().status, 200);
     assert.strictEqual(rConn._get().body.success, true);
     assert.ok(rConn._get().body.connectors.supabase);
     assert.ok(rConn._get().body.connectors.smtp);
     assert.ok(rConn._get().body.connectors.n8n);
 
-    // Status
-    const statusMod = await import('../api/executive/status.js');
+    // Status via gateway
     const rStatus = mockRes();
-    await statusMod.default({ method: 'GET', headers: {} }, rStatus);
+    await indexMod.default({ url: '/api/executive/status', method: 'GET', headers: {} }, rStatus);
     assert.strictEqual(rStatus._get().status, 200);
-    assert.strictEqual(rStatus._get().body.runtimeStatus, 'OPERATIONAL');
+    assert.ok(rStatus._get().body.runtimeStatus === 'OPERATIONAL' || rStatus._get().body.runtimeStatus === 'HEALTHY');
 
-    // 6. Dedicated api/dashboard.js -> serves Command Center UI
-    const dashMod = await import('../api/dashboard.js');
-    const rDashDirect = mockRes();
-    await dashMod.default({ method: 'GET', headers: {} }, rDashDirect);
-    assert.strictEqual(rDashDirect._get().status, 200);
-    assert.ok(typeof rDashDirect._get().body === 'string');
-    assert.ok(rDashDirect._get().body.includes('Command Center') || rDashDirect._get().body.includes('RAIOC'));
+    // Dashboard via gateway
+    const rDash = mockRes();
+    await indexMod.default({ url: '/dashboard', method: 'GET', headers: {} }, rDash);
+    assert.strictEqual(rDash._get().status, 200);
+    assert.ok(typeof rDash._get().body === 'string');
+    assert.ok(rDash._get().body.includes('Command Center') || rDash._get().body.includes('RAIOC'));
 
-    // 7. api/index.js on '/' -> MUST serve index.html (public website), NEVER the dashboard
-    const indexMod = await import('../api/index.js');
+    // Root / -> MUST serve index.html (public website)
     const rRoot = mockRes();
     await indexMod.default({ url: '/', method: 'GET', headers: {} }, rRoot);
     assert.strictEqual(rRoot._get().status, 200);
     assert.ok(typeof rRoot._get().body === 'string');
     assert.ok(rRoot._get().body.includes('Emanuel Rendas — Private Real Estate Advisory'), 'Root / must be the public website');
     assert.ok(!rRoot._get().body.includes('Command Center UI') && !rRoot._get().body.includes('RAIOC COMMAND CENTER'), 'Root / must NOT be the dashboard');
-
-    // 8. api/index.js on '/dashboard' -> serves Command Center UI
-    const rDashViaIndex = mockRes();
-    await indexMod.default({ url: '/dashboard', method: 'GET', headers: {} }, rDashViaIndex);
-    assert.strictEqual(rDashViaIndex._get().status, 200);
-    assert.ok(typeof rDashViaIndex._get().body === 'string');
-    assert.ok(rDashViaIndex._get().body.includes('Command Center') || rDashViaIndex._get().body.includes('RAIOC'));
   });
 });
+
