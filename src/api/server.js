@@ -28,8 +28,8 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
   return await correlationTracer.runWithContext({ correlationId }, async () => {
     let response;
 
-    // 1. Dashboard UI & Telemetry (Root, /dashboard, /api/dashboard/*, /health, /api/test-email)
-    if (url === '/' || url === '/dashboard' || url === '/api/test-email' || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url === '/health' || url === '/api/health') {
+    // 1. Dashboard UI, Executive Telemetry & Connectors (Root, /dashboard, /api/dashboard/*, /api/executive/*, /api/telemetry/*, /health, /api/health, /api/test-email)
+    if (url === '/' || url === '/dashboard' || url === '/api/test-email' || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
       response = await handleTelemetryRequest(url, { headers, query, body });
     }
     // 2. IKL Endpoints
