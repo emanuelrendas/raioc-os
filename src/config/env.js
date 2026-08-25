@@ -101,9 +101,9 @@ export const config = {
   },
   n8n: {
     enabled: process.env.N8N_ENABLED !== 'false',
-    webhookUrl: process.env.N8N_WEBHOOK_URL || '',
-    webhookSecret: process.env.N8N_WEBHOOK_SECRET || 'raioc_n8n_hmac_secret',
-    timeoutMs: parseInt(process.env.N8N_TIMEOUT_MS || '10000', 10),
+    webhookUrl: process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || '',
+    webhookSecret: process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || 'raioc_n8n_hmac_secret',
+    timeoutMs: parseInt(process.env.N8N_TIMEOUT_MS || '5000', 10),
   },
   telegram: {
     enabled: process.env.TELEGRAM_ENABLED !== 'false',

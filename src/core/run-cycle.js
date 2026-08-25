@@ -10,6 +10,8 @@ import { queueEngine } from '../engines/queue-engine.js';
 import { whatsAppAdapter } from '../adapters/whatsapp-adapter.js';
 import { emailAdapter } from '../adapters/email-adapter.js';
 import { crmAdapter } from '../adapters/crm-adapter.js';
+import { dispatchN8nEvent } from '../adapters/n8n-adapter.js';
+import { sendTelegramAlert } from '../adapters/telegram-adapter.js';
 import { logger } from '../logging/audit-logger.js';
 import { telemetry } from '../logging/telemetry.js';
 
@@ -38,6 +40,8 @@ export async function run_cycle(options = {}) {
       whatsapp: 0,
       email: 0,
       crm: 0,
+      n8n: 0,
+      telegram: 0,
     },
     queueResults: {
       processed: 0,
@@ -72,6 +76,24 @@ export async function run_cycle(options = {}) {
         // Save Executive Brief to Supabase
         await db.saveExecutiveBrief(brief);
         summary.executiveBriefsGenerated++;
+
+        // Automated Webhook & VIP Bridge: Dispatch QUALIFIED_LEAD to n8n and Telegram
+        const correlationId = lead.correlation_id || lead.metadata?.correlationId || `corr_cycle_${lead.id}_${Date.now()}`;
+        await dispatchN8nEvent('QUALIFIED_LEAD', {
+          lead,
+          intelligence,
+          brief,
+          correlationId,
+        });
+        summary.dispatches.n8n++;
+
+        await sendTelegramAlert('NOTIF_QUALIFIED_LEAD', {
+          lead,
+          intelligence,
+          brief,
+          correlationId,
+        });
+        summary.dispatches.telegram++;
 
         // Enqueue Dispatches
         if (brief.dispatchPayloads.whatsapp.recipient) {

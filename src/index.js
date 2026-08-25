@@ -31,6 +31,8 @@ import { openAiClient } from './integrations/openai/openai-client.js';
 import { gmailAdapter } from './adapters/gmail-adapter.js';
 import { calendarAdapter } from './adapters/calendar-adapter.js';
 import { whatsAppCloudAdapter } from './adapters/whatsapp-cloud-adapter.js';
+import { n8nAdapter, dispatchN8nEvent } from './adapters/n8n-adapter.js';
+import { telegramAdapter, sendTelegramAlert, NOTIF_TEMPLATES } from './adapters/telegram-adapter.js';
 import { toolRegistry } from './agents/tool-registry.js';
 import { agentRuntime } from './agents/agent-runtime.js';
 import { AgentAction, AgentContext, ExecutionResult } from './agents/agent-action-interface.js';
@@ -103,6 +105,11 @@ export {
   gmailAdapter,
   calendarAdapter,
   whatsAppCloudAdapter,
+  n8nAdapter,
+  dispatchN8nEvent,
+  telegramAdapter,
+  sendTelegramAlert,
+  NOTIF_TEMPLATES,
   toolRegistry,
   agentRuntime,
   AgentAction,
