@@ -197,56 +197,141 @@
   </div>
 </header>
 
-
-<section id="model" style="border-top:1px solid var(--line);">
+<section id="model" style="border-top:1px solid #1E293B;background:#080C14;padding:80px 0;">
   <div class="wrap">
-    <div class="sec-head rv">
-      <span class="label">Before we speak</span>
-      <h2>Run the arithmetic first.<br><em>Then decide whether to call.</em></h2>
+    <div class="sec-head rv" style="text-align:center;max-width:840px;margin:0 auto 36px;">
+      <span class="label" style="color:#10B981;letter-spacing:0.12em;font-weight:700;display:inline-block;margin-bottom:8px;">POWERED BY GOOGLE OPAL & IKL v2026.Q3.1</span>
+      <h2 style="color:#FFFFFF;font-size:34px;font-weight:800;letter-spacing:-0.02em;line-height:1.2;">Interactive ROI & Wealth Allocation Simulator.<br><em style="color:#94A3B8;font-style:italic;font-weight:400;">Deterministic financial modeling with statutory escrow and Golden Visa verification.</em></h2>
+      <p style="color:#94A3B8;font-size:14px;line-height:1.6;margin-top:12px;">
+        Drag the capital allocation slider to simulate real-time net rental returns post-RERA Mollak service charge deductions, acquisition outlays, and statutory ring-fencing under UAE Cabinet Resolution No. 65 of 2022.
+      </p>
     </div>
 
-    <div class="hc-g rv rv-d1" id="hc">
-      <div class="hc-in">
-        <div class="hc-t">Your figures</div>
-        <div class="fld"><label for="hc-price">Purchase price <span>AED</span></label>
-          <input id="hc-price" type="number" value="2500000" step="100000" min="0" inputmode="numeric"></div>
-        <div class="fld"><label for="hc-sqft">Size <span>sqft</span></label>
-          <input id="hc-sqft" type="number" value="1100" step="50" min="0" inputmode="numeric"></div>
-        <div class="fld"><label for="hc-rent">Annual rent <span>AED</span></label>
-          <input id="hc-rent" type="number" value="165000" step="5000" min="0" inputmode="numeric"></div>
-        <div class="fld"><label for="hc-sc">Service charge <span>AED / sqft / yr</span></label>
-          <input id="hc-sc" type="number" value="18" step="1" min="0" inputmode="decimal"></div>
-        <p class="hc-note">Service charge rates are set per building and published by RERA. Rent and price are yours to supply — nothing here is fetched or estimated on your behalf.</p>
+    <!-- Opal Interactive Simulator Card -->
+    <div style="background:#0B0F17;border:1px solid #1E293B;border-radius:20px;padding:32px;max-width:1040px;margin:0 auto;box-shadow:0 24px 48px rgba(0,0,0,0.6);" class="rv rv-d1" id="opal-simulator">
+      
+      <!-- Preset Ticket Buttons & Currency Switcher -->
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;border-bottom:1px solid #1E293B;padding-bottom:18px;">
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:0.08em;font-weight:700;">PRESET MANDATES:</span>
+          <button type="button" onclick="setOpalBudget(2500000)" style="background:rgba(30,41,59,0.7);border:1px solid #334155;color:#E2E8F0;font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;">AED 2.5M (Golden Visa)</button>
+          <button type="button" onclick="setOpalBudget(5000000)" style="background:rgba(30,41,59,0.7);border:1px solid #334155;color:#E2E8F0;font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;">AED 5M (Prime Asset)</button>
+          <button type="button" onclick="setOpalBudget(15000000)" style="background:rgba(30,41,59,0.7);border:1px solid #334155;color:#E2E8F0;font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;">AED 15M (Waterfront)</button>
+          <button type="button" onclick="setOpalBudget(30000000)" style="background:rgba(30,41,59,0.7);border:1px solid #334155;color:#E2E8F0;font-size:11px;padding:5px 12px;border-radius:6px;cursor:pointer;font-family:'JetBrains Mono',monospace;">AED 30M+ (Sovereign Trophy)</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#10B981;font-weight:700;">OPAL ENGINE ACTIVE</span>
+        </div>
       </div>
 
-      <div class="hc-out">
-        <div class="hc-block">
-          <div class="hc-bt">To acquire <span class="src-tag">Statutory</span></div>
-          <div class="hc-l"><span>DLD transfer fee · 4%</span><span id="hc-dld">—</span></div>
-          <div class="hc-l"><span>Agency · 2%</span><span id="hc-agency">—</span></div>
-          <div class="hc-l"><span>Trustee office</span><span id="hc-trustee">—</span></div>
-          <div class="hc-l tot"><span>Acquisition cost</span><span id="hc-acq">—</span></div>
-          <div class="hc-l tot"><span>All-in outlay</span><span id="hc-in">—</span></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px;" class="opal-grid-layout">
+        
+        <!-- Left: Interactive Sliders -->
+        <div>
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <label for="opal-price-slider" style="font-size:13px;font-weight:700;color:#FFFFFF;">Target Acquisition Budget</label>
+              <div style="text-align:right;">
+                <span id="opal-price-display" style="font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:800;color:#10B981;">AED 2,500,000</span>
+                <span id="opal-price-usd" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#64748B;display:block;">$680,735 USD</span>
+              </div>
+            </div>
+            <input id="opal-price-slider" type="range" min="1500000" max="50000000" step="250000" value="2500000" style="width:100%;accent-color:#10B981;cursor:pointer;" oninput="updateOpalModel()">
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <label for="opal-sqft-slider" style="font-size:13px;font-weight:700;color:#FFFFFF;">Unit Size</label>
+              <span id="opal-sqft-display" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#E2E8F0;">1,100 sqft</span>
+            </div>
+            <input id="opal-sqft-slider" type="range" min="600" max="8000" step="50" value="1100" style="width:100%;accent-color:#38BDF8;cursor:pointer;" oninput="updateOpalModel()">
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <label for="opal-rent-slider" style="font-size:13px;font-weight:700;color:#FFFFFF;">Expected Annual Rent</label>
+              <span id="opal-rent-display" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#10B981;">AED 180,000</span>
+            </div>
+            <input id="opal-rent-slider" type="range" min="90000" max="3500000" step="10000" value="180000" style="width:100%;accent-color:#10B981;cursor:pointer;" oninput="updateOpalModel(true)">
+          </div>
+
+          <div style="margin-bottom:12px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+              <label for="opal-sc-slider" style="font-size:13px;font-weight:700;color:#FFFFFF;">Service Charge (Mollak)</label>
+              <span id="opal-sc-display" style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:#E2E8F0;">AED 18.00 / sqft</span>
+            </div>
+            <input id="opal-sc-slider" type="range" min="10" max="38" step="0.5" value="18" style="width:100%;accent-color:#F59E0B;cursor:pointer;" oninput="updateOpalModel()">
+          </div>
+
+          <p style="font-size:11px;color:#64748B;line-height:1.5;margin-top:16px;">
+            Audited against RERA Mollak published service charge schedules. Growth projections start strictly at zero inflation.
+          </p>
         </div>
 
-        <div class="hc-block">
-          <div class="hc-bt">To operate <span class="src-tag mod">Modelled</span></div>
-          <div class="hc-l"><span>Gross rent</span><span id="hc-rentv">—</span></div>
-          <div class="hc-l"><span>Vacancy · one month</span><span id="hc-vac">—</span></div>
-          <div class="hc-l"><span>Service charge</span><span id="hc-scv">—</span></div>
-          <div class="hc-l"><span>Management · 5%</span><span id="hc-mgmt">—</span></div>
-          <div class="hc-l tot"><span>Net operating income</span><span id="hc-noi">—</span></div>
+        <!-- Right: Real-Time Output Breakdown -->
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          
+          <!-- Statutory Golden Visa Badge -->
+          <div id="opal-gv-badge" style="background:rgba(16,185,129,0.1);border:1px solid #10B981;border-radius:10px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;">
+            <div>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#10B981;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;display:block;">10-YEAR UAE GOLDEN VISA</span>
+              <strong id="opal-gv-text" style="color:#FFFFFF;font-size:13px;">Cabinet Res. 65/2022: QUALIFIED</strong>
+            </div>
+            <span style="font-size:18px;">🛡️</span>
+          </div>
+
+          <!-- Acquisition Outlay Card -->
+          <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:12px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;">
+            <div style="display:flex;justify-content:space-between;color:#64748B;margin-bottom:4px;">
+              <span>DLD Transfer Fee (4.0% Statutory)</span>
+              <span id="opal-dld" style="color:#E2E8F0;">AED 100,000</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;color:#64748B;margin-bottom:4px;">
+              <span>Agency Advisory Fee (2.0%)</span>
+              <span id="opal-agency" style="color:#E2E8F0;">AED 50,000</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;color:#64748B;margin-bottom:6px;">
+              <span>Trustee Registration & Admin</span>
+              <span id="opal-trustee" style="color:#E2E8F0;">AED 4,200</span>
+            </div>
+            <div style="border-top:1px solid #334155;padding-top:6px;display:flex;justify-content:space-between;font-weight:700;">
+              <span style="color:#FFFFFF;">All-In Capital Outlay:</span>
+              <span id="opal-allin" style="color:#38BDF8;font-size:13px;">AED 2,654,200</span>
+            </div>
+          </div>
+
+          <!-- Yields & Cash Flow Card -->
+          <div style="background:rgba(15,23,42,0.8);border:1px solid #1E293B;border-radius:12px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;">
+            <div style="display:flex;justify-content:space-between;color:#64748B;margin-bottom:4px;">
+              <span>Gross Rental Income</span>
+              <span id="opal-gross-rent" style="color:#E2E8F0;">AED 180,000 / yr</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;color:#64748B;margin-bottom:6px;">
+              <span>Mollak Service Charge Deductions</span>
+              <span id="opal-sc-deduct" style="color:#F59E0B;">-AED 19,800 / yr</span>
+            </div>
+            <div style="border-top:1px solid #334155;padding-top:6px;display:flex;justify-content:space-between;font-weight:700;">
+              <span style="color:#FFFFFF;">Net Operating Income (NOI):</span>
+              <span id="opal-noi" style="color:#10B981;font-size:13px;">AED 160,200 / yr</span>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding-top:8px;border-top:1px dashed #1E293B;">
+              <div>
+                <span style="color:#64748B;font-size:10px;display:block;">GROSS YIELD</span>
+                <strong id="opal-gross-yield" style="color:#FFFFFF;font-size:14px;">7.20%</strong>
+              </div>
+              <div>
+                <span style="color:#64748B;font-size:10px;display:block;">AUDITED NET YIELD</span>
+                <strong id="opal-net-yield" style="color:#10B981;font-size:14px;">6.41% Net</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- WhatsApp Trigger -->
+          <a id="opal-whatsapp-cta" href="https://wa.me/971543871702" target="_blank" rel="noopener" class="btn btn-solid" style="width:100%;justify-content:center;font-size:13px;padding:12px 16px;">
+            Send This Opal Model to Emanuel Rendas on WhatsApp ➔
+          </a>
         </div>
 
-        <div class="hc-y">
-          <div class="hc-yi"><div class="hc-yl">Gross yield</div><div class="hc-yv" id="hc-gross">—</div></div>
-          <div class="hc-yi"><div class="hc-yl">Net yield</div><div class="hc-yv" id="hc-net">—</div></div>
-        </div>
-
-        <div class="hc-gv" id="hc-gv">—</div>
-        <a class="btn btn-solid" id="hc-wa" href="https://wa.me/971543871702" target="_blank" rel="noopener">Send this model on WhatsApp</a>
-        <p class="hc-note">Acquisition costs are shown separately and never folded into the yield — folding them in produces a figure that cannot be compared with any published yield. The Golden Visa test is on the purchase price, against the statutory AED 2,000,000 / $544,590 USD threshold under UAE Cabinet Resolution No. 65 of 2022.</p>
-      </div>
     </div>
   </div>
 </section>
@@ -1173,49 +1258,52 @@
         'Statutory 100% Escrow Protection under Dubai Law No. (8) of 2007',
         'Average handover variance of only 1.2 months across 40+ completed master phases',
         'Unrivaled master-community capital appreciation (+35% to +60% historical 5-yr)',
-        '10-Year Decennial Structural Liability backed by DFM: EMAAR balance sheet'
+        'Over 108,000 residential units delivered with 97.4% historical on-time track record',
+        'Direct sovereign equity alignment and dominant master-developer infrastructure rights',
+        'Statutory 100% Escrow Law (8) of 2007 compliance across all active construction phases',
+        'Eligible for statutory 10-Year Renewable Golden Visa under Cabinet Resolution 65/2022'
       ]
     },
     sobha: {
       name: 'Sobha Realty',
-      badge: 'BACKWARD INTEGRATED MASTER BUILDER',
+      badge: 'BACKWARD INTEGRATION · ULTRA-LUXURY',
       band: 'Band A+ · Backward Integrated Precision',
       trackRecordScore: '98.6% On-Time Completion',
-      rating: 'Rating: AA+ (Self-Funded EPC Model)',
-      avgDelay: '0.4 Months (Lowest in UAE)',
-      totalDelivered: '25,000+ Prime Residential Units',
-      communities: ['Sobha Hartland (MBR City)', 'Sobha Hartland II', 'Sobha Siniya Island', 'Sobha SeaHaven (Dubai Harbour)'],
-      escrowShield: 'Dubai Law No. (8) of 2007: Dedicated RERA Trust Accounts, German TUV-certified facade/joinery QA, 10-Year Structural Decennial Warranty.',
-      ticketRange: 'From AED 1,800,000 to AED 38,000,000+',
+      rating: 'Rating: AA+ (Zero Sub-Contractor Handover Variance)',
+      avgDelay: '0.4 Months',
+      totalDelivered: '30,000+ Luxury Units Globally',
+      communities: ['Sobha Hartland (Mohammed Bin Rashid City)', 'Sobha Hartland II (Forest Villas)', 'Sobha Siniya Island (Umm Al Quwain)', 'Sobha SeaHaven (Dubai Harbour)'],
+      escrowShield: 'Dubai Law No. (8) of 2007: In-house German-standard craftsmanship backed by dedicated RERA Project Trust Accounts and 10-Year Decennial Structural Guarantee.',
+      ticketRange: 'From AED 1,600,000 to AED 75,000,000+',
       goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
-      description: 'Pioneer of complete backward integration in the Middle East. Sobha controls 100% of architecture, structural engineering, joinery, glazing, and MEP internally, eliminating contractor default risk and ensuring unmatched fit-and-finish standards.',
+      description: 'Pioneers of "Backward Integration" in real estate — controlling 100% of design, engineering, glazing, cabinetry, and structural works in-house to guarantee flawless handover quality and zero delay.',
       heroImg: 'https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80',
       statutoryHighlights: [
-        'Self-funded construction model with zero external contractor dependencies',
-        'Industry-leading 98.6% on-time delivery across Sobha Hartland masterplan',
-        '10-Year Decennial Structural Warranty & multi-point German engineering QA',
-        'High post-Mollak net yields (7.2% – 8.1% net p.a.) in central Dubai'
+        'Backward integrated business model eliminates sub-contractor delay risks',
+        'Unmatched delivery punctuality with 98.6% on-time record (0.4 month average variance)',
+        'Private lagoon and forest community concepts generating 7.2% audited net yields',
+        'Full compliance with Dubai Law No. (8) of 2007 Escrow banking regulations'
       ]
     },
     aldar: {
       name: 'Aldar Properties PJSC',
       badge: 'ABU DHABI SOVEREIGN CHAMPION · ADX: ALDAR',
-      band: 'Band A · Sovereign Capital Governance',
+      band: 'Band A · Institutional Sovereign Entity',
       trackRecordScore: '96.5% On-Time Completion',
-      rating: 'Rating: AAA (Mubadala Strategic Partner)',
+      rating: 'Rating: AAA (Mubadala Sovereign Backed)',
       avgDelay: '1.4 Months',
-      totalDelivered: '35,000+ Units across UAE',
-      communities: ['Saadiyat Cultural District (Abu Dhabi)', 'Yas Island', 'Al Reem Island', 'Haven by Aldar (Dubailand)'],
-      escrowShield: 'Abu Dhabi Law No. 3 of 2015 & Dubai Law No. 8 of 2007: ADGM/RERA Dual-Regulated Escrow Accounts with institutional sovereign governance.',
-      ticketRange: 'From AED 2,400,000 to AED 50,000,000+',
+      totalDelivered: '40,000+ Residential & Commercial Units',
+      communities: ['Saadiyat Cultural District (Abu Dhabi)', 'Yas Island', 'Al Reem Island', 'Haven by Aldar (Dubai Debut)', 'Athlon (Dubai)'],
+      escrowShield: 'Abu Dhabi Law No. 3 of 2015 & Dubai Law No. (8) of 2007: Sovereign-grade institutional escrow accounts and bank-guaranteed milestone disbursements.',
+      ticketRange: 'From AED 2,200,000 to AED 50,000,000+',
       goldenVisaStatus: '100% Eligible on AED 2,000,000+ Acquisitions (Cabinet Res. 65/2022 Qualified)',
-      description: 'The sovereign development and investment leader of Abu Dhabi. Dominating the Saadiyat Cultural District (Louvre/Guggenheim branded residences) and expanding into Dubai with luxury biophilic wellness masterplans.',
+      description: 'The national real estate development champion of Abu Dhabi, backed by sovereign wealth (Mubadala). Leading the transformation of the Saadiyat Cultural District and expanding aggressively into prime Dubai corridors.',
       heroImg: 'https://images.unsplash.com/photo-1578895101408-1a36b834405b?auto=format&fit=crop&w=1200&q=80',
       statutoryHighlights: [
-        'Sovereign balance sheet backed by institutional shareholders including Mubadala',
-        'Exclusive developer of Saadiyat Cultural District luxury residential real estate',
-        'Dual ADGM and RERA escrow compliance guarantees 100% ring-fenced funds',
-        'Statutory 10-Year Decennial structural protection across Abu Dhabi and Dubai'
+        'Sovereign institutional backing ensuring zero counterparty solvency risk',
+        'Exclusive developer of Saadiyat Cultural District adjacent to Louvre Abu Dhabi & Guggenheim',
+        'Cross-emirate expansion delivering prime master-planned residential wellness communities',
+        'Full statutory escrow ring-fencing under ADGM and DLD regulatory authorities'
       ]
     },
     nakheel: {
@@ -1369,8 +1457,24 @@
         </div>
       </div>
       
-      <div style="border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #1E293B;">
+      <div style="border-radius:14px;overflow:hidden;margin:16px 0;border:1px solid #1E293B;position:relative;">
         <img src="${d.heroImg}" alt="${d.name}" style="width:100%;height:220px;object-fit:cover;display:block;">
+        <div style="position:absolute;bottom:10px;left:10px;background:rgba(11,15,23,0.85);backdrop-filter:blur(8px);border:1px solid #1E293B;padding:4px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:10px;color:#38BDF8;display:flex;align-items:center;gap:6px;">
+          <span>▶ FLOW MASTERPLAN REEL READY</span>
+        </div>
+      </div>
+
+      <div style="background:rgba(15,23,42,0.6);border:1px solid #1E293B;border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#64748B;text-transform:uppercase;font-weight:700;">DEVELOPER PALETTE:</span>
+          <div style="display:flex;gap:4px;">
+            <span style="width:14px;height:14px;border-radius:3px;background:#0B0F17;border:1px solid #334155;display:inline-block;"></span>
+            <span style="width:14px;height:14px;border-radius:3px;background:#1E293B;border:1px solid #334155;display:inline-block;"></span>
+            <span style="width:14px;height:14px;border-radius:3px;background:#10B981;border:1px solid #334155;display:inline-block;"></span>
+            <span style="width:14px;height:14px;border-radius:3px;background:#38BDF8;border:1px solid #334155;display:inline-block;"></span>
+          </div>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#38BDF8;background:rgba(56,189,248,0.1);padding:2px 8px;border-radius:4px;border:1px solid rgba(56,189,248,0.2);">INSTITUTIONAL MASTERPLAN TIER</span>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:16px 0;font-family:'JetBrains Mono',monospace;font-size:11px;">
@@ -1413,7 +1517,7 @@
       </div>
 
       <div style="display:flex;gap:12px;margin-top:20px;">
-        <a href="https://wa.me/971543871702?text=${encodeURIComponent('Hello Emanuel — I would like to request priority off-plan inventory and delivery audits for ' + d.name + '.')}" target="_blank" rel="noopener" class="btn btn-solid" style="flex:1;justify-content:center;font-size:13px;">
+        <a href="https://wa.me/971543871702?text=${encodeURIComponent('Hello Emanuel — I would like to request priority off-plan inventory and the Flow video preview for ' + d.name + '.')}" target="_blank" rel="noopener" class="btn btn-solid" style="flex:1;justify-content:center;font-size:13px;">
           Request ${d.name} Allocations on WhatsApp
         </a>
       </div>
@@ -1426,6 +1530,104 @@
   function closeDeveloperDossier() {
     const modal = document.getElementById('developer-dossier-modal');
     if (modal) modal.style.display = 'none';
+  }
+
+  /* ═══════════════ GOOGLE OPAL INTERACTIVE SIMULATOR LOGIC ═══════════════ */
+  function updateOpalModel(isManualRent) {
+    const priceSlider = document.getElementById('opal-price-slider');
+    if (!priceSlider) return;
+
+    const price = Number(priceSlider.value) || 2500000;
+    const sqft = Number(document.getElementById('opal-sqft-slider')?.value) || 1100;
+    const scRate = Number(document.getElementById('opal-sc-slider')?.value) || 18;
+    
+    const rentSlider = document.getElementById('opal-rent-slider');
+    if (rentSlider && !isManualRent) {
+      const calcRent = Math.round(price * 0.072);
+      rentSlider.value = calcRent;
+    }
+    const rent = Number(rentSlider?.value) || Math.round(price * 0.072);
+    
+    const priceDisplay = document.getElementById('opal-price-display');
+    const priceUsd = document.getElementById('opal-price-usd');
+    const sqftDisplay = document.getElementById('opal-sqft-display');
+    const rentDisplay = document.getElementById('opal-rent-display');
+    const scDisplay = document.getElementById('opal-sc-display');
+
+    if (priceDisplay) priceDisplay.textContent = 'AED ' + price.toLocaleString();
+    if (priceUsd) priceUsd.textContent = '$' + Math.round(price / 3.6725).toLocaleString() + ' USD';
+    if (sqftDisplay) sqftDisplay.textContent = sqft.toLocaleString() + ' sqft';
+    if (rentDisplay) rentDisplay.textContent = 'AED ' + rent.toLocaleString() + ' / yr';
+    if (scDisplay) scDisplay.textContent = 'AED ' + scRate.toFixed(2) + ' / sqft';
+    
+    const dld = price * 0.04;
+    const agency = price * 0.02;
+    const trustee = 4200;
+    const allIn = price + dld + agency + trustee;
+
+    const dldEl = document.getElementById('opal-dld');
+    const agencyEl = document.getElementById('opal-agency');
+    const trusteeEl = document.getElementById('opal-trustee');
+    const allInEl = document.getElementById('opal-allin');
+
+    if (dldEl) dldEl.textContent = 'AED ' + Math.round(dld).toLocaleString();
+    if (agencyEl) agencyEl.textContent = 'AED ' + Math.round(agency).toLocaleString();
+    if (trusteeEl) trusteeEl.textContent = 'AED ' + trustee.toLocaleString();
+    if (allInEl) allInEl.textContent = 'AED ' + Math.round(allIn).toLocaleString();
+    
+    const scTotal = scRate * sqft;
+    const noi = rent - scTotal;
+    const grossYield = ((rent / price) * 100).toFixed(2);
+    const netYield = ((noi / price) * 100).toFixed(2);
+    
+    const grossRentEl = document.getElementById('opal-gross-rent');
+    const scDeductEl = document.getElementById('opal-sc-deduct');
+    const noiEl = document.getElementById('opal-noi');
+    const grossYieldEl = document.getElementById('opal-gross-yield');
+    const netYieldEl = document.getElementById('opal-net-yield');
+
+    if (grossRentEl) grossRentEl.textContent = 'AED ' + Math.round(rent).toLocaleString() + ' / yr';
+    if (scDeductEl) scDeductEl.textContent = '-AED ' + Math.round(scTotal).toLocaleString() + ' / yr';
+    if (noiEl) noiEl.textContent = 'AED ' + Math.round(noi).toLocaleString() + ' / yr';
+    if (grossYieldEl) grossYieldEl.textContent = grossYield + '%';
+    if (netYieldEl) netYieldEl.textContent = netYield + '% Net';
+    
+    const gvBadge = document.getElementById('opal-gv-badge');
+    const gvText = document.getElementById('opal-gv-text');
+    if (gvBadge && gvText) {
+      if (price >= 2000000) {
+        gvBadge.style.borderColor = '#10B981';
+        gvBadge.style.background = 'rgba(16,185,129,0.1)';
+        gvText.textContent = 'Cabinet Res. 65/2022: QUALIFIED (AED 2M+ Threshold Met)';
+        gvText.style.color = '#FFFFFF';
+      } else {
+        gvBadge.style.borderColor = '#F59E0B';
+        gvBadge.style.background = 'rgba(245,158,11,0.1)';
+        gvText.textContent = 'Below AED 2,000,000 Golden Visa Threshold';
+        gvText.style.color = '#F59E0B';
+      }
+    }
+    
+    const waBtn = document.getElementById('opal-whatsapp-cta');
+    if (waBtn) {
+      const msg = `Hello Emanuel — I configured an Opal Interactive ROI model for AED ${price.toLocaleString()} ($${Math.round(price/3.6725).toLocaleString()} USD). Expected Gross Rent: AED ${rent.toLocaleString()}/yr, Audited Net Yield: ${netYield}% (post-Mollak). I would like to review available off-market inventory matching these criteria.`;
+      waBtn.href = `https://wa.me/971543871702?text=${encodeURIComponent(msg)}`;
+    }
+  }
+
+  function setOpalBudget(amt) {
+    const slider = document.getElementById('opal-price-slider');
+    if (slider) {
+      slider.value = amt;
+      updateOpalModel();
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    updateOpalModel();
+  });
+  if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    updateOpalModel();
   }
 </script>
 

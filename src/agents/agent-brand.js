@@ -7,6 +7,7 @@
 import { BaseSpecialistAgent } from './specialists/base-agent.js';
 import { AgentEvents } from '../events/agent-event-bus.js';
 import { logger } from '../logging/audit-logger.js';
+import { handleOpalRoi, handleMixboardBoard, handleFlowTeaser } from '../api/routes/ai-tools-routes.js';
 
 export class BrandContentAgent extends BaseSpecialistAgent {
   constructor() {
@@ -20,6 +21,9 @@ export class BrandContentAgent extends BaseSpecialistAgent {
         'script_writing',
         'multimodal_storyboarding',
         'macro_editorial',
+        'opal_roi_modeling',
+        'mixboard_moodboards',
+        'flow_video_hooks',
       ],
       systemPrompt:
         'You are the Chief Brand & Content Strategist for Emanuel Rendas Private Real Estate Advisory. You create high-impact, institutional scripts and hooks focused on UAE sovereign megaprojects, Golden Visa statutory law (Res 65/2022), and audited net yields.',
@@ -103,6 +107,25 @@ export class BrandContentAgent extends BaseSpecialistAgent {
 
     const thesis = this.macroTheses[topic] || this.macroTheses['dubai-south'];
 
+    // Generate enriched assets through AI tools
+    let opalEnrichment = null;
+    let mixboardEnrichment = null;
+    let flowEnrichment = null;
+
+    try {
+      const priceNum = parseInt((thesis.entryTicketAed || '3200000').replace(/[^0-9]/g, ''), 10) || 3200000;
+      const opalRes = await handleOpalRoi({ purchasePriceAed: priceNum });
+      opalEnrichment = opalRes?.body || null;
+
+      const mixboardRes = await handleMixboardBoard({ budgetAed: priceNum, strategicFocus: topic });
+      mixboardEnrichment = mixboardRes?.body || null;
+
+      const flowRes = await handleFlowTeaser({ budgetAed: priceNum, projectName: thesis.title });
+      flowEnrichment = flowRes?.body || null;
+    } catch (enrichErr) {
+      logger.warn('BRAND', `AI tools enrichment notice: ${enrichErr.message}`);
+    }
+
     const contentPackage = {
       id: `content_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
       topic,
@@ -115,6 +138,11 @@ export class BrandContentAgent extends BaseSpecialistAgent {
         escrowProtection: thesis.lawAnchor,
         auditedNetYield: thesis.netYield,
         capitalAppreciation: thesis.appreciation,
+      },
+      aiTools: {
+        opalRoi: opalEnrichment,
+        mixboard: mixboardEnrichment,
+        flowTeaser: flowEnrichment,
       },
       hook: thesis.hook,
       script: this._generateScriptByFormat(format, thesis),

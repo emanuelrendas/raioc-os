@@ -8,6 +8,7 @@ import { diraRiisEngine } from '../engines/dira-riis-engine.js';
 import { supabase } from '../db/supabase-client.js';
 import { AgentEvents } from '../events/agent-event-bus.js';
 import { logger } from '../logging/audit-logger.js';
+import { handleOpalRoi, handleMixboardBoard, handleFlowTeaser } from '../api/routes/ai-tools-routes.js';
 
 export class DmConversionAgent extends BaseSpecialistAgent {
   constructor() {
@@ -21,9 +22,12 @@ export class DmConversionAgent extends BaseSpecialistAgent {
         'dira_scoring_sync',
         'calendar_booking_trigger',
         'private_client_onboarding',
+        'opal_roi_enrichment',
+        'mixboard_synthesis',
+        'flow_teaser_dispatch',
       ],
       systemPrompt:
-        'You triage and qualify inbound direct messages from Instagram, Meta, TikTok, and LinkedIn. You extract investor requirements, calculate DIRA/RIIS scores, ingest qualified leads, and provide bespoke VIP conversion replies.',
+        'You triage and qualify inbound direct messages from Instagram, Meta, TikTok, and LinkedIn. You extract investor requirements, calculate DIRA/RIIS scores, ingest qualified leads, and enrich outbound investor packets with Opal ROI models, Mixboard concepts, and Flow video hooks.',
     });
   }
 
@@ -50,7 +54,36 @@ export class DmConversionAgent extends BaseSpecialistAgent {
     const tierNumeric = isTier1 ? 1 : (rawTier === 'TIER_2_STRATEGIC' || rawTier === 2 || parsedLead.budgetAed >= 5000000 ? 2 : 3);
     const riisScore = evaluation.riis?.score || (isTier1 ? 95 : 80);
 
-    // 3. Persist lead record into Supabase
+    // 3. Multi-Agent Ecosystem Enrichment: Opal ROI + Mixboard + Flow Teaser
+    let opalEnrichment = null;
+    let mixboardEnrichment = null;
+    let flowEnrichment = null;
+
+    try {
+      const opalRes = await handleOpalRoi({
+        purchasePriceAed: parsedLead.budgetAed,
+        expectedAnnualRentAed: Math.round(parsedLead.budgetAed * 0.072),
+      });
+      opalEnrichment = opalRes?.body || null;
+
+      const mixboardRes = await handleMixboardBoard({
+        budgetAed: parsedLead.budgetAed,
+        clientName: parsedLead.name,
+        strategicFocus: parsedLead.strategicIntent,
+      });
+      mixboardEnrichment = mixboardRes?.body || null;
+
+      const flowRes = await handleFlowTeaser({
+        budgetAed: parsedLead.budgetAed,
+        clientName: parsedLead.name,
+        projectName: parsedLead.preferredCorridor,
+      });
+      flowEnrichment = flowRes?.body || null;
+    } catch (enrichErr) {
+      logger.warn('DM_CONVERSION', `AI tools enrichment notice: ${enrichErr.message}`);
+    }
+
+    // 4. Persist lead record into Supabase
     let leadRecord = null;
     try {
       if (typeof supabase.insertLead === 'function') {
@@ -69,7 +102,7 @@ export class DmConversionAgent extends BaseSpecialistAgent {
       logger.warn('DM_CONVERSION', `Supabase lead ingestion notice: ${err.message}`);
     }
 
-    // 4. Synthesize bespoke VIP direct response
+    // 5. Synthesize bespoke VIP direct response
     const replyMessage = this._generateDmReply(parsedLead, tierNumeric);
 
     const result = {
@@ -82,6 +115,11 @@ export class DmConversionAgent extends BaseSpecialistAgent {
         tier: tierNumeric,
         tierLabel: rawTier,
         category: evaluation.persona?.name || 'Sovereign Investor',
+      },
+      aiToolsEnrichment: {
+        opalRoi: opalEnrichment,
+        mixboard: mixboardEnrichment,
+        flowTeaser: flowEnrichment,
       },
       replyMessage,
       bookingUrl: 'https://www.emanuelrendas.com/advisory',
@@ -96,7 +134,7 @@ export class DmConversionAgent extends BaseSpecialistAgent {
         objectiveId: context.correlationId || result.leadId,
         confidenceScore: 0.95,
         impactLevel: tierNumeric <= 2 ? 'HIGH' : 'MEDIUM',
-        metadata: { platform, senderHandle, riis: riisScore },
+        metadata: { platform, senderHandle, riis: riisScore, hasOpal: !!opalEnrichment },
       }
     );
 
