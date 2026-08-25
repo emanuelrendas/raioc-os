@@ -26,12 +26,26 @@ export default async function handler(req, res) {
 
     if (contentType.includes('text/html') || typeof response.body === 'string') {
       res.setHeader('Content-Type', contentType);
-      res.send(response.body);
+      if (typeof res.send === 'function') {
+        res.send(response.body);
+      } else {
+        res.end(response.body);
+      }
     } else {
       res.setHeader('Content-Type', 'application/json');
-      res.json(response.body);
+      if (typeof res.json === 'function') {
+        res.json(response.body);
+      } else {
+        res.end(JSON.stringify(response.body));
+      }
     }
   } catch (err) {
-    res.status(500).json({ error: 'Internal Serverless Execution Error', message: err.message });
+    res.status(500);
+    const errPayload = { error: 'Internal Serverless Execution Error', message: err.message };
+    if (typeof res.json === 'function') {
+      res.json(errPayload);
+    } else {
+      res.end(JSON.stringify(errPayload));
+    }
   }
 }
