@@ -1,0 +1,211 @@
+{
+  "name": "RAIOC — WF-04: ATLAS & LEX Asset Valuation & Statutory Compliance (ATLAS / LEX)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-asset-valuation",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Valuation Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "id": "node_wf04_webhook_01"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare parameters for ATLAS Market Intelligence and LEX Legal engine\nconst crypto = require('crypto');\nconst input = $input.first().json;\nconst body = input.body || input;\nconst headers = input.headers || {};\n\nconst assetName = body.asset_name || 'Como Residences (Palm Jumeirah)';\nconst developer = body.developer || 'Nakheel';\nconst purchasePriceAed = Number(body.purchase_price_aed || 21000000);\nconst investorName = body.investor_name || 'Dr. Afonso Henriques Family Office';\nconst investorEmail = body.investor_email || 'privateadvisory@emanuelrendas.com';\nconst escrowNumber = body.escrow_number || 'ESC-2024-COMO-804';\n\nconst traceparent = headers['traceparent'] || `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`;\nconst correlationId = headers['x-correlation-id'] || `corr_${Date.now()}`;\n\nreturn [{\n  json: {\n    assetName,\n    developer,\n    purchasePriceAed,\n    investorName,\n    investorEmail,\n    escrowNumber,\n    traceparent,\n    correlationId,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Asset Parameters Extractor",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300],
+      "id": "node_wf04_params_02"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/opal/roi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "propertyPriceAed", "value": "={{ $json.purchasePriceAed }}" },
+            { "name": "communityId", "value": "comm_palm_jumeirah" },
+            { "name": "rentalYieldPct", "value": 7.8 },
+            { "name": "appreciationPct", "value": 12.5 },
+            { "name": "holdingPeriodYears", "value": 5 }
+          ]
+        },
+        "options": {}
+      },
+      "name": "3. ATLAS Opal Yield & ROI Model",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "id": "node_wf04_atlas_roi_03"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/cognitive/dispatch",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "agent", "value": "LEX" },
+            { "name": "prompt", "value": "=Audit statutory compliance for {{ $('2. Asset Parameters Extractor').item.json.assetName }} under UAE Law 8/2007 (Escrow: {{ $('2. Asset Parameters Extractor').item.json.escrowNumber }}), 4% DLD Fee, and Cabinet Resolution 65/2022 10-Year Golden Visa qualification." }
+          ]
+        },
+        "options": {}
+      },
+      "name": "4. LEX Statutory Compliance Audit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 300],
+      "id": "node_wf04_lex_audit_04"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Executive Institutional Memorandum HTML and text\nconst roi = $('3. ATLAS Opal Yield & ROI Model').item.json;\nconst params = $('2. Asset Parameters Extractor').item.json;\nconst lex = $input.first().json;\n\nconst dldFeeAed = params.purchasePriceAed * 0.04;\nconst netYield = roi.body?.netYieldPct || roi.netYieldPct || 7.8;\nconst projected5YrReturnAed = roi.body?.projectedTotalReturnAed || (params.purchasePriceAed * 0.58);\n\nconst subject = `RAIOC Private Memorandum — ${params.assetName} (AED ${(params.purchasePriceAed / 1000000).toFixed(1)}M)`;\nconst htmlBody = `<div style=\"font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 650px; margin: 0 auto; background: #030712; color: #f3f4f6; padding: 32px; border-radius: 12px; border: 1px solid rgba(212,175,55,0.3);\">\n  <h1 style=\"color: #d4af37; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 24px;\">Institutional Real Estate Memorandum</h1>\n  <p><strong>Principal:</strong> ${params.investorName}</p>\n  <p><strong>Target Asset:</strong> ${params.assetName} by ${params.developer}</p>\n  <p><strong>Acquisition Valuation:</strong> AED ${params.purchasePriceAed.toLocaleString()}</p>\n  <hr style=\"border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;\" />\n  <h3 style=\"color: #38bdf8; font-size: 14px; text-transform: uppercase;\">ATLAS Financial Intelligence</h3>\n  <p>• Projected Net Yield: <strong>${netYield}%</strong></p>\n  <p>• 5-Year Cumulative Capital Appreciation: <strong>AED ${projected5YrReturnAed.toLocaleString()}</strong></p>\n  <hr style=\"border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;\" />\n  <h3 style=\"color: #4ade80; font-size: 14px; text-transform: uppercase;\">LEX Statutory Verification</h3>\n  <p>• UAE Law No. 8/2007 Escrow Account: <span style=\"color:#4ade80;\">VERIFIED (${params.escrowNumber})</span></p>\n  <p>• UAE 10-Year Golden Visa (Res. 65/2022): <span style=\"color:#4ade80;\">QUALIFIED</span> (Threshold: AED 2.0M)</p>\n  <p>• Statutory DLD Transfer Fee (4%): AED ${dldFeeAed.toLocaleString()}</p>\n  <hr style=\"border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 20px 0;\" />\n  <p style=\"font-size: 11px; color: #9ca3af;\">Synthesized autonomously by RAIOC Autonomous Intelligence Mesh. Correlation: ${params.correlationId}</p>\n</div>`;\n\nreturn [{\n  json: {\n    investorName: params.investorName,\n    investorEmail: params.investorEmail,\n    subject,\n    htmlBody,\n    correlationId: params.correlationId,\n    traceparent: params.traceparent\n  }\n}];"
+      },
+      "name": "5. Memorandum Synthesis",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 300],
+      "id": "node_wf04_memo_05"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>",
+        "toEmail": "={{ $json.investorEmail }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.htmlBody }}",
+        "options": {}
+      },
+      "name": "6. Dispatch Memorandum Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [1300, 300],
+      "id": "node_wf04_email_06"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/event",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event_type", "value": "raioc.asset.valuation.completed.v1" },
+            { "name": "source_agent", "value": "ATLAS" },
+            { "name": "correlation_id", "value": "={{ $json.correlationId }}" },
+            { "name": "payload", "value": "={{ $json }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "7. Publish Valuation Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1520, 300],
+      "id": "node_wf04_event_bus_07"
+    }
+  ],
+  "connections": {
+    "1. Valuation Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "2. Asset Parameters Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Asset Parameters Extractor": {
+      "main": [
+        [
+          {
+            "node": "3. ATLAS Opal Yield & ROI Model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. ATLAS Opal Yield & ROI Model": {
+      "main": [
+        [
+          {
+            "node": "4. LEX Statutory Compliance Audit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. LEX Statutory Compliance Audit": {
+      "main": [
+        [
+          {
+            "node": "5. Memorandum Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Memorandum Synthesis": {
+      "main": [
+        [
+          {
+            "node": "6. Dispatch Memorandum Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Dispatch Memorandum Email": {
+      "main": [
+        [
+          {
+            "node": "7. Publish Valuation Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

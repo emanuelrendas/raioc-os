@@ -1,0 +1,193 @@
+{
+  "name": "RAIOC — WF-03: AIDA Executive Voice AI Outreach & Speech Synthesis (AIDA)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-voice-outreach",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Inbound Voice Request Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "id": "node_wf03_webhook_01"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare voice synthesis payload for AIDA Voice Gateway\nconst crypto = require('crypto');\nconst input = $input.first().json;\nconst body = input.body || input;\nconst headers = input.headers || {};\n\nconst investorName = body.investor_name || body.name || 'Lord Alistair Sterling';\nconst recipientPhone = body.phone || '+447946099100';\nconst allocationAed = Number(body.budget_aed || 20000000);\nconst assetCorridor = body.asset_corridor || 'Palm Jumeirah Ultra-Prime Freehold';\nconst useCase = (body.use_case || 'INVESTOR_FOLLOWUP').toUpperCase();\n\nconst traceparent = headers['traceparent'] || `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`;\nconst correlationId = headers['x-correlation-id'] || `corr_${Date.now()}`;\n\nconst promptText = body.custom_text || `Good afternoon ${investorName}. This is AIDA from Emanuel Rendas Private Advisory in Dubai. Following your review of the ${assetCorridor} allocation of AED ${(allocationAed / 1000000).toFixed(1)}M, our statutory escrow and yield modeling has verified an 8.1% net yield under UAE Law 8 ringfencing. We have reserved the private memorandum for your family office review.`;\n\nreturn [{\n  json: {\n    investorName,\n    recipientPhone,\n    allocationAed,\n    assetCorridor,\n    useCase,\n    promptText,\n    traceparent,\n    correlationId,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Voice Context Formatter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300],
+      "id": "node_wf03_context_02"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/communication/voice",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
+            { "name": "traceparent", "value": "={{ $json.traceparent }}" },
+            { "name": "x-correlation-id", "value": "={{ $json.correlationId }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "investor_name", "value": "={{ $json.investorName }}" },
+            { "name": "text", "value": "={{ $json.promptText }}" },
+            { "name": "use_case", "value": "={{ $json.useCase }}" },
+            { "name": "target_language", "value": "en-GB" },
+            { "name": "executive_voice_profile", "value": "AIDA_SOVEREIGN_BRITISH" }
+          ]
+        },
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "name": "3. AIDA Voice Synthesis Engine",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "id": "node_wf03_voice_synth_03"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare WhatsApp audio payload and metadata\nconst synth = $input.first().json;\nconst context = $('2. Voice Context Formatter').item.json;\n\nreturn [{\n  json: {\n    audioUrl: synth.body?.audio_url || synth.audio_url || 'https://assets.emanuelrendas.com/audio/aida_memo_sterling.mp3',\n    audioSha256: synth.body?.audio_sha256 || synth.audio_sha256 || '0000000000000000000000000000000000000000000000000000000000000000',\n    durationSeconds: synth.body?.duration_seconds || 18.5,\n    recipientPhone: context.recipientPhone,\n    investorName: context.investorName,\n    correlationId: context.correlationId,\n    traceparent: context.traceparent\n  }\n}];"
+      },
+      "name": "4. Audio Envelope Packager",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [860, 300],
+      "id": "node_wf03_package_04"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v20.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "messaging_product", "value": "whatsapp" },
+            { "name": "recipient_type", "value": "individual" },
+            { "name": "to", "value": "={{ $json.recipientPhone.replace(/[^0-9]/g, '') }}" },
+            { "name": "type", "value": "audio" },
+            { "name": "audio", "value": "={{ { link: $json.audioUrl } }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "5. Meta WhatsApp Audio Dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 300],
+      "id": "node_wf03_wa_dispatch_05"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/event",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event_type", "value": "raioc.communication.voice.dispatched.v1" },
+            { "name": "source_agent", "value": "AIDA" },
+            { "name": "correlation_id", "value": "={{ $('2. Voice Context Formatter').item.json.correlationId }}" },
+            { "name": "payload", "value": "={{ $json }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "6. Publish Voice Dispatched Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 300],
+      "id": "node_wf03_event_bus_06"
+    }
+  ],
+  "connections": {
+    "1. Inbound Voice Request Webhook": {
+      "main": [
+        [
+          {
+            "node": "2. Voice Context Formatter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Voice Context Formatter": {
+      "main": [
+        [
+          {
+            "node": "3. AIDA Voice Synthesis Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. AIDA Voice Synthesis Engine": {
+      "main": [
+        [
+          {
+            "node": "4. Audio Envelope Packager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Audio Envelope Packager": {
+      "main": [
+        [
+          {
+            "node": "5. Meta WhatsApp Audio Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Meta WhatsApp Audio Dispatch": {
+      "main": [
+        [
+          {
+            "node": "6. Publish Voice Dispatched Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}

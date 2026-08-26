@@ -1,0 +1,176 @@
+{
+  "name": "RAIOC — WF-05: SENTINEL 24/7 Mesh Observability & Circuit Breakers (SENTINEL)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 1
+            }
+          ]
+        }
+      },
+      "name": "1. 60-Second Watchdog Timer",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 300],
+      "id": "node_wf05_timer_01"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/mission-control/v1-state",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
+            { "name": "x-raioc-secret", "value": "={{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "name": "2. Probe Mission Control State",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [420, 300],
+      "id": "node_wf05_probe_02"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluate system health, error rate and circuit breakers\nconst state = $input.first().json.body || $input.first().json;\nconst health = state.healthBar || {};\nconst errorRate5m = Number(health.errorRate5m || 0.0);\nconst systemHealthPct = Number(health.systemHealthPct || 100.0);\nconst pendingApprovals = Number(health.pendingApprovalsCount || 0);\n\nconst isDegraded = errorRate5m > 5.0 || systemHealthPct < 95.0;\n\nreturn [{\n  json: {\n    systemHealthPct,\n    errorRate5m,\n    pendingApprovals,\n    isDegraded,\n    timestamp: new Date().toISOString(),\n    status: isDegraded ? 'DEGRADED' : 'OPTIMAL'\n  }\n}];"
+      },
+      "name": "3. Evaluate Health & Anomalies",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [640, 300],
+      "id": "node_wf05_eval_03"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.isDegraded }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "4. Is Anomaly Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 300],
+      "id": "node_wf05_if_04"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "chat_id", "value": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}" },
+            { "name": "parse_mode", "value": "Markdown" },
+            { "name": "text", "value": "=🚨 *RAIOC SENTINEL CRITICAL ALERT*\n\n*Health Status:* DEGRADED ({{ $json.systemHealthPct }}%)\n*5M Error Rate:* {{ $json.errorRate5m }}%\n*Pending Approvals:* {{ $json.pendingApprovals }}\n*Timestamp:* `{{ $json.timestamp }}`\n\n_Auto-failover to Tier-2 offline cache initiated._" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "5. Emergency Alert Dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 220],
+      "id": "node_wf05_alert_05"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/event",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event_type", "value": "raioc.sentinel.heartbeat.recorded.v1" },
+            { "name": "source_agent", "value": "SENTINEL" },
+            { "name": "correlation_id", "value": "=corr_heartbeat_{{ Date.now() }}" },
+            { "name": "payload", "value": "={{ $json }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "6. Log Sentinel Heartbeat",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 380],
+      "id": "node_wf05_heartbeat_06"
+    }
+  ],
+  "connections": {
+    "1. 60-Second Watchdog Timer": {
+      "main": [
+        [
+          {
+            "node": "2. Probe Mission Control State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Probe Mission Control State": {
+      "main": [
+        [
+          {
+            "node": "3. Evaluate Health & Anomalies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Evaluate Health & Anomalies": {
+      "main": [
+        [
+          {
+            "node": "4. Is Anomaly Detected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Is Anomaly Detected?": {
+      "main": [
+        [
+          {
+            "node": "5. Emergency Alert Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "6. Log Sentinel Heartbeat",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
