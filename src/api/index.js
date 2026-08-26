@@ -12,3 +12,6 @@ export { handleTelemetryRequest } from './routes/telemetry-routes.js';
 export { handleWebhookRequest } from './routes/webhook-routes.js';
 export { handleAgentRequest } from './routes/agent-routes.js';
 export { handleCrmRequest } from './routes/crm-routes.js';
+export { handleFleetRequest } from './mission-control/fleet.js';
+export { handleApprovalsRequest } from './mission-control/approvals.js';
+export { handleInteractionsRequest } from './mission-control/interactions.js';

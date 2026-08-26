@@ -8,6 +8,7 @@
 
 import { propertyCalculators } from '../calculators/property-calculators.js';
 import { MultimodalEngine } from '../../engines/multimodal-engine.js';
+import { geminiAdapter } from '../../adapters/gemini-adapter.js';
 import { logger } from '../../logging/audit-logger.js';
 
 const multimodalEngine = new MultimodalEngine();
@@ -152,13 +153,49 @@ export async function handleFlowTeaser(payload = {}) {
 }
 
 /**
+ * Handle Gemini Advisor Executive Intelligence Directives
+ * @param {Object} payload 
+ * @param {Object} headers
+ * @returns {Object} HTTP response
+ */
+export async function handleGeminiAdvisor(payload = {}, headers = {}) {
+  const prompt = payload.prompt || payload.message || payload.query || 'Provide executive real estate intelligence update for Dubai prime assets.';
+  const correlationId = headers['x-correlation-id'] || `corr_gemini_advisor_${Date.now()}`;
+  
+  const outcome = await geminiAdapter.generateResponse(prompt, {
+    correlationId,
+    clientName: payload.clientName || 'Emanuel Rendas (Principal Advisor)',
+    budgetAed: payload.budgetAed || payload.budget || 15000000,
+    strategicFocus: payload.strategicFocus || 'sovereign_capital_preservation',
+    ...(payload.context || {}),
+  });
+
+  return {
+    status: 200,
+    body: {
+      success: true,
+      tool: 'gemini_executive_advisor',
+      model: outcome.model || 'gemini-2.5-flash',
+      provider: outcome.provider,
+      prompt,
+      response: outcome.text,
+      latencyMs: outcome.latencyMs,
+      finishReason: outcome.finishReason,
+      timestamp: new Date().toISOString(),
+    },
+  };
+}
+
+/**
  * Main HTTP router for AI Tools
  * @param {string} url 
  * @param {string} method 
  * @param {Object} body 
+ * @param {Object} query
+ * @param {Object} headers
  * @returns {Object} HTTP response
  */
-export async function handleAiToolsRequest(url, method = 'GET', body = {}) {
+export async function handleAiToolsRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
   const cleanUrl = url.split('?')[0].replace(/\/$/, '');
 
   if (cleanUrl === '/api/opal/roi' || cleanUrl === '/api/opal') {
@@ -173,11 +210,16 @@ export async function handleAiToolsRequest(url, method = 'GET', body = {}) {
     return await handleFlowTeaser(body);
   }
 
+  if (cleanUrl === '/api/ai/gemini-advisor' || cleanUrl === '/api/ai/advisor' || cleanUrl === '/api/mission-control/copilot') {
+    return await handleGeminiAdvisor(body, headers);
+  }
+
   return {
     status: 404,
     body: {
       error: `Unknown AI Tool endpoint: ${url}`,
-      availableEndpoints: ['/api/opal/roi', '/api/mixboard/board', '/api/flow/teaser'],
+      availableEndpoints: ['/api/opal/roi', '/api/mixboard/board', '/api/flow/teaser', '/api/ai/gemini-advisor'],
     },
   };
 }
+

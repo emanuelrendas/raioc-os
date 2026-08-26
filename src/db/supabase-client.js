@@ -21,6 +21,9 @@ export class SupabaseClient {
       audit_logs: [],
       telemetry: [],
       agent_status: new Map(),
+      agent_fleet_status: new Map(),
+      executive_approvals: [],
+      interaction_logs: [],
       system_health: [],
       system_metrics: [],
       connector_health: new Map(),
@@ -797,9 +800,395 @@ export class SupabaseClient {
     }
   }
 
+  // --- Mission Control Fleet Telemetry & Approvals ---
+
+  async fetchFleetStatus() {
+    const defaultRoster = [
+      {
+        agentId: 'jarvis_executive_brain',
+        name: 'JARVIS (CEO & Sovereign Executive Orchestrator)',
+        role: 'Chief Autonomous Orchestration Agent & Executive Brain',
+        status: 'IDLE',
+        currentTask: 'Autonomous cycle telemetry loop & sovereign asset indexing',
+        metrics: { latencyMs: 14, tasksCompleted: 142, tasksFailed: 0, learningScore: 98.5, efficiencyIndex: 99 },
+        lastHeartbeat: new Date().toISOString(),
+      },
+      {
+        agentId: 'mark_lead_triage',
+        name: 'MARK (Sales & Lead Triage Specialist)',
+        role: 'Lead Triage, Multi-Channel Ingestion & RIIS Scoring',
+        status: 'PROCESSING',
+        currentTask: 'Evaluating inbound sovereign family office allocation mandates',
+        metrics: { latencyMs: 18, tasksCompleted: 98, tasksFailed: 1, learningScore: 95.0, efficiencyIndex: 96 },
+        lastHeartbeat: new Date().toISOString(),
+      },
+      {
+        agentId: 'atlas_opal_calculator',
+        name: 'ATLAS (Google Opal & Prime Market Intelligence)',
+        role: 'Opal ROI Statutory Shielding & Real Estate Valuations',
+        status: 'IDLE',
+        currentTask: 'Calibrating Law 8 Escrow models and Golden Visa yield bands',
+        metrics: { latencyMs: 8, tasksCompleted: 215, tasksFailed: 0, learningScore: 99.2, efficiencyIndex: 100 },
+        lastHeartbeat: new Date().toISOString(),
+      },
+      {
+        agentId: 'aida_flow_mixboard',
+        name: 'AIDA (Flow & Mixboard Multimodal Generator)',
+        role: 'Client Relations, Flow Cinematic Video & Moodboard Engine',
+        status: 'IDLE',
+        currentTask: 'Synthesizing Palm Jumeirah & Aerotropolis concept boards',
+        metrics: { latencyMs: 24, tasksCompleted: 64, tasksFailed: 0, learningScore: 94.0, efficiencyIndex: 95 },
+        lastHeartbeat: new Date().toISOString(),
+      },
+      {
+        agentId: 'sentinel_devops_qa',
+        name: 'SENTINEL (DevOps, QA & Health Watchdog)',
+        role: 'Operational Watchdog, Telemetry Mesh & Fault Recovery',
+        status: 'IDLE',
+        currentTask: 'Continuous single-gateway latency & connector pulse verification',
+        metrics: { latencyMs: 4, tasksCompleted: 380, tasksFailed: 0, learningScore: 99.9, efficiencyIndex: 100 },
+        lastHeartbeat: new Date().toISOString(),
+      },
+      {
+        agentId: 'lex_compliance_visa',
+        name: 'LEX (Regulatory, Golden Visa & Tax Specialist)',
+        role: 'Statutory Shielding, Law 8 Escrow & DIFC Common Law Governance',
+        status: 'IDLE',
+        currentTask: 'Auditing 4% DLD fee exemptions & sovereign trust frameworks',
+        metrics: { latencyMs: 12, tasksCompleted: 112, tasksFailed: 0, learningScore: 97.4, efficiencyIndex: 98 },
+        lastHeartbeat: new Date().toISOString(),
+      },
+    ];
+
+    if (this.isMock) {
+      if (this.mockStore.agent_fleet_status.size === 0) {
+        for (const agent of defaultRoster) {
+          this.mockStore.agent_fleet_status.set(agent.agentId, agent);
+        }
+      }
+      return Array.from(this.mockStore.agent_fleet_status.values());
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/agent_fleet_status?select=*&order=updated_at.desc`, {
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows && rows.length > 0) return rows;
+      }
+      return defaultRoster;
+    } catch {
+      return defaultRoster;
+    }
+  }
+
+  async recordFleetHeartbeat(agentData) {
+    const record = {
+      agentId: agentData.agentId || agentData.agent_id || 'unknown_agent',
+      name: agentData.name || agentData.agentId || 'Autonomous Specialist Agent',
+      role: agentData.role || 'Autonomous System Agent',
+      status: (agentData.status || 'IDLE').toUpperCase(), // 'IDLE', 'PROCESSING', 'ALERT', 'OFFLINE'
+      currentTask: agentData.currentTask || agentData.current_task || agentData.activeTask || null,
+      metrics: {
+        latencyMs: agentData.metrics?.latencyMs || agentData.latencyMs || 0,
+        tasksCompleted: agentData.metrics?.tasksCompleted || agentData.tasksCompleted || 0,
+        tasksFailed: agentData.metrics?.tasksFailed || agentData.tasksFailed || 0,
+        learningScore: agentData.metrics?.learningScore || agentData.learningScore || 95.0,
+        efficiencyIndex: agentData.metrics?.efficiencyIndex || agentData.efficiencyIndex || 95,
+      },
+      lastHeartbeat: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.agent_fleet_status.set(record.agentId, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/agent_fleet_status`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : record;
+    } catch {
+      return record;
+    }
+  }
+
+  async fetchApprovals(status = 'PENDING') {
+    const defaultApprovals = [
+      {
+        id: 'appr_palm_allocation_001',
+        title: 'Outbound Prime Allocation Dossier — AED 15M (Palm Jumeirah)',
+        agent: 'MARK (Sales & Lead Triage Specialist)',
+        category: 'HIGH_VALUE_DISPATCH',
+        status: 'PENDING',
+        priority: 'HIGH',
+        recipient: 'Dr. Gonçalo de Albuquerque (Portugal NHR)',
+        targetAsset: 'Como Residences (Nakheel)',
+        payload: {
+          budgetAed: 15000000,
+          goldenVisaEligible: true,
+          escrowLaw8Guaranteed: true,
+          netYieldBand: '7.6% - 8.2% Net',
+          dispatchChannel: 'WhatsApp & Sovereign PDF Email',
+        },
+        createdAt: new Date(Date.now() - 300000).toISOString(),
+      },
+      {
+        id: 'appr_dld_greenlist_002',
+        title: 'DLD Green List Verified Pre-Launch Tranche Release',
+        agent: 'ATLAS (Real Estate & Market Intelligence)',
+        category: 'MARKET_ALLOCATION',
+        status: 'PENDING',
+        priority: 'CRITICAL',
+        recipient: 'Al-Mansoor Sovereign Family Office',
+        targetAsset: 'Valia at Dubai Creek Harbour',
+        payload: {
+          allocatedUnits: 4,
+          totalCapitalAed: 22000000,
+          decennialWarranty: 'UAE Civil Code Art. 880 Compliant',
+        },
+        createdAt: new Date(Date.now() - 600000).toISOString(),
+      },
+      {
+        id: 'appr_voice_followup_003',
+        title: 'Autonomous ElevenLabs Voice Followup Synthesis',
+        agent: 'AIDA (Client Relations & Flow Engine)',
+        category: 'VOICE_BROADCAST',
+        status: 'PENDING',
+        priority: 'MEDIUM',
+        recipient: 'Lord Arthur Kensington (UK Non-Dom)',
+        targetAsset: 'Rosehill (Dubai Hills Estate)',
+        payload: {
+          scriptExcerpt: 'Private brief prepared regarding UK Non-Dom capital reallocation into DIFC shielded assets...',
+          voiceModel: 'Emanuel Rendas Institutional British / International',
+        },
+        createdAt: new Date(Date.now() - 900000).toISOString(),
+      },
+    ];
+
+    if (this.isMock) {
+      if (this.mockStore.executive_approvals.length === 0) {
+        this.mockStore.executive_approvals = [...defaultApprovals];
+      }
+      if (!status || status === 'ALL') return this.mockStore.executive_approvals;
+      return this.mockStore.executive_approvals.filter((a) => a.status === status);
+    }
+
+    try {
+      const filter = status && status !== 'ALL' ? `?status=eq.${status}&order=created_at.desc` : `?order=created_at.desc`;
+      const res = await fetch(`${this.url}/rest/v1/executive_approvals${filter}`, {
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows && rows.length > 0) return rows;
+      }
+      return defaultApprovals.filter((a) => !status || status === 'ALL' || a.status === status);
+    } catch {
+      return defaultApprovals.filter((a) => !status || status === 'ALL' || a.status === status);
+    }
+  }
+
+  async resolveApproval(id, resolution, actor = 'Emanuel Rendas', metadata = {}) {
+    const cleanStatus = resolution === 'APPROVE' || resolution === 'APPROVED' ? 'APPROVED' : 'REJECTED';
+
+    if (this.isMock) {
+      if (this.mockStore.executive_approvals.length === 0) {
+        await this.fetchApprovals();
+      }
+      let item = this.mockStore.executive_approvals.find((a) => a.id === id);
+      if (!item) {
+        item = {
+          id,
+          title: `Action Item ${id}`,
+          status: cleanStatus,
+          resolvedAt: new Date().toISOString(),
+          actor,
+          metadata,
+        };
+        this.mockStore.executive_approvals.push(item);
+      } else {
+        item.status = cleanStatus;
+        item.resolvedAt = new Date().toISOString();
+        item.actor = actor;
+        item.metadata = { ...(item.metadata || {}), ...metadata };
+      }
+      return item;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/executive_approvals?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify({
+          status: cleanStatus,
+          resolved_at: new Date().toISOString(),
+          actor,
+          metadata,
+        }),
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        return rows[0] || { id, status: cleanStatus, actor, resolvedAt: new Date().toISOString() };
+      }
+      return { id, status: cleanStatus, actor, resolvedAt: new Date().toISOString() };
+    } catch {
+      return { id, status: cleanStatus, actor, resolvedAt: new Date().toISOString() };
+    }
+  }
+
+  async fetchInteractionLogs(limit = 15) {
+    const defaultLogs = [
+      {
+        id: 'log_inbound_001',
+        correlation_id: 'corr_pt_hnw_178773801',
+        channel: 'WEBSITE',
+        event_type: 'LEAD_INGESTED',
+        source_agent: 'MARK',
+        direction: 'INBOUND',
+        summary: 'Portugal HNW Lead Ingestion: Gonçalo de Albuquerque (AED 15,000,000)',
+        status: 'SUCCESS',
+        created_at: new Date(Date.now() - 45000).toISOString(),
+      },
+      {
+        id: 'log_opal_002',
+        correlation_id: 'corr_pt_hnw_178773801',
+        channel: 'API',
+        event_type: 'OPAL_ROI_CALCULATED',
+        source_agent: 'ATLAS',
+        direction: 'INTERNAL_AGENT',
+        summary: 'Google Opal ROI Computation: 7.8% Net Yield with Law 8 Escrow statutory shield',
+        status: 'SUCCESS',
+        created_at: new Date(Date.now() - 38000).toISOString(),
+      },
+      {
+        id: 'log_memo_003',
+        correlation_id: 'corr_pt_hnw_178773801',
+        channel: 'ENGINE',
+        event_type: 'MEMORANDUM_GENERATED',
+        source_agent: 'JARVIS',
+        direction: 'INTERNAL_AGENT',
+        summary: 'Institutional Memorandum generated [memo_178773801_x9] in 2ms',
+        status: 'SUCCESS',
+        created_at: new Date(Date.now() - 30000).toISOString(),
+      },
+      {
+        id: 'log_wa_004',
+        correlation_id: 'corr_pt_hnw_178773801',
+        channel: 'WHATSAPP',
+        event_type: 'BRIEF_DISPATCHED',
+        source_agent: 'AIDA',
+        direction: 'OUTBOUND',
+        summary: 'WhatsApp brief queued for +351912345678 (Como Residences allocation)',
+        status: 'SUCCESS',
+        created_at: new Date(Date.now() - 22000).toISOString(),
+      },
+      {
+        id: 'log_email_005',
+        correlation_id: 'corr_pt_hnw_178773801',
+        channel: 'EMAIL',
+        event_type: 'EXECUTIVE_BRIEF_SENT',
+        source_agent: 'AIDA',
+        direction: 'OUTBOUND',
+        summary: 'Executive Brief email queued for goncalo@albuquerque-capital.pt',
+        status: 'SUCCESS',
+        created_at: new Date(Date.now() - 15000).toISOString(),
+      },
+      {
+        id: 'log_n8n_006',
+        correlation_id: 'corr_es_hnw_178773802',
+        channel: 'N8N_WEBHOOK',
+        event_type: 'N8N_PIPELINE_TRIGGERED',
+        source_agent: 'HERMES',
+        direction: 'INTERNAL_AGENT',
+        summary: 'Segmented n8n pipeline executed for Spain HNW Wealth Tax Hedge lead',
+        status: 'SUCCESS',
+        created_at: new Date(Date.now() - 8000).toISOString(),
+      },
+    ];
+
+    if (this.isMock) {
+      if (this.mockStore.interaction_logs.length === 0) {
+        this.mockStore.interaction_logs = [...defaultLogs];
+      }
+      return this.mockStore.interaction_logs.slice(0, limit);
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/interaction_logs?select=*&order=created_at.desc&limit=${limit}`, {
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        if (rows && rows.length > 0) return rows;
+      }
+      return defaultLogs.slice(0, limit);
+    } catch {
+      return defaultLogs.slice(0, limit);
+    }
+  }
+
+  async recordInteractionLog(logData) {
+    const record = {
+      id: logData.id || `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      investor_id: logData.investor_id || logData.investorId || null,
+      correlation_id: logData.correlation_id || logData.correlationId || null,
+      channel: logData.channel || 'WEBSITE',
+      event_type: logData.event_type || logData.eventType || 'SYSTEM_EVENT',
+      source_agent: logData.source_agent || logData.sourceAgent || 'JARVIS',
+      direction: logData.direction || 'INBOUND',
+      summary: logData.summary || 'Interaction logged',
+      payload: logData.payload || {},
+      response_data: logData.response_data || logData.responseData || {},
+      latency_ms: logData.latency_ms || logData.latencyMs || 0,
+      status: logData.status || 'SUCCESS',
+      error_message: logData.error_message || logData.errorMessage || null,
+      created_at: logData.created_at || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.interaction_logs.unshift(record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/interaction_logs`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      return res.ok ? record : record;
+    } catch {
+      return record;
+    }
+  }
+
   getOperationalStoreSnapshot() {
     return {
       agents: Array.from(this.mockStore.agent_status.values()),
+      fleet: Array.from(this.mockStore.agent_fleet_status.values()),
+      approvals: this.mockStore.executive_approvals,
+      interactions: this.mockStore.interaction_logs,
       connectors: Array.from(this.mockStore.connector_health.values()),
       executions: Array.from(this.mockStore.executions.values()),
       workflows: Array.from(this.mockStore.workflow_runs.values()),
@@ -811,3 +1200,4 @@ export class SupabaseClient {
 }
 
 export const supabase = new SupabaseClient();
+

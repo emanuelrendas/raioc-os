@@ -10,6 +10,7 @@ import path from 'node:path';
 import { routeApiRequest } from '../src/api/server.js';
 import { renderCommandCenterHtml } from '../src/dashboard/command-center-html.js';
 import { renderExecutiveBriefHtml } from '../src/site/brief-viewer-html.js';
+import { renderMissionControlHtml } from '../src/site/mission-control-html.js';
 import { supabase } from '../src/db/supabase-client.js';
 import { sitePages } from '../src/site/site-pages.js';
 
@@ -56,6 +57,15 @@ export default async function handler(req, res) {
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
     res.status(200);
     return typeof res.send === 'function' ? res.send(briefHtml) : res.end(briefHtml);
+  }
+
+  // 1b. Executive Mission Control UI (/admin/mission-control, /mission-control)
+  if (url === '/admin/mission-control' || url === '/mission-control' || url === '/admin/mission-control.html' || url === '/mission-control.html' || url === '/api/mission-control/ui') {
+    const mcHtml = (sitePages && sitePages['mission-control']) ? sitePages['mission-control'] : renderMissionControlHtml();
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+    res.status(200);
+    return typeof res.send === 'function' ? res.send(mcHtml) : res.end(mcHtml);
   }
 
   // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard'

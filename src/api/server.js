@@ -18,7 +18,11 @@ import { handleIntakeRequest } from './routes/intake-routes.js';
 import { handleAiToolsRequest } from './routes/ai-tools-routes.js';
 import { handleSocialRequest } from './routes/social-routes.js';
 import { handleCrmRequest } from './routes/crm-routes.js';
+import { handleFleetRequest } from './mission-control/fleet.js';
+import { handleApprovalsRequest } from './mission-control/approvals.js';
+import { handleInteractionsRequest } from './mission-control/interactions.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
+import { renderMissionControlHtml } from '../site/mission-control-html.js';
 import { supabase } from '../db/supabase-client.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
 import { metricsCollector } from '../monitoring/metrics-collector.js';
@@ -42,6 +46,15 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       const briefId = url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0];
       const briefRecord = await supabase.fetchExecutiveBriefById(briefId);
       const html = renderExecutiveBriefHtml(briefRecord || { id: briefId, companyName: 'Private Sovereign Client' });
+      response = {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        body: html,
+      };
+    }
+    // 0b. Executive Mission Control UI (/admin/mission-control, /mission-control, /api/mission-control/ui)
+    else if ((url === '/admin/mission-control' || url === '/mission-control' || url === '/api/mission-control/ui') && method === 'GET') {
+      const html = renderMissionControlHtml();
       response = {
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
@@ -76,9 +89,21 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/calculators')) {
       response = await handleCalculatorRequest(url, body);
     }
-    // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow)
-    else if (url.startsWith('/api/opal') || url.startsWith('/api/mixboard') || url.startsWith('/api/flow')) {
-      response = await handleAiToolsRequest(url, method, body);
+    // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow, Gemini Advisor)
+    else if (url.startsWith('/api/opal') || url.startsWith('/api/mixboard') || url.startsWith('/api/flow') || url.startsWith('/api/ai')) {
+      response = await handleAiToolsRequest(url, method, body, query, headers);
+    }
+    // 8b. Mission Control Fleet Telemetry (/api/mission-control/fleet)
+    else if (url.startsWith('/api/mission-control/fleet')) {
+      response = await handleFleetRequest(url, method, body, query, headers);
+    }
+    // 8c. Mission Control Executive Approvals (/api/mission-control/approvals)
+    else if (url.startsWith('/api/mission-control/approvals')) {
+      response = await handleApprovalsRequest(url, method, body, query, headers);
+    }
+    // 8d. Mission Control Ingestion Stream (/api/mission-control/interactions)
+    else if (url.startsWith('/api/mission-control/interactions')) {
+      response = await handleInteractionsRequest(url, method, body, query, headers);
     }
     // 9. Assessment Submission
     else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {

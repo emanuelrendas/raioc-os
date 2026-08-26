@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 
-const pages = ['index', 'about', 'contact', 'advisory', 'instruments', 'intelligence', 'addresses', 'dashboard'];
+const pages = ['index', 'about', 'contact', 'advisory', 'instruments', 'intelligence', 'addresses', 'dashboard', 'mission-control'];
 const map = {};
 for (const p of pages) {
   map[p] = fs.readFileSync(p + '.html', 'utf8');
