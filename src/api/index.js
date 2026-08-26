@@ -11,3 +11,4 @@ export { handleLeadSubmission } from './routes/lead-routes.js';
 export { handleTelemetryRequest } from './routes/telemetry-routes.js';
 export { handleWebhookRequest } from './routes/webhook-routes.js';
 export { handleAgentRequest } from './routes/agent-routes.js';
+export { handleCrmRequest } from './routes/crm-routes.js';

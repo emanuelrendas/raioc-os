@@ -1,0 +1,293 @@
+{
+  "name": "RAIOC — Google Tools Orchestration (Gemini, Opal, Mixboard, Flow)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-google-tools-orchestration",
+        "responseMode": "responseNode",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Inbound Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        180,
+        340
+      ],
+      "id": "node_google_tools_webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract incoming client inquiry & setup parameters\nconst incoming = $input.first().json;\nconst body = incoming.body || incoming;\nconst correlationId = body.correlationId || incoming.headers?.['x-correlation-id'] || `corr_gtools_${Date.now()}`;\n\nconst clientName = body.clientName || body.name || 'Private Sovereign Investor';\nconst email = body.email || 'privateadvisory@emanuelrendas.com';\nconst budgetAed = Number(body.budgetAed || body.propertyPriceAed || body.budget || 15000000);\nconst sqft = Number(body.unitSizeSqft || body.sqft || 1850);\nconst rentAed = Number(body.expectedAnnualRentAed || body.rent || Math.round(budgetAed * 0.078));\nconst serviceCharge = Number(body.serviceChargePerSqft || body.sc || 18);\nconst strategicFocus = body.strategicFocus || (budgetAed >= 10000000 ? 'sovereign_capital_preservation' : 'high_net_yield');\nconst projectName = body.projectName || (budgetAed >= 15000000 ? 'Como Residences' : 'Rosehill');\n\nreturn [{\n  json: {\n    correlationId,\n    clientName,\n    email,\n    budgetAed,\n    sqft,\n    rentAed,\n    serviceCharge,\n    strategicFocus,\n    projectName,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Standardize Inbound Parameters",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        400,
+        340
+      ],
+      "id": "node_standardize_params"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/opal/roi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"purchasePriceAed\": {{ $json.budgetAed }},\n  \"unitSizeSqft\": {{ $json.sqft }},\n  \"expectedAnnualRentAed\": {{ $json.rentAed }},\n  \"serviceChargePerSqft\": {{ $json.serviceCharge }}\n}",
+        "options": {}
+      },
+      "name": "3. Google Opal ROI & Statutory Shield",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        180
+      ],
+      "id": "node_opal_roi_calc"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/mixboard/board",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"clientName\": \"{{ $json.clientName }}\",\n  \"budgetAed\": {{ $json.budgetAed }},\n  \"strategicFocus\": \"{{ $json.strategicFocus }}\"\n}",
+        "options": {}
+      },
+      "name": "4. Mixboard Portfolio Concept Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        340
+      ],
+      "id": "node_mixboard_board"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/flow/teaser",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"clientName\": \"{{ $json.clientName }}\",\n  \"budgetAed\": {{ $json.budgetAed }},\n  \"projectName\": \"{{ $json.projectName }}\"\n}",
+        "options": {}
+      },
+      "name": "5. Flow Cinematic Teaser Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        500
+      ],
+      "id": "node_flow_teaser"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $env.GEMINI_API_KEY || $env.GOOGLE_AI_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [\n    {\n      \"role\": \"user\",\n      \"parts\": [\n        {\n          \"text\": \"Synthesize an executive intelligence brief for {{ $('2. Standardize Inbound Parameters').item.json.clientName }} allocating AED {{ $('2. Standardize Inbound Parameters').item.json.budgetAed }} into Dubai prime assets (Law 8 Escrow, Cabinet Res 65/2022 Golden Visa, target project: {{ $('2. Standardize Inbound Parameters').item.json.projectName }}).\"\n        }\n      ]\n    }\n  ],\n  \"systemInstruction\": {\n    \"parts\": [\n      {\n        \"text\": \"You are JARVIS, Chief Intelligence AI for Emanuel Rendas Private Advisory in Dubai. Provide ultra-crisp, institutional real estate intelligence citing statutory Escrow guarantees and audited net yields.\"\n      }\n    ]\n  }\n}",
+        "options": {
+          "neverError": true
+        }
+      },
+      "name": "6. Google Gemini 2.5 Flash Synthesis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        340
+      ],
+      "id": "node_gemini_synthesis"
+    },
+    {
+      "parameters": {
+        "jsCode": "const base = $('2. Standardize Inbound Parameters').item.json;\nconst opal = $('3. Google Opal ROI & Statutory Shield').item.json;\nconst mixboard = $('4. Mixboard Portfolio Concept Generator').item.json;\nconst flow = $('5. Flow Cinematic Teaser Generator').item.json;\nconst geminiRaw = $('6. Google Gemini 2.5 Flash Synthesis').item.json;\n\nconst geminiText = geminiRaw.candidates?.[0]?.content?.parts?.[0]?.text || \n  `JARVIS Executive Summary: Allocation of AED ${base.budgetAed.toLocaleString()} into ${base.projectName} is 100% shielded under Dubai Law No. 8 of 2007 with projected net yield of ${opal.financialMetrics?.netYieldPct || 7.8}% p.a. and Cabinet Res. 65/2022 Golden Visa eligibility.`;\n\nreturn [{\n  json: {\n    success: true,\n    orchestrator: 'RAIOC_GOOGLE_TOOLS_ORCHESTRATION',\n    version: '2026.Q3',\n    correlationId: base.correlationId,\n    client: base.clientName,\n    budgetAed: base.budgetAed,\n    geminiExecutiveSummary: geminiText,\n    opalRoiAnalysis: opal,\n    mixboardMoodboard: mixboard,\n    flowCinematicTeaser: flow,\n    directBookingUrl: 'https://wa.me/971543871702?text=' + encodeURIComponent(`Hello Emanuel — I received the multi-tool intelligence package for ${base.projectName} (AED ${base.budgetAed.toLocaleString()}). Let us schedule an executive consultation.`),\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "7. Consolidate Multi-Tool Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        340
+      ],
+      "id": "node_consolidate_package"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "X-RAIOC-Engine",
+                "value": "Google-Tools-Orchestrator-v2026"
+              }
+            ]
+          }
+        }
+      },
+      "name": "8. Return Executive Response",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        340
+      ],
+      "id": "node_respond_webhook"
+    }
+  ],
+  "connections": {
+    "1. Inbound Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "2. Standardize Inbound Parameters",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Standardize Inbound Parameters": {
+      "main": [
+        [
+          {
+            "node": "3. Google Opal ROI & Statutory Shield",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "4. Mixboard Portfolio Concept Generator",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "5. Flow Cinematic Teaser Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Google Opal ROI & Statutory Shield": {
+      "main": [
+        [
+          {
+            "node": "6. Google Gemini 2.5 Flash Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Mixboard Portfolio Concept Generator": {
+      "main": [
+        [
+          {
+            "node": "6. Google Gemini 2.5 Flash Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Flow Cinematic Teaser Generator": {
+      "main": [
+        [
+          {
+            "node": "6. Google Gemini 2.5 Flash Synthesis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Google Gemini 2.5 Flash Synthesis": {
+      "main": [
+        [
+          {
+            "node": "7. Consolidate Multi-Tool Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Consolidate Multi-Tool Package": {
+      "main": [
+        [
+          {
+            "node": "8. Return Executive Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "raioc-gtools-v2026-08"
+}

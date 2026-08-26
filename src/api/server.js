@@ -17,6 +17,7 @@ import { handleEventRequest } from './routes/event-routes.js';
 import { handleIntakeRequest } from './routes/intake-routes.js';
 import { handleAiToolsRequest } from './routes/ai-tools-routes.js';
 import { handleSocialRequest } from './routes/social-routes.js';
+import { handleCrmRequest } from './routes/crm-routes.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
 import { supabase } from '../db/supabase-client.js';
 import { correlationTracer } from '../monitoring/correlation-tracer.js';
@@ -86,6 +87,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     // 10. Lead Submission
     else if (url.startsWith('/api/lead') || url.startsWith('/api/brief')) {
       response = await handleLeadSubmission(body);
+    }
+    // 10b. CRM & Ingestion Pipeline (/api/crm)
+    else if (url.startsWith('/api/crm')) {
+      response = await handleCrmRequest(url, method, body, query, headers);
     }
     // 11. Webhook Endpoints (n8n & WhatsApp)
     else if (url.startsWith('/api/webhooks')) {

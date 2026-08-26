@@ -337,5 +337,39 @@ describe('PRODUCTION RECOVERY: 100% Endpoint Verification via Single Gateway (ap
     assert.strictEqual(out.body.status, 'PROCESSED');
     assert.strictEqual(out.body.provider, 'tiktok');
   });
+
+  test('28. CRM Route: /api/crm/lead/ingest (Segmented Ingestion & Opal ROI Thesis)', async () => {
+    const res = createMockRes();
+    const payload = {
+      name: 'Dr. Afonso Henriques',
+      email: 'afonso@lisbon-capital.pt',
+      phone: '+351912345678',
+      country: 'Portugal',
+      segment: 'PT_HNW',
+      budgetAed: 18000000,
+      notes: 'Portugal NHR transition mandate, seeking 100% Escrow Law 8 prime assets on Palm Jumeirah.',
+    };
+    await handler({ url: '/api/crm/lead/ingest', method: 'POST', body: payload, headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.success, true);
+    assert.strictEqual(out.body.status, 'INGESTED');
+    assert.strictEqual(out.body.segment, 'PT_HNW');
+    assert.strictEqual(out.body.targetThesis.thesisTitle, 'Opal ROI / Escrow Guarantee');
+    assert.strictEqual(out.body.targetThesis.statutoryShield.goldenVisaEligible, true);
+    assert.ok(out.body.riis.score > 0);
+    assert.ok(out.body.dira.riskLevel);
+    assert.ok(out.body.briefId);
+    assert.ok(out.body.correlationId);
+  });
+
+  test('29. CRM Route: /api/crm/segments (Segment Discovery & Schema)', async () => {
+    const res = createMockRes();
+    await handler({ url: '/api/crm/segments', method: 'GET', headers: {} }, res);
+    const out = res._get();
+    assert.strictEqual(out.status, 200);
+    assert.strictEqual(out.body.success, true);
+    assert.deepStrictEqual(out.body.segmentList, ['PT_HNW', 'ES_HNW', 'UK_NONDOM', 'DLD_BUYER', 'DLD_SELLER']);
+  });
 });
 

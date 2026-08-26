@@ -1,0 +1,380 @@
+{
+  "name": "RAIOC — Global Lead Enrichment & Segment Routing (OM-002)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-lead-enrichment-routing",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Receive Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        360
+      ],
+      "id": "node_lead_webhook_trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract incoming lead payload and assign correlation ID\nconst incoming = $input.first().json;\nconst body = incoming.body || incoming;\nconst correlationId = body.correlationId || incoming.headers?.['x-correlation-id'] || `corr_n8n_lead_${Date.now()}`;\n\nconst rawSegment = (body.segment || body.campaign_segment || '').toUpperCase();\nconst country = body.country || body.location || 'International';\nconst name = body.name || body.contact_name || 'Private Sovereign Investor';\nconst email = body.email || 'privateadvisory@emanuelrendas.com';\nconst phone = body.phone || body.whatsapp || '+971501234567';\nconst budgetAed = Number(body.budgetAed || body.budget_aed || body.budget || 15000000);\nconst notes = body.notes || body.mandate || 'Autonomous acquisition inquiry';\n\n// Determine segment if missing\nlet segment = rawSegment;\nif (!['PT_HNW', 'ES_HNW', 'UK_NONDOM', 'DLD_BUYER', 'DLD_SELLER'].includes(segment)) {\n  if (country.toLowerCase().includes('portugal') || notes.toLowerCase().includes('nhr')) segment = 'PT_HNW';\n  else if (country.toLowerCase().includes('spain') || notes.toLowerCase().includes('beckham')) segment = 'ES_HNW';\n  else if (country.toLowerCase().includes('uk') || country.toLowerCase().includes('united kingdom') || notes.toLowerCase().includes('non-dom')) segment = 'UK_NONDOM';\n  else if (notes.toLowerCase().includes('sell') || notes.toLowerCase().includes('secondary')) segment = 'DLD_SELLER';\n  else segment = 'DLD_BUYER';\n}\n\nreturn [{\n  json: {\n    correlationId,\n    lead: {\n      name,\n      email,\n      phone,\n      country,\n      segment,\n      budgetAed,\n      notes\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Extract & Standardize Payload",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        360
+      ],
+      "id": "node_standardize_payload"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/crm/lead/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.lead.name }}\",\n  \"email\": \"{{ $json.lead.email }}\",\n  \"phone\": \"{{ $json.lead.phone }}\",\n  \"country\": \"{{ $json.lead.country }}\",\n  \"segment\": \"{{ $json.lead.segment }}\",\n  \"budgetAed\": {{ $json.lead.budgetAed }},\n  \"notes\": \"{{ $json.lead.notes }}\"\n}",
+        "options": {}
+      },
+      "name": "3. Ingest via RAIOC CRM Gateway",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        640,
+        360
+      ],
+      "id": "node_ingest_crm_gateway"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.segment }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "PT_HNW",
+              "output": 0
+            },
+            {
+              "value2": "ES_HNW",
+              "output": 0
+            },
+            {
+              "value2": "UK_NONDOM",
+              "output": 1
+            },
+            {
+              "value2": "DLD_BUYER",
+              "output": 2
+            },
+            {
+              "value2": "DLD_SELLER",
+              "output": 3
+            }
+          ]
+        },
+        "fallbackOutput": 2
+      },
+      "name": "4. Route by Segment",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        860,
+        360
+      ],
+      "id": "node_route_by_segment"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Iberian HNW (Portugal / Spain) Tailored Copy Generator\nconst item = $input.first().json;\nconst lead = item.executiveBrief?.companyName || item.targetThesis?.segmentName || 'Iberian HNW Client';\nconst budgetAed = Number(item.budgetAed || 15000000);\nconst riisScore = item.riis?.score || 88;\nconst thesisTitle = item.targetThesis?.thesisTitle || 'Opal ROI / Escrow Guarantee';\n\nconst emailSubject = `RAIOC Sovereign Advisory — Iberian Capital Shield & Dubai Asset Allocation (${(budgetAed/1000000).toFixed(1)}M AED)`;\nconst emailBody = `<h2>Sovereign Asset Allocation Strategy</h2><p>Dear ${item.executiveBrief?.leadName || 'Private Investor'},</p><p>Following changes in the European wealth tax environment and Portugal NHR / Spanish regional asset rules, your tailored Dubai allocation memo is prepared under thesis: <strong>${thesisTitle}</strong>.</p><ul><li><strong>Allocated Capital:</strong> AED ${budgetAed.toLocaleString()}</li><li><strong>RIIS Readiness Score:</strong> ${riisScore}/100 [Tier-1]</li><li><strong>Statutory Escrow Shield:</strong> Dubai Law No. 8 of 2007 (100% Trust Banking)</li><li><strong>Golden Visa:</strong> Cabinet Resolution No. 65 of 2022 Qualified</li></ul><p><a href=\"${item.briefUrl}\">Access Complete Institutional Memorandum</a></p>`;\n\nconst whatsappMessage = `🏛 *RAIOC Sovereign Advisory (Iberian Desk)*\\n\\nDear ${item.executiveBrief?.leadName || 'Investor'},\\nYour tailored sovereign allocation brief under *${thesisTitle}* has been compiled.\\n\\n• *Allocated Outlay:* AED ${budgetAed.toLocaleString()}\\n• *RIIS Score:* ${riisScore}/100\\n• *Escrow Trust:* 100% Guaranteed under Dubai Law No. 8\\n\\nView confidential brief: ${item.briefUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    emailSubject,\n    emailBody,\n    whatsappMessage\n  }\n}];"
+      },
+      "name": "5a. Format Iberian Brief (PT/ES)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        140
+      ],
+      "id": "node_format_iberian_brief"
+    },
+    {
+      "parameters": {
+        "jsCode": "// UK Non-Dom Regime Abolition Tailored Copy Generator\nconst item = $input.first().json;\nconst budgetAed = Number(item.budgetAed || 25000000);\nconst riisScore = item.riis?.score || 92;\nconst thesisTitle = item.targetThesis?.thesisTitle || 'Escrow Guarantee / Sovereign Safe Haven';\n\nconst emailSubject = `RAIOC Executive Advisory — UK Non-Dom Offshore Sovereign Reallocation (AED ${(budgetAed/1000000).toFixed(1)}M)`;\nconst emailBody = `<h2>UK Non-Dom Capital Shield Memorandum</h2><p>Dear ${item.executiveBrief?.leadName || 'Private Client'},</p><p>In response to the UK Non-Domiciled regime abolition and worldwide IHT exposure, we have structured a prime Dubai freehold asset allocation under thesis: <strong>${thesisTitle}</strong>.</p><ul><li><strong>Allocated Capital:</strong> AED ${budgetAed.toLocaleString()} (approx. £${Math.round(budgetAed / 4.7).toLocaleString()})</li><li><strong>Freehold Ownership Protection:</strong> Dubai Law No. (7) of 2006</li><li><strong>Escrow Protection:</strong> 100% Trust Account under Dubai Law No. (8) of 2007</li><li><strong>Target Yield:</strong> 6.8% – 7.8% Net Mollak Audited</li></ul><p><a href=\"${item.briefUrl}\">Open Institutional Executive Brief</a></p>`;\n\nconst whatsappMessage = `🇬🇧 *RAIOC Sovereign Advisory (UK Desk)*\\n\\nDear ${item.executiveBrief?.leadName || 'Client'},\\nYour UK Non-Dom hedge brief under *${thesisTitle}* is ready.\\n\\n• *Allocation:* AED ${budgetAed.toLocaleString()} (£${Math.round(budgetAed/4.7).toLocaleString()})\\n• *RIIS Readiness:* ${riisScore}/100\\n• *Statutory Freehold:* Law No. 7 / Law No. 8 Protected\\n\\nAccess dossier: ${item.briefUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    emailSubject,\n    emailBody,\n    whatsappMessage\n  }\n}];"
+      },
+      "name": "5b. Format UK Non-Dom Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        300
+      ],
+      "id": "node_format_uk_nondom_brief"
+    },
+    {
+      "parameters": {
+        "jsCode": "// DLD Buyer Off-Plan Allocation Copy Generator\nconst item = $input.first().json;\nconst budgetAed = Number(item.budgetAed || 12000000);\nconst riisScore = item.riis?.score || 85;\nconst thesisTitle = item.targetThesis?.thesisTitle || 'Opal ROI / Off-Plan Capital Appreciation';\n\nconst emailSubject = `RAIOC DLD Green List — Priority Off-Plan Allocation (AED ${(budgetAed/1000000).toFixed(1)}M)`;\nconst emailBody = `<h2>DLD Green List Off-Plan Allocation</h2><p>Dear ${item.executiveBrief?.leadName || 'Investor'},</p><p>Your priority allocation memorandum has been compiled for off-plan appreciation with Mollak-audited service charges under thesis: <strong>${thesisTitle}</strong>.</p><ul><li><strong>Acquisition Budget:</strong> AED ${budgetAed.toLocaleString()}</li><li><strong>RIIS Rating:</strong> ${riisScore}/100</li><li><strong>Golden Visa:</strong> APPROVED (Cabinet Resolution No. 65 of 2022)</li><li><strong>Mollak Audited Net Yield:</strong> 7.2% – 8.5% Net</li></ul><p><a href=\"${item.briefUrl}\">View Full Project Dossier</a></p>`;\n\nconst whatsappMessage = `🌴 *RAIOC DLD Green List (Buyer Allocation)*\\n\\nDear ${item.executiveBrief?.leadName || 'Investor'},\\nPriority allocation memo prepared under *${thesisTitle}*.\\n\\n• *Target Acquisition:* AED ${budgetAed.toLocaleString()}\\n• *RIIS Score:* ${riisScore}/100\\n• *DLD Transfer (4%):* AED ${(budgetAed * 0.04).toLocaleString()}\\n\\nDossier: ${item.briefUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    emailSubject,\n    emailBody,\n    whatsappMessage\n  }\n}];"
+      },
+      "name": "5c. Format DLD Buyer Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        460
+      ],
+      "id": "node_format_dld_buyer_brief"
+    },
+    {
+      "parameters": {
+        "jsCode": "// DLD Seller Equity Harvest & Redeployment Copy Generator\nconst item = $input.first().json;\nconst budgetAed = Number(item.budgetAed || 20000000);\nconst riisScore = item.riis?.score || 89;\nconst thesisTitle = item.targetThesis?.thesisTitle || 'Escrow Guarantee / Equity Harvest & Reallocation';\n\nconst emailSubject = `RAIOC DLD Green List — Secondary Equity Harvest & Redeployment Strategy`;\nconst emailBody = `<h2>Secondary Portfolio Equity Harvest</h2><p>Dear ${item.executiveBrief?.leadName || 'Asset Owner'},</p><p>We have structured an institutional liquidation and off-plan reinvestment arbitrage under thesis: <strong>${thesisTitle}</strong>.</p><ul><li><strong>Target Valuation Harvest:</strong> AED ${budgetAed.toLocaleString()}</li><li><strong>1031-Style Tax-Free Dubai Roll-Over:</strong> 100% Tax Exempt</li><li><strong>Escrow Milestone Protection:</strong> Dubai Law No. (8) of 2007</li></ul><p><a href=\"${item.briefUrl}\">Open Liquidity & Reinvestment Memorandum</a></p>`;\n\nconst whatsappMessage = `📊 *RAIOC DLD Green List (Equity Harvest Desk)*\\n\\nDear ${item.executiveBrief?.leadName || 'Owner'},\\nSecondary equity harvest & off-plan reinvestment model prepared under *${thesisTitle}*.\\n\\n• *Harvest Portfolio:* AED ${budgetAed.toLocaleString()}\\n• *Tax-Free Redeployment:* 0% CGT / Income Tax\\n\\nReview Strategy: ${item.briefUrl}`;\n\nreturn [{\n  json: {\n    ...item,\n    emailSubject,\n    emailBody,\n    whatsappMessage\n  }\n}];"
+      },
+      "name": "5d. Format DLD Seller Brief",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        620
+      ],
+      "id": "node_format_dld_seller_brief"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/contacts",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"email\": \"{{ $json.executiveBrief?.email || $json.email || 'lead_' + $json.leadId + '@private.emanuelrendas.com' }}\",\n    \"firstname\": \"{{ ($json.executiveBrief?.leadName || 'Client').split(' ')[0] }}\",\n    \"lastname\": \"{{ ($json.executiveBrief?.leadName || 'Client').split(' ').slice(1).join(' ') || 'Investor' }}\",\n    \"company\": \"{{ $json.executiveBrief?.companyName || 'Private Office' }}\",\n    \"phone\": \"{{ $json.executiveBrief?.phone || '' }}\",\n    \"lead_segment\": \"{{ $json.segment }}\",\n    \"target_thesis\": \"{{ $json.targetThesis?.thesisTitle }}\",\n    \"riis_readiness_score\": \"{{ $json.riis?.score }}\",\n    \"dira_risk_tier\": \"{{ $json.dira?.riskLevel }}\",\n    \"budget_aed\": \"{{ $json.budgetAed }}\",\n    \"brief_url\": \"{{ $json.briefUrl }}\",\n    \"lead_correlation_id\": \"{{ $json.correlationId }}\"\n  }\n}",
+        "options": {}
+      },
+      "name": "6. Update HubSpot CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        360
+      ],
+      "id": "node_update_hubspot_crm"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>",
+        "toEmail": "={{ $json.executiveBrief?.email || $json.email }}",
+        "subject": "={{ $json.emailSubject }}",
+        "html": "={{ $json.emailBody }}",
+        "options": {}
+      },
+      "name": "7. Send Executive Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1600,
+        360
+      ],
+      "id": "node_send_executive_email",
+      "credentials": {
+        "smtp": {
+          "id": "cred_namecheap_smtp",
+          "name": "Namecheap PrivateEmail SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"TASK_COMPLETED\",\n  \"event\": \"TASK_COMPLETED\",\n  \"correlationId\": \"{{ $json.correlationId }}\",\n  \"n8nExecutionId\": \"exec_n8n_enrichment_{{ $execution.id }}\",\n  \"segment\": \"{{ $json.segment }}\",\n  \"targetThesis\": \"{{ $json.targetThesis?.thesisTitle }}\",\n  \"dispatches\": {\n    \"email\": {\n      \"status\": \"DELIVERED\",\n      \"subject\": \"{{ $json.emailSubject }}\"\n    },\n    \"hubspot\": {\n      \"status\": \"SYNCED\",\n      \"segment\": \"{{ $json.segment }}\"\n    }\n  }\n}",
+        "options": {}
+      },
+      "name": "8. Notify RAIOC Event Bus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1820,
+        360
+      ],
+      "id": "node_notify_event_bus"
+    }
+  ],
+  "connections": {
+    "1. Receive Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "2. Extract & Standardize Payload",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Extract & Standardize Payload": {
+      "main": [
+        [
+          {
+            "node": "3. Ingest via RAIOC CRM Gateway",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Ingest via RAIOC CRM Gateway": {
+      "main": [
+        [
+          {
+            "node": "4. Route by Segment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Route by Segment": {
+      "main": [
+        [
+          {
+            "node": "5a. Format Iberian Brief (PT/ES)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5b. Format UK Non-Dom Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5c. Format DLD Buyer Brief",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5d. Format DLD Seller Brief",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5a. Format Iberian Brief (PT/ES)": {
+      "main": [
+        [
+          {
+            "node": "6. Update HubSpot CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5b. Format UK Non-Dom Brief": {
+      "main": [
+        [
+          {
+            "node": "6. Update HubSpot CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5c. Format DLD Buyer Brief": {
+      "main": [
+        [
+          {
+            "node": "6. Update HubSpot CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5d. Format DLD Seller Brief": {
+      "main": [
+        [
+          {
+            "node": "6. Update HubSpot CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Update HubSpot CRM": {
+      "main": [
+        [
+          {
+            "node": "7. Send Executive Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Send Executive Email": {
+      "main": [
+        [
+          {
+            "node": "8. Notify RAIOC Event Bus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  }
+}

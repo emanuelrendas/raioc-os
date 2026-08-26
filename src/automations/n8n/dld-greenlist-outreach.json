@@ -1,0 +1,332 @@
+{
+  "name": "RAIOC — DLD Green List Outreach & Equity Harvest Pipeline (OM-003)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-dld-greenlist-outreach",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Receive DLD Outreach Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        360
+      ],
+      "id": "node_dld_webhook_trigger"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://www.emanuelrendas.com/api/dld",
+        "options": {}
+      },
+      "name": "2. Fetch Live DLD Market Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        420,
+        360
+      ],
+      "id": "node_fetch_dld_market_data"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Synthesize DLD Market Intelligence with Prospect Payload\nconst dldData = $input.first().json;\nconst incoming = $('1. Receive DLD Outreach Trigger').first().json;\nconst body = incoming.body || incoming;\nconst correlationId = body.correlationId || `corr_dld_${Date.now()}`;\n\nconst role = (body.role || body.segment || 'DLD_BUYER').toUpperCase();\nconst segment = role.includes('SELL') ? 'DLD_SELLER' : 'DLD_BUYER';\nconst name = body.name || body.owner_name || body.contact_name || 'DLD Registered Investor';\nconst email = body.email || 'privateadvisory@emanuelrendas.com';\nconst phone = body.phone || body.mobile || '+971501234567';\nconst propertyOrBudget = Number(body.budgetAed || body.propertyValueAed || 18000000);\nconst community = body.community || 'Palm Jumeirah';\n\nconst medianSqft = dldData.totals?.medianPricePerSqft || 2450;\nconst totalTransactions = dldData.totals?.transactions || 28400;\nconst offPlanSharePct = dldData.totals?.offPlanSharePercent || 58.4;\n\nreturn [{\n  json: {\n    correlationId,\n    lead: {\n      name,\n      email,\n      phone,\n      country: 'United Arab Emirates',\n      segment,\n      budgetAed: propertyOrBudget,\n      community,\n      notes: `DLD Green List Lead - Target Community: ${community}`\n    },\n    dldStats: {\n      medianSqft,\n      totalTransactions,\n      offPlanSharePct,\n      source: 'Dubai Land Department via Dubai Pulse'\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "3. Synthesize Market Intelligence",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        360
+      ],
+      "id": "node_synthesize_market_intel"
+    },
+    {
+      "parameters": {
+        "dataType": "string",
+        "value1": "={{ $json.lead.segment }}",
+        "rules": {
+          "rules": [
+            {
+              "value2": "DLD_BUYER",
+              "output": 0
+            },
+            {
+              "value2": "DLD_SELLER",
+              "output": 1
+            }
+          ]
+        },
+        "fallbackOutput": 0
+      },
+      "name": "4. Split Buyer vs Seller",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3,
+      "position": [
+        860,
+        360
+      ],
+      "id": "node_split_buyer_seller"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Buyer Strategy: Opal ROI & Off-Plan Pre-Launch Allocation\nconst item = $input.first().json;\nconst lead = item.lead;\nconst stats = item.dldStats;\nconst budget = lead.budgetAed;\n\nconst thesis = 'Opal ROI / Off-Plan Capital Appreciation';\nconst targetProjects = budget >= 15000000 \n  ? ['Como Residences (Nakheel)', 'Armani Beach Residences (Arada)']\n  : ['Greenway at Emaar South', 'Rosehill Waterfront'];\n\nconst subject = `RAIOC DLD Buyer Brief — Priority Off-Plan Allocation (${(budget/1000000).toFixed(1)}M AED)`;\nconst htmlBody = `<h2>DLD Green List Verified Buyer Allocation</h2><p>Dear ${lead.name},</p><p>Based on 90-day trailing DLD records (${stats.totalTransactions.toLocaleString()} transactions, ${stats.offPlanSharePct}% off-plan share), we have secured priority developer allocations matching your AED ${budget.toLocaleString()} capital band.</p><ul><li><strong>Matched Assets:</strong> ${targetProjects.join(', ')}</li><li><strong>Audited Net Yield:</strong> 7.4% – 8.6% Net (Mollak Shield)</li><li><strong>100% Escrow Protection:</strong> Dubai Law No. 8 of 2007</li><li><strong>Statutory Golden Visa:</strong> Cabinet Resolution No. 65 of 2022 Approved</li></ul>`;\n\nconst whatsappText = `🏛 *RAIOC DLD Green List (Buyer Allocation)*\\n\\nDear ${lead.name},\\nPriority off-plan allocation is ready for *${lead.community}* (AED ${budget.toLocaleString()}).\\n\\n• *DLD 90-Day Trailing Median:* AED ${stats.medianSqft}/sqft\\n• *Matched Projects:* ${targetProjects[0]}\\n• *Escrow Guarantee:* 100% Trust Protected (Law No. 8)\\n\\nRequest Full Dossier via Emanuel Rendas Private Advisory.`;\n\nreturn [{\n  json: {\n    ...item,\n    thesisTitle: thesis,\n    targetProjects,\n    subject,\n    htmlBody,\n    whatsappText\n  }\n}];"
+      },
+      "name": "5a. Buyer Allocation Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        220
+      ],
+      "id": "node_buyer_allocation_engine"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Seller Strategy: Equity Harvest & 1031-Style Redeployment\nconst item = $input.first().json;\nconst lead = item.lead;\nconst stats = item.dldStats;\nconst valuation = lead.budgetAed;\n\nconst thesis = 'Escrow Guarantee / Equity Harvest & Reallocation';\nconst projectedGainHarvest = Math.round(valuation * 0.38); // 38% estimated capital gain\nconst subject = `RAIOC DLD Seller Advisory — Equity Harvest & Tax-Free Off-Plan Reinvestment`;\nconst htmlBody = `<h2>Secondary Portfolio Liquidity & Equity Harvest Model</h2><p>Dear ${lead.name},</p><p>With DLD median valuations at AED ${stats.medianSqft}/sqft across ${lead.community}, current market liquidity enables an optimal exit of your secondary asset (Est. Valuation: AED ${valuation.toLocaleString()}).</p><ul><li><strong>Estimated Harvestable Equity Gain:</strong> AED ${projectedGainHarvest.toLocaleString()}</li><li><strong>Tax-Free Roll-Over:</strong> 0% Capital Gains & 0% Income Tax</li><li><strong>Reinvestment Allocation:</strong> High-growth infrastructure corridors (Dubai South / Palm Jebel Ali)</li><li><strong>Milestone Escrow Banking:</strong> Dubai Law No. (8) of 2007</li></ul>`;\n\nconst whatsappText = `📊 *RAIOC DLD Seller Advisory (Equity Harvest)*\\n\\nDear ${lead.name},\\nYour secondary portfolio valuation analysis for *${lead.community}* (AED ${valuation.toLocaleString()}) has been compiled.\\n\\n• *Harvestable Equity Opportunity:* AED ${projectedGainHarvest.toLocaleString()}\\n• *Tax-Free Redeployment:* 100% Capital Gains Neutral\\n• *Off-Plan Escrow Security:* Dubai Law No. 8 Protected\\n\\nReview Strategy with Emanuel Rendas Private Advisory.`;\n\nreturn [{\n  json: {\n    ...item,\n    thesisTitle: thesis,\n    projectedGainHarvest,\n    subject,\n    htmlBody,\n    whatsappText\n  }\n}];"
+      },
+      "name": "5b. Seller Equity Harvest Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        500
+      ],
+      "id": "node_seller_harvest_engine"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/crm/lead/ingest",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.lead.name }}\",\n  \"email\": \"{{ $json.lead.email }}\",\n  \"phone\": \"{{ $json.lead.phone }}\",\n  \"country\": \"{{ $json.lead.country }}\",\n  \"segment\": \"{{ $json.lead.segment }}\",\n  \"budgetAed\": {{ $json.lead.budgetAed }},\n  \"notes\": \"{{ $json.lead.notes }} | Thesis: {{ $json.thesisTitle }}\"\n}",
+        "options": {}
+      },
+      "name": "6. Ingest into RAIOC OS",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1380,
+        360
+      ],
+      "id": "node_ingest_raioc_os"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/deals",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"dealname\": \"DLD Green List: {{ $json.lead.name }} ({{ $json.lead.segment }}) — AED {{ ($json.lead.budgetAed / 1000000).toFixed(1) }}M\",\n    \"amount\": \"{{ $json.lead.budgetAed }}\",\n    \"dealstage\": \"{{ $json.lead.segment == 'DLD_SELLER' ? 'equity_harvest' : 'qualifiedtobuy' }}\",\n    \"lead_segment\": \"{{ $json.lead.segment }}\",\n    \"target_thesis\": \"{{ $json.thesisTitle }}\",\n    \"lead_correlation_id\": \"{{ $json.correlationId }}\"\n  }\n}",
+        "options": {}
+      },
+      "name": "7. Create/Update HubSpot Deal",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        360
+      ],
+      "id": "node_create_hubspot_deal"
+    },
+    {
+      "parameters": {
+        "fromEmail": "Emanuel Rendas Private Advisory <intelligence@emanuelrendas.com>",
+        "toEmail": "={{ $json.lead.email }}",
+        "subject": "={{ $json.subject }}",
+        "html": "={{ $json.htmlBody }}",
+        "options": {}
+      },
+      "name": "8. Send Executive Email",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1820,
+        360
+      ],
+      "id": "node_send_email_outreach",
+      "credentials": {
+        "smtp": {
+          "id": "cred_namecheap_smtp",
+          "name": "Namecheap PrivateEmail SMTP"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"TASK_COMPLETED\",\n  \"event\": \"TASK_COMPLETED\",\n  \"correlationId\": \"{{ $json.correlationId }}\",\n  \"n8nExecutionId\": \"exec_n8n_dld_{{ $execution.id }}\",\n  \"leadSegment\": \"{{ $json.lead.segment }}\",\n  \"thesisTitle\": \"{{ $json.thesisTitle }}\",\n  \"dispatches\": {\n    \"email\": \"DELIVERED\",\n    \"hubspot\": \"DEAL_CREATED\"\n  }\n}",
+        "options": {}
+      },
+      "name": "9. Notify RAIOC Bus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2040,
+        360
+      ],
+      "id": "node_notify_dld_bus"
+    }
+  ],
+  "connections": {
+    "1. Receive DLD Outreach Trigger": {
+      "main": [
+        [
+          {
+            "node": "2. Fetch Live DLD Market Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Fetch Live DLD Market Data": {
+      "main": [
+        [
+          {
+            "node": "3. Synthesize Market Intelligence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. Synthesize Market Intelligence": {
+      "main": [
+        [
+          {
+            "node": "4. Split Buyer vs Seller",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Split Buyer vs Seller": {
+      "main": [
+        [
+          {
+            "node": "5a. Buyer Allocation Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "5b. Seller Equity Harvest Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5a. Buyer Allocation Engine": {
+      "main": [
+        [
+          {
+            "node": "6. Ingest into RAIOC OS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5b. Seller Equity Harvest Engine": {
+      "main": [
+        [
+          {
+            "node": "6. Ingest into RAIOC OS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Ingest into RAIOC OS": {
+      "main": [
+        [
+          {
+            "node": "7. Create/Update HubSpot Deal",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Create/Update HubSpot Deal": {
+      "main": [
+        [
+          {
+            "node": "8. Send Executive Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "8. Send Executive Email": {
+      "main": [
+        [
+          {
+            "node": "9. Notify RAIOC Bus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  }
+}

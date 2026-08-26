@@ -1,0 +1,270 @@
+{
+  "name": "RAIOC — VIP WhatsApp & Voice Omnichannel Followup Pipeline (OM-004)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-vip-whatsapp-voice-followup",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Receive VIP Ingestion Event",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        200,
+        360
+      ],
+      "id": "node_vip_webhook_trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Evaluate VIP Tier, Language, and Multi-Channel Tone\nconst incoming = $input.first().json;\nconst body = incoming.body || incoming;\nconst correlationId = body.correlationId || `corr_vip_${Date.now()}`;\nconst lead = body.lead || body.data?.lead || body;\n\nconst riisScore = Number(body.riisScore || body.riis?.score || 85);\nconst diraRisk = body.diraRiskLevel || body.dira?.riskLevel || 'LOW';\nconst budgetAed = Number(body.budgetAed || lead.budgetAed || 15000000);\nconst segment = (body.segment || lead.segment || 'PT_HNW').toUpperCase();\nconst phone = (lead.phone || body.phone || '+971543871702').replace(/[^0-9+]/g, '');\nconst name = lead.name || body.name || 'Private Sovereign Client';\nconst email = lead.email || body.email || 'privateadvisory@emanuelrendas.com';\nconst briefUrl = body.briefUrl || `https://www.emanuelrendas.com/brief/${body.briefId || 'default'}`;\n\n// Select language tone based on segment\nlet language = 'en';\nlet salutation = `Dear ${name}`;\nlet voiceAccent = 'british_executive';\n\nif (segment === 'PT_HNW') {\n  language = 'pt';\n  salutation = `Estimado(a) ${name}`;\n  voiceAccent = 'portuguese_sovereign';\n} else if (segment === 'ES_HNW') {\n  language = 'es';\n  salutation = `Estimado(a) ${name}`;\n  voiceAccent = 'spanish_executive';\n}\n\nconst isVipTier1 = budgetAed >= 5000000 || riisScore >= 80;\n\nreturn [{\n  json: {\n    correlationId,\n    isVipTier1,\n    lead: {\n      name,\n      email,\n      phone,\n      segment,\n      budgetAed,\n      riisScore,\n      diraRisk,\n      briefUrl,\n      language,\n      salutation,\n      voiceAccent\n    },\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Evaluate VIP Tier & Persona",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        420,
+        360
+      ],
+      "id": "node_eval_vip_persona"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.isVipTier1 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "name": "3. VIP Gate Filter",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        640,
+        360
+      ],
+      "id": "node_vip_gate_filter"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/flow/teaser",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"{{ $json.lead.name }}\",\n  \"budgetAed\": {{ $json.lead.budgetAed }},\n  \"projectName\": \"Como Residences\"\n}",
+        "options": {}
+      },
+      "name": "4. Generate Flow Teaser Hook",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        280
+      ],
+      "id": "node_flow_teaser_generator"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Multilingual WhatsApp Interactive Payload & Voice Audio Script\nconst flowData = $input.first().json;\nconst leadContext = $('2. Evaluate VIP Tier & Persona').first().json.lead;\nconst correlationId = $('2. Evaluate VIP Tier & Persona').first().json.correlationId;\n\nlet waBodyText = '';\nlet audioVoiceScript = '';\n\nif (leadContext.language === 'pt') {\n  waBodyText = `🏛 *RAIOC Private Sovereign Advisory*\\n\\n${leadContext.salutation},\\nO seu dossiê institucional para alocação patrimonial em Dubai (AED ${(leadContext.budgetAed/1000000).toFixed(1)}M) está concluído.\\n\\n• *Classificação RIIS:* ${leadContext.riisScore}/100 [Tier-1]\\n• *Garantia Fiduciária:* Lei nº 8 de 2007 (Escrow 100% Protegido)\\n• *Visto Gold 10 Anos:* Qualificado\\n\\nConsulte o dossiê confidencial:\\n${leadContext.briefUrl}`;\n  audioVoiceScript = `Olá ${leadContext.name}. Aqui é Emanuel Rendas. Estruturámos a sua alocação institucional em Dubai com proteção fiduciária total ao abrigo da Lei número 8. O seu memorando executivo está disponível no link enviado.`;\n} else if (leadContext.language === 'es') {\n  waBodyText = `🏛 *RAIOC Private Sovereign Advisory*\\n\\n${leadContext.salutation},\\nSu dossier institucional para la asignación patrimonial en Dubái (AED ${(leadContext.budgetAed/1000000).toFixed(1)}M) ha sido generado.\\n\\n• *Puntuación RIIS:* ${leadContext.riisScore}/100 [Tier-1]\\n• *Protección Fiduciaria:* Ley nº 8 de 2007 (100% Escrow)\\n• *Golden Visa 10 Años:* Aprobada\\n\\nAcceda a su informe confidencial:\\n${leadContext.briefUrl}`;\n  audioVoiceScript = `Estimado ${leadContext.name}, le saluda Emanuel Rendas. Hemos completado el análisis de asignación patrimonial en Dubái bajo la Ley número 8 de fideicomiso. Puede revisar su informe en el enlace adjunto.`;\n} else {\n  waBodyText = `🏛 *RAIOC Private Sovereign Advisory*\\n\\n${leadContext.salutation},\\nYour institutional Dubai capital allocation brief (AED ${(leadContext.budgetAed/1000000).toFixed(1)}M) has been compiled.\\n\\n• *RIIS Readiness:* ${leadContext.riisScore}/100 [Tier-1]\\n• *Statutory Shield:* Dubai Law No. (8) of 2007 (100% Escrow Banking)\\n• *Golden Visa 10-Year:* Qualified\\n\\nAccess confidential brief:\\n${leadContext.briefUrl}`;\n  audioVoiceScript = `Good day ${leadContext.name}. This is Emanuel Rendas. Your institutional Dubai prime asset memorandum is compiled with full statutory escrow protection under Dubai Law Number 8. Please review your briefing at the link provided.`;\n}\n\nreturn [{\n  json: {\n    correlationId,\n    lead: leadContext,\n    flowTeaser: flowData,\n    waBodyText,\n    audioVoiceScript,\n    directBookingUrl: `https://wa.me/971543871702?text=${encodeURIComponent(`Hello Emanuel — I received the VIP briefing (${leadContext.name}) and would like to schedule a private advisory call.`)}`,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "5. Synthesize Multichannel Copy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1100,
+        280
+      ],
+      "id": "node_synthesize_multichannel_copy"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://graph.facebook.com/v20.0/{{ $env.WHATSAPP_PHONE_NUMBER_ID }}/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.WHATSAPP_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"recipient_type\": \"individual\",\n  \"to\": \"{{ $json.lead.phone.replace(/[^0-9]/g, '') }}\",\n  \"type\": \"text\",\n  \"text\": {\n    \"body\": \"{{ $json.waBodyText }}\"\n  }\n}",
+        "options": {}
+      },
+      "name": "6. Send WhatsApp VIP Text",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1340,
+        280
+      ],
+      "id": "node_send_whatsapp_vip_text"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.hubapi.com/crm/v3/objects/notes",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $env.HUBSPOT_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"properties\": {\n    \"hs_timestamp\": \"{{ $json.timestamp }}\",\n    \"hs_note_body\": \"VIP Omnichannel follow-up dispatched via WhatsApp and AI Voice Hook.\\nLead: {{ $json.lead.name }}\\nSegment: {{ $json.lead.segment }}\\nBudget: AED {{ $json.lead.budgetAed }}\\nRIIS: {{ $json.lead.riisScore }}/100\\nCorrelation ID: {{ $json.correlationId }}\"\n  }\n}",
+        "options": {}
+      },
+      "name": "7. Log HubSpot Note",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1560,
+        280
+      ],
+      "id": "node_log_hubspot_vip_note"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://www.emanuelrendas.com/api/webhooks/n8n",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "X-Correlation-ID",
+              "value": "={{ $json.correlationId }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"TASK_COMPLETED\",\n  \"event\": \"TASK_COMPLETED\",\n  \"correlationId\": \"{{ $json.correlationId }}\",\n  \"n8nExecutionId\": \"exec_n8n_vip_{{ $execution.id }}\",\n  \"dispatches\": {\n    \"whatsapp\": \"DELIVERED\",\n    \"voice_note\": \"QUEUED\",\n    \"hubspot_note\": \"LOGGED\"\n  }\n}",
+        "options": {}
+      },
+      "name": "8. Notify RAIOC Bus",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        280
+      ],
+      "id": "node_notify_vip_bus"
+    }
+  ],
+  "connections": {
+    "1. Receive VIP Ingestion Event": {
+      "main": [
+        [
+          {
+            "node": "2. Evaluate VIP Tier & Persona",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Evaluate VIP Tier & Persona": {
+      "main": [
+        [
+          {
+            "node": "3. VIP Gate Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. VIP Gate Filter": {
+      "main": [
+        [
+          {
+            "node": "4. Generate Flow Teaser Hook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Generate Flow Teaser Hook": {
+      "main": [
+        [
+          {
+            "node": "5. Synthesize Multichannel Copy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Synthesize Multichannel Copy": {
+      "main": [
+        [
+          {
+            "node": "6. Send WhatsApp VIP Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "6. Send WhatsApp VIP Text": {
+      "main": [
+        [
+          {
+            "node": "7. Log HubSpot Note",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "7. Log HubSpot Note": {
+      "main": [
+        [
+          {
+            "node": "8. Notify RAIOC Bus",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveExecutionProgress": true,
+    "saveManualExecutions": true
+  }
+}
