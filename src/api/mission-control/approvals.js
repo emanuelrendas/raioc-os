@@ -15,15 +15,8 @@ import { agentEventBus } from '../../events/agent-event-bus.js';
 export async function handleApprovalsRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
   const cleanPath = url.split('?')[0].replace(/\/+$/, '');
 
-  // 1. POST /api/mission-control/approvals/resolve
-  if (cleanPath === '/api/mission-control/approvals/resolve' || cleanPath.endsWith('/approvals/resolve')) {
-    if (method !== 'POST') {
-      return {
-        status: 405,
-        body: { success: false, error: `Method ${method} not allowed on approvals resolve` },
-      };
-    }
-
+  // 1. POST /api/v1/mission-control/approvals or /api/v1/mission-control/approvals/resolve
+  if (method === 'POST' && (cleanPath.endsWith('/approvals') || cleanPath.endsWith('/approvals/resolve'))) {
     // Authenticate request using Bearer Token or RAIOC_INTERNAL_SECRET
     const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN]);
     if (!auth.authenticated) {
@@ -46,7 +39,7 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
       };
     }
 
-    const rawAction = (body.action || body.status || body.decision || '').toUpperCase();
+    const rawAction = (body.resolution || body.action || body.status || body.decision || '').toUpperCase();
     if (!['APPROVE', 'APPROVED', 'REJECT', 'REJECTED'].includes(rawAction)) {
       return {
         status: 400,

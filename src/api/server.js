@@ -21,6 +21,7 @@ import { handleCrmRequest } from './routes/crm-routes.js';
 import { handleFleetRequest } from './mission-control/fleet.js';
 import { handleApprovalsRequest } from './mission-control/approvals.js';
 import { handleInteractionsRequest } from './mission-control/interactions.js';
+import { handleMissionControlV1State } from './mission-control/v1-state.js';
 import { handleRegistryRequest } from './core/registry.js';
 import { handleKnowledgeRequest } from './core/knowledge.js';
 import { handleRuntimeTelemetryRequest } from './runtime/telemetry.js';
@@ -109,6 +110,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       const prompt = body.prompt || body.message || body.context || effectiveQuery.prompt || '';
       const cogRes = await cognitiveRouter.dispatch(prompt, { ...effectiveQuery, ...body, correlationId });
       response = { status: 200, body: { success: true, ...cogRes } };
+    }
+    // 8a. Mission Control V1 Consolidated State (/api/v1/mission-control/v1-state, /api/mission-control/v1-state)
+    else if (url.startsWith('/api/v1/mission-control/v1-state') || url.startsWith('/api/mission-control/v1-state')) {
+      response = await handleMissionControlV1State(url, method, body, effectiveQuery, headers);
     }
     // 8b. Mission Control Fleet Telemetry (/api/v1/mission-control/fleet, /api/mission-control/fleet)
     else if (url.startsWith('/api/v1/mission-control/fleet') || url.startsWith('/api/mission-control/fleet')) {

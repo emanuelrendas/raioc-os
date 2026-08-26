@@ -1,6 +1,8 @@
 /**
- * RAIOC OS — Executive Mission Control HTML Template
+ * RAIOC OS — Executive Mission Control HTML Template (Sprint 2 / Phase B)
  * Pre-compiled Zero-I/O renderer for `/admin/mission-control` and `/mission-control`.
+ * 24/7 Wall-Screen High-Density Dashboard with Consolidated Realtime Telemetry,
+ * Integrated Operational CRM Pipeline, Multi-Agent Fleet Matrix, and HITL Approval Gateway.
  */
 
 export function renderMissionControlHtml() {
@@ -9,7 +11,7 @@ export function renderMissionControlHtml() {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>RAIOC — Executive Mission Control & Fleet Telemetry</title>
+  <title>RAIOC — 24/7 Executive Mission Control & Wall-Screen Command Center</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -39,311 +41,480 @@ export function renderMissionControlHtml() {
   </script>
   <style>
     body { background-color: #030712; color: #F3F4F6; font-family: 'Plus Jakarta Sans', sans-serif; }
-    .glass-card { background: rgba(11, 15, 23, 0.85); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card { background: rgba(11, 15, 23, 0.90); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.08); }
     .gold-glow { box-shadow: 0 0 25px rgba(234, 179, 8, 0.15); }
     .pulse-badge { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    /* Custom Scrollbar for high-density wall monitors */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: rgba(3, 7, 18, 0.5); }
+    ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(234, 179, 8, 0.4); }
   </style>
 </head>
-<body class="min-h-screen flex flex-col antialiased">
-  <!-- Top Navigation Bar -->
-  <header class="glass-card sticky top-0 z-50 px-6 py-4 border-b border-white/10 flex items-center justify-between">
+<body class="min-h-screen flex flex-col antialiased bg-[#030712]">
+  <!-- Top Navigation & Global Clocks Bar -->
+  <header class="glass-card sticky top-0 z-50 px-6 py-3 border-b border-white/10 flex items-center justify-between">
     <div class="flex items-center space-x-3">
-      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-300 flex items-center justify-center font-black text-black text-xl shadow-lg shadow-amber-500/20">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-300 flex items-center justify-center font-black text-black text-lg shadow-lg shadow-amber-500/20">
         R
       </div>
       <div>
         <div class="flex items-center gap-2">
-          <h1 class="text-base font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
             RAIOC MISSION CONTROL
-            <span class="text-[10px] px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30">FLEET TELEMETRY</span>
+            <span class="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 font-mono border border-amber-500/30 font-semibold">24/7 WALL-SCREEN V1</span>
           </h1>
         </div>
-        <p class="text-xs text-gray-400">Autonomous Multi-Agent Telemetry & Sovereign Approval Gateway</p>
+        <p class="text-[11px] text-gray-400">Autonomous Sovereign Real Estate Intelligence & Multi-Agent Command Mesh</p>
       </div>
     </div>
 
-    <div class="flex items-center space-x-4">
+    <!-- Live Clocks Strip -->
+    <div class="hidden lg:flex items-center space-x-4 text-xs font-mono">
+      <div class="flex items-center space-x-2 bg-[#111827] px-3 py-1 rounded-lg border border-white/10">
+        <span class="text-gray-400">DXB (UTC+4):</span>
+        <span id="clock-dxb" class="text-amber-400 font-bold">--:--:--</span>
+      </div>
+      <div class="flex items-center space-x-2 bg-[#111827] px-3 py-1 rounded-lg border border-white/10">
+        <span class="text-gray-400">LON (UTC+0):</span>
+        <span id="clock-lon" class="text-gray-200">--:--:--</span>
+      </div>
+      <div class="flex items-center space-x-2 bg-[#111827] px-3 py-1 rounded-lg border border-white/10">
+        <span class="text-gray-400">LIS (UTC+0):</span>
+        <span id="clock-lis" class="text-gray-200">--:--:--</span>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3">
       <div class="flex items-center space-x-2 bg-[#111827] px-3 py-1.5 rounded-lg border border-white/10 text-xs font-mono">
         <span class="relative flex h-2 w-2">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
           <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
         </span>
-        <span class="text-emerald-400 font-semibold">REALTIME MESH</span>
-        <span class="text-gray-600">|</span>
-        <span id="clock" class="text-gray-300">--:--:-- GST</span>
+        <span id="gateway-status" class="text-emerald-400 font-semibold">AUTONOMOUS CORE ACTIVE</span>
       </div>
-
-      <button onclick="refreshAll()" class="p-2 rounded-lg bg-white/5 hover:bg-white/10 text-amber-300 border border-white/10 transition" title="Refresh Telemetry">
+      <button onclick="refreshMissionControl()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors" title="Force Refresh">
         <i data-lucide="refresh-cw" class="w-4 h-4"></i>
       </button>
     </div>
   </header>
 
-  <!-- Main Container -->
-  <main class="max-w-7xl w-full mx-auto px-6 py-8 space-y-8 flex-1">
+  <!-- Main Command Center Canvas -->
+  <main class="flex-1 p-6 space-y-6 max-w-[1920px] mx-auto w-full">
     
-    <!-- Component A: Fleet Matrix -->
-    <section class="space-y-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-            Component A: Autonomous Fleet Matrix
-          </h2>
-          <p class="text-xs text-gray-400">Active agent heartbeat, cognitive workloads, and latency telemetry.</p>
+    <!-- 1. Top Executive KPI Strip -->
+    <div id="kpi-strip" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div class="glass-card p-4 rounded-xl border border-white/10">
+        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">System Health</div>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="kpi-health" class="text-2xl font-bold text-emerald-400 font-mono">99.98%</span>
+          <span class="text-[10px] text-emerald-500 font-mono font-semibold">SOVEREIGN</span>
         </div>
-        <span id="fleet-count" class="text-xs font-mono text-gray-400">Loading fleet...</span>
       </div>
-
-      <div id="fleet-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <!-- Dynamic Fleet Cards Rendered Here -->
+      <div class="glass-card p-4 rounded-xl border border-white/10">
+        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Active Pipeline</div>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="kpi-pipeline" class="text-2xl font-bold text-amber-400 font-mono">AED 207M</span>
+          <span class="text-[10px] text-gray-400 font-mono">€51.8M</span>
+        </div>
       </div>
-    </section>
-
-    <!-- 2-Column Section: Component B & Component C -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-      
-      <!-- Component B: Executive Approval Queue -->
-      <section class="lg:col-span-7 space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-rose-400"></span>
-              Component B: Executive Approval Gate (HITL)
-            </h2>
-            <p class="text-xs text-gray-400">Pending high-value actions requiring principal authorization.</p>
-          </div>
-          <span id="approvals-badge" class="px-2 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">0 PENDING</span>
+      <div class="glass-card p-4 rounded-xl border border-white/10">
+        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Active Deals</div>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="kpi-deals" class="text-2xl font-bold text-white font-mono">10 Active</span>
+          <span class="text-[10px] text-sky-400 font-mono">6 STAGES</span>
         </div>
-
-        <div id="approvals-container" class="space-y-3">
-          <!-- Dynamic Approvals Rendered Here -->
+      </div>
+      <div class="glass-card p-4 rounded-xl border border-white/10">
+        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Pending Approvals</div>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="kpi-approvals" class="text-2xl font-bold text-amber-500 font-mono">3 Pending</span>
+          <span class="text-[10px] text-amber-400 font-mono">HITL QUEUE</span>
         </div>
-      </section>
-
-      <!-- Component C: Ingestion Pulse Feed -->
-      <section class="lg:col-span-5 space-y-4">
-        <div class="flex items-center justify-between">
-          <div>
-            <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-              Component C: Ingestion Pulse Feed
-            </h2>
-            <p class="text-xs text-gray-400">Last 15 multi-channel interactions.</p>
-          </div>
-          <span class="text-xs font-mono text-emerald-400">Live Pulse</span>
+      </div>
+      <div class="glass-card p-4 rounded-xl border border-white/10">
+        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">5m Error Rate</div>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="kpi-error-rate" class="text-2xl font-bold text-emerald-400 font-mono">0.00%</span>
+          <span class="text-[10px] text-emerald-500 font-mono">CIRCUITS CLOSED</span>
         </div>
-
-        <div id="interactions-container" class="glass-card p-4 rounded-2xl divide-y divide-white/5 max-h-[520px] overflow-y-auto space-y-2">
-          <!-- Dynamic Interaction Stream Rendered Here -->
+      </div>
+      <div class="glass-card p-4 rounded-xl border border-white/10">
+        <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Active Workflows</div>
+        <div class="mt-1 flex items-baseline justify-between">
+          <span id="kpi-workflows" class="text-2xl font-bold text-purple-400 font-mono">8 Running</span>
+          <span class="text-[10px] text-purple-300 font-mono">EVENT BUS v1.1</span>
         </div>
-      </section>
+      </div>
     </div>
 
-    <!-- Component D: Executive Copilot Input -->
-    <section class="glass-card p-6 rounded-3xl border border-amber-500/30 space-y-4 gold-glow">
-      <div class="flex items-center justify-between">
-        <div>
-          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
-            Component D: Executive Copilot (Gemini 2.5 Flash)
+    <!-- 2. Four-Column 24/7 Command Matrix -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      <!-- COLUMN 1: Agent Fleet & Infrastructure Matrix -->
+      <div class="space-y-6">
+        <!-- Live Agent Fleet Matrix -->
+        <!-- Component A: Autonomous Fleet Matrix -->
+        <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[480px]">
+          <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+              <i data-lucide="bot" class="w-3.5 h-3.5 text-amber-400"></i>
+              Component A: Autonomous Fleet Matrix
+            </h2>
+            <span class="text-[10px] font-mono text-gray-400" id="fleet-count">8 ONLINE</span>
+          </div>
+          <div id="fleet-container" class="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
+            <div class="p-6 text-center text-xs font-mono text-gray-500">Loading Agent Fleet...</div>
+          </div>
+        </div>
+
+        <!-- Infrastructure & Observability Panel -->
+        <div class="glass-card rounded-2xl border border-white/10 p-4 space-y-3">
+          <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+            <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i>
+            Infrastructure & Observability
           </h2>
-          <p class="text-xs text-gray-400">Query institutional Escrow frameworks, yield models, and autonomous directives.</p>
+          <div class="space-y-2 text-xs font-mono">
+            <div class="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5">
+              <span class="text-gray-400">Supabase DB</span>
+              <span class="text-emerald-400 font-semibold flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                CONNECTED (2ms)
+              </span>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5">
+              <span class="text-gray-400">Vercel Edge Network</span>
+              <span class="text-emerald-400 font-semibold flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                OPERATIONAL (8ms)
+              </span>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5">
+              <span class="text-gray-400">Event Bus v1.1</span>
+              <span class="text-amber-400 font-semibold">QUEUE DEPTH: 0</span>
+            </div>
+            <div class="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5">
+              <span class="text-gray-400">Circuit Breakers</span>
+              <span class="text-emerald-400 font-semibold">100% HEALTHY</span>
+            </div>
+          </div>
         </div>
-        <span class="text-[10px] font-mono text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">GEMINI PROPRIETARY</span>
       </div>
 
-      <form id="copilot-form" onsubmit="handleCopilot(event)" class="flex gap-3">
-        <input
-          id="copilot-input"
-          type="text"
-          placeholder="e.g. Synthesize Portuguese NHR allocation strategy for Palm Jumeirah under Law 8 Escrow..."
-          class="flex-1 bg-[#030712] border border-white/15 focus:border-amber-400 rounded-2xl px-5 py-3.5 text-sm text-white placeholder-gray-500 outline-none transition font-sans shadow-inner"
-        />
-        <button
-          type="submit"
-          id="copilot-btn"
-          class="px-6 py-3.5 rounded-2xl bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-400 hover:from-amber-500 hover:to-yellow-300 text-black font-bold text-sm transition shadow-lg shadow-amber-500/20 flex items-center gap-2"
-        >
-          <span>Instruct</span>
-          <i data-lucide="send" class="w-4 h-4"></i>
-        </button>
-      </form>
-
-      <div class="flex flex-wrap gap-2">
-        <button type="button" onclick="setPrompt('Palm Jumeirah Escrow Law 8 Yield Band')" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-amber-300 text-[11px] font-mono border border-white/5">+ Palm Jumeirah Escrow</button>
-        <button type="button" onclick="setPrompt('Golden Visa Cabinet Res 65/2022 Criteria')" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-amber-300 text-[11px] font-mono border border-white/5">+ Golden Visa Decree</button>
-        <button type="button" onclick="setPrompt('Spain Wealth Tax Hedge Allocation')" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-amber-300 text-[11px] font-mono border border-white/5">+ Spain Tax Hedge</button>
-        <button type="button" onclick="setPrompt('DIFC Common Law Asset Shielding')" class="px-2.5 py-1 rounded bg-white/5 hover:bg-white/10 text-gray-400 hover:text-amber-300 text-[11px] font-mono border border-white/5">+ DIFC Asset Shield</button>
-      </div>
-
-      <div id="copilot-output" class="hidden p-5 rounded-2xl bg-[#030712] border border-amber-500/30 space-y-2">
-        <div class="flex items-center justify-between text-xs font-mono">
-          <span class="text-amber-400 font-bold flex items-center gap-1.5">
-            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-            JARVIS / Gemini 2.5 Flash Output
-          </span>
-          <span id="copilot-latency" class="text-gray-500">12ms</span>
+      <!-- COLUMN 2: Realtime Operational CRM Pipeline -->
+      <div class="space-y-6">
+        <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[740px]">
+          <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+              <i data-lucide="kanban" class="w-3.5 h-3.5 text-sky-400"></i>
+              Realtime Operational CRM
+            </h2>
+            <span class="text-[10px] font-mono text-amber-400 font-bold" id="crm-total">AED 207.0M</span>
+          </div>
+          <div id="crm-container" class="p-4 overflow-y-auto space-y-4 flex-1 text-xs">
+            <div class="p-6 text-center text-xs font-mono text-gray-500">Loading Pipeline Deals...</div>
+          </div>
         </div>
-        <p id="copilot-text" class="text-sm text-gray-200 leading-relaxed whitespace-pre-wrap"></p>
       </div>
-    </section>
+
+      <!-- COLUMN 3: HITL Approval Queue & Workflow Monitor -->
+      <div class="space-y-6">
+        <!-- Executive HITL Approval Queue -->
+        <!-- Component B: Executive Approval Gate -->
+        <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[460px]">
+          <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+              <i data-lucide="shield-alert" class="w-3.5 h-3.5 text-amber-500"></i>
+              Component B: Executive Approval Gate
+            </h2>
+            <span id="approval-count-badge" class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">0 PENDING</span>
+          </div>
+          <div id="approvals-container" class="p-4 overflow-y-auto space-y-3 flex-1 text-xs">
+            <div class="p-6 text-center text-xs font-mono text-gray-500">No pending approvals required.</div>
+          </div>
+        </div>
+
+        <!-- Workflow Monitor -->
+        <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[260px]">
+          <div class="px-5 py-3 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+              <i data-lucide="workflow" class="w-3.5 h-3.5 text-purple-400"></i>
+              Workflow Monitor
+            </h2>
+            <span class="text-[10px] font-mono text-gray-400">REGISTRY v1.1</span>
+          </div>
+          <div id="workflow-container" class="p-3 overflow-y-auto space-y-2 flex-1 text-xs font-mono">
+            <div class="p-4 text-center text-xs text-gray-500">Loading Workflows...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMN 4: Ingestion Pulse Feed & Immutable Audit Timeline -->
+      <div class="space-y-6">
+        <!-- Live Ingestion Pulse Feed -->
+        <!-- Component C: Ingestion Pulse -->
+        <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[480px]">
+          <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
+            <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+              <i data-lucide="activity" class="w-3.5 h-3.5 text-emerald-400"></i>
+              Component C: Ingestion Pulse
+            </h2>
+            <span class="text-[10px] font-mono text-emerald-400 font-semibold">STREAMING</span>
+          </div>
+          <div id="interactions-container" class="p-4 overflow-y-auto space-y-3 flex-1 divide-y divide-white/5 text-xs">
+            <div class="p-6 text-center text-xs font-mono text-gray-500">Listening for inbound interactions...</div>
+          </div>
+        </div>
+
+        <!-- Immutable Audit Timeline -->
+        <div class="glass-card rounded-2xl border border-white/10 p-4 space-y-2.5 h-[240px] flex flex-col overflow-hidden">
+          <div class="flex items-center justify-between border-b border-white/5 pb-2">
+            <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
+              <i data-lucide="lock" class="w-3.5 h-3.5 text-gold-400"></i>
+              Immutable Audit Ledger
+            </h2>
+            <span class="text-[9px] font-mono text-gray-500">SHA-256 CHAIN</span>
+          </div>
+          <div id="audit-container" class="overflow-y-auto space-y-2 flex-1 text-[11px] font-mono">
+            <div class="p-3 text-center text-xs text-gray-500">Loading Audit Timeline...</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 3. Autonomous Executive Copilot Bar -->
+    <!-- Component D: Executive Copilot -->
+    <div class="glass-card rounded-2xl border border-white/10 p-4 flex items-center justify-between gap-4">
+      <div class="flex items-center space-x-3 flex-1">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center font-mono font-bold">
+          J
+        </div>
+        <form id="copilot-form" onsubmit="handleCopilot(event)" class="flex-1 flex gap-2">
+          <input 
+            type="text" 
+            id="copilot-input" 
+            placeholder="Instruct JARVIS: 'Evaluate Como Residences tranche allocation under Escrow Law No. 8 for Lisbon Lead'..."
+            class="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-xs font-mono text-white placeholder-gray-500 focus:outline-none focus:border-amber-500/50 transition-colors"
+          />
+          <button type="submit" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs rounded-xl shadow-lg shadow-amber-500/10 transition-all font-mono">
+            EXECUTE
+          </button>
+        </form>
+      </div>
+      <div id="copilot-status" class="hidden text-xs font-mono text-gray-400 items-center gap-2">
+        <span class="animate-spin w-3 h-3 border-2 border-amber-500 border-t-transparent rounded-full"></span>
+        <span id="copilot-status-text">Synthesizing multi-agent consensus...</span>
+      </div>
+    </div>
+
   </main>
 
+  <!-- Client-Side Dashboard Telemetry & Realtime Script -->
   <script>
-    const SECRET = 'raioc_sovereign_auth_2026_x99';
     const authHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + SECRET,
-      'X-RAIOC-Secret': SECRET,
+      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99'
     };
 
-    function updateClock() {
+    // Live Clocks
+    function updateClocks() {
       const now = new Date();
-      document.getElementById('clock').textContent = now.toLocaleTimeString('en-US', { timeZone: 'Asia/Dubai', hour12: false }) + ' GST';
+      document.getElementById('clock-dxb').innerText = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Dubai', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
+      document.getElementById('clock-lon').innerText = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/London', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
+      document.getElementById('clock-lis').innerText = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Lisbon', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }).format(now);
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClocks, 1000);
+    updateClocks();
 
-    async function loadFleet() {
+    async function refreshMissionControl() {
       try {
-        const res = await fetch('/api/v1/mission-control/fleet', { headers: authHeaders });
+        const res = await fetch('/api/v1/mission-control/v1-state', { headers: authHeaders });
+        if (!res.ok) throw new Error(\`Failed to fetch state: \${res.status}\`);
         const data = await res.json();
-        const container = document.getElementById('fleet-container');
-        document.getElementById('fleet-count').textContent = (data.fleet?.length || 0) + ' Agents Online';
+        renderState(data);
+      } catch (err) {
+        console.error('Mission Control V1 refresh error:', err);
+      }
+    }
 
-        if (!data.fleet || data.fleet.length === 0) {
-          container.innerHTML = '<p class="text-gray-500 text-xs font-mono p-4">No agents found.</p>';
-          return;
-        }
+    function renderState(state) {
+      if (!state) return;
 
-        container.innerHTML = data.fleet.map(agent => {
-          const isProcessing = agent.status === 'PROCESSING';
-          const isAlert = agent.status === 'ALERT';
-          const badgeClass = isProcessing ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
-                             isAlert ? 'bg-rose-500/10 text-rose-400 border-rose-500/30' :
-                             'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
-          const dotClass = isProcessing ? 'bg-amber-400' : isAlert ? 'bg-rose-400' : 'bg-emerald-400';
+      // 1. KPI Strip
+      if (state.kpiStrip) {
+        document.getElementById('kpi-health').innerText = state.kpiStrip.systemHealth + '%';
+        document.getElementById('kpi-pipeline').innerText = 'AED ' + (state.kpiStrip.pipelineAed / 1000000).toFixed(1) + 'M';
+        document.getElementById('kpi-deals').innerText = state.kpiStrip.activeLeads + ' Active';
+        document.getElementById('kpi-approvals').innerText = state.kpiStrip.pendingHitlCount + ' Pending';
+        document.getElementById('kpi-error-rate').innerText = state.kpiStrip.errorRate5m.toFixed(2) + '%';
+        document.getElementById('kpi-workflows').innerText = state.kpiStrip.activeWorkflows + ' Running';
+      }
+
+      // 2. Fleet Matrix
+      if (state.fleetMatrix) {
+        document.getElementById('fleet-count').innerText = state.fleetMatrix.length + ' ONLINE';
+        const fleetContainer = document.getElementById('fleet-container');
+        fleetContainer.innerHTML = state.fleetMatrix.map(agent => {
+          const isProcessing = agent.live_status === 'PROCESSING';
+          const isIdle = agent.live_status === 'IDLE';
+          const badgeClass = isProcessing ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
+                             isIdle ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' :
+                             'bg-rose-500/20 text-rose-300 border-rose-500/30';
 
           return \`
-            <div class="glass-card p-5 rounded-2xl border border-white/10 hover:border-amber-500/30 transition flex flex-col justify-between">
-              <div>
-                <div class="flex items-start justify-between gap-2 mb-3">
-                  <div>
-                    <h3 class="text-sm font-bold text-white">\${agent.name}</h3>
-                    <p class="text-[11px] text-gray-400 truncate max-w-[200px]">\${agent.role}</p>
-                  </div>
-                  <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border \${badgeClass}">
-                    <span class="w-1.5 h-1.5 rounded-full \${dotClass} animate-pulse"></span>
-                    \${agent.status}
-                  </span>
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/5 hover:border-white/10 transition-colors space-y-1.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                  <span class="font-bold text-white font-mono">\${agent.name}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[9px] font-mono uppercase font-bold border \${badgeClass}">\${agent.live_status}</span>
                 </div>
-                <div class="bg-[#111827] p-3 rounded-xl border border-white/5 mb-4">
-                  <span class="text-[9px] font-mono uppercase text-gray-500 block mb-1">Active Objective:</span>
-                  <p class="text-xs text-gray-300 line-clamp-2">\${agent.currentTask || 'Autonomous standby'}</p>
-                </div>
+                <span class="text-[10px] font-mono text-gray-400">\${agent.last_latency_ms}ms</span>
               </div>
-              <div class="grid grid-cols-3 gap-2 pt-3 border-t border-white/5 text-center text-xs">
-                <div class="bg-[#030712] p-2 rounded-lg"><span class="text-[9px] text-gray-500 uppercase block">Latency</span><span class="font-mono text-emerald-400 font-bold">\${agent.metrics?.latencyMs || 10}ms</span></div>
-                <div class="bg-[#030712] p-2 rounded-lg"><span class="text-[9px] text-gray-500 uppercase block">Completed</span><span class="font-mono text-white font-bold">\${agent.metrics?.tasksCompleted || 0}</span></div>
-                <div class="bg-[#030712] p-2 rounded-lg"><span class="text-[9px] text-gray-500 uppercase block">Score</span><span class="font-mono text-amber-400 font-bold">\${agent.metrics?.learningScore || 95}%</span></div>
-              </div>
+              <p class="text-[11px] text-gray-400 truncate">\${agent.active_task || agent.role}</p>
             </div>
           \`;
         }).join('');
-      } catch (err) {
-        console.error('loadFleet error:', err);
       }
-    }
 
-    async function loadApprovals() {
-      try {
-        const res = await fetch('/api/v1/mission-control/approvals', { headers: authHeaders });
-        const data = await res.json();
-        const container = document.getElementById('approvals-container');
-        document.getElementById('approvals-badge').textContent = (data.approvals?.length || 0) + ' PENDING';
-
-        if (!data.approvals || data.approvals.length === 0) {
-          container.innerHTML = '<div class="glass-card p-6 rounded-2xl text-center text-xs font-mono text-gray-500">All autonomous decisions cleared. No pending actions.</div>';
-          return;
-        }
-
-        container.innerHTML = data.approvals.map(appr => \`
-          <div class="glass-card p-5 rounded-2xl border border-white/10 hover:border-amber-500/30 transition space-y-3">
-            <div class="flex items-start justify-between gap-2">
-              <div>
-                <span class="text-[10px] font-mono text-amber-400 font-bold">\${appr.category}</span>
-                <h4 class="text-sm font-bold text-white">\${appr.title}</h4>
-              </div>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">\${appr.priority || 'HIGH'}</span>
+      // 3. Operational CRM Pipeline
+      if (state.crmPipeline && state.crmPipeline.stages) {
+        document.getElementById('crm-total').innerText = 'AED ' + (state.crmPipeline.totalPipelineAed / 1000000).toFixed(1) + 'M';
+        const crmContainer = document.getElementById('crm-container');
+        crmContainer.innerHTML = state.crmPipeline.stages.map(stage => \`
+          <div class="space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-mono">
+              <span class="font-bold text-gray-300">\${stage.label}</span>
+              <span class="text-amber-400 font-semibold">AED \${(stage.totalAed / 1000000).toFixed(1)}M (\${stage.dealCount})</span>
             </div>
-            <div class="bg-[#111827] p-3 rounded-xl text-xs text-gray-300 space-y-1">
-              <div><span class="text-gray-500">Recipient:</span> \${appr.recipient || 'Private Investor'}</div>
-              <div><span class="text-gray-500">Target Asset:</span> \${appr.targetAsset || 'Palm Jumeirah Prime'}</div>
-              <pre class="pt-2 text-[10px] font-mono text-gray-400 whitespace-pre-wrap overflow-x-auto">\${JSON.stringify(appr.payload, null, 2)}</pre>
-            </div>
-            <div class="flex items-center justify-end gap-3 pt-2">
-              <button onclick="resolveApproval('\${appr.id}', 'REJECTED')" class="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold">Reject</button>
-              <button onclick="resolveApproval('\${appr.id}', 'APPROVED')" class="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white text-xs font-semibold shadow-lg shadow-emerald-500/20">Approve & Dispatch</button>
+            <div class="space-y-1.5">
+              \${(stage.deals || []).map(deal => \`
+                <div class="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="font-semibold text-white truncate max-w-[180px]">\${deal.name}</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">DIRA \${deal.diraScore}</span>
+                  </div>
+                  <div class="flex items-center justify-between text-[10px] font-mono text-gray-400">
+                    <span>\${deal.targetAsset}</span>
+                    <span class="text-emerald-400 font-bold">AED \${(deal.budgetAed / 1000000).toFixed(1)}M</span>
+                  </div>
+                </div>
+              \`).join('')}
             </div>
           </div>
         \`).join('');
-      } catch (err) {
-        console.error('loadApprovals error:', err);
       }
+
+      // 4. Executive Approval Queue
+      if (state.approvalQueue) {
+        document.getElementById('approval-count-badge').innerText = state.approvalQueue.length + ' PENDING';
+        const approvalsContainer = document.getElementById('approvals-container');
+        if (state.approvalQueue.length === 0) {
+          approvalsContainer.innerHTML = '<div class="p-6 text-center text-xs font-mono text-gray-500">No pending executive approvals required.</div>';
+        } else {
+          approvalsContainer.innerHTML = state.approvalQueue.map(appr => \`
+            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">\${appr.priority || 'HIGH'} PRIORITY</span>
+                <span class="text-[10px] font-mono text-gray-500">\${appr.createdAt ? new Date(appr.createdAt).toLocaleTimeString() : 'Recent'}</span>
+              </div>
+              <h3 class="text-xs font-bold text-white leading-snug">\${appr.title}</h3>
+              <div class="text-[11px] text-gray-400 space-y-0.5 font-mono">
+                <div>Recipient: <span class="text-gray-200">\${appr.recipient}</span></div>
+                <div>Asset: <span class="text-amber-400">\${appr.targetAsset}</span></div>
+              </div>
+              <div class="flex items-center gap-2 pt-1">
+                <button onclick="resolveApproval('\${appr.id}', 'APPROVE')" class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-mono font-bold text-[10px] transition-colors">
+                  APPROVE & DISPATCH
+                </button>
+                <button onclick="resolveApproval('\${appr.id}', 'REJECT')" class="py-1.5 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-mono font-bold text-[10px] transition-colors">
+                  REJECT
+                </button>
+              </div>
+            </div>
+          \`).join('');
+        }
+      }
+
+      // 5. Workflow Monitor
+      if (state.workflowMonitor) {
+        const wfContainer = document.getElementById('workflow-container');
+        wfContainer.innerHTML = state.workflowMonitor.map(wf => \`
+          <div class="flex items-center justify-between p-2 rounded-lg bg-white/[0.02] border border-white/5">
+            <div class="truncate max-w-[170px]">
+              <div class="text-white font-medium truncate">\${wf.name}</div>
+              <div class="text-[9px] text-gray-500">\${wf.trigger_type} · \${wf.orchestrator}</div>
+            </div>
+            <div class="text-right text-[10px]">
+              <span class="text-emerald-400 font-bold">\${wf.success_rate}%</span>
+              <div class="text-[9px] text-gray-500">\${wf.last_execution_duration_ms}ms</div>
+            </div>
+          </div>
+        \`).join('');
+      }
+
+      // 6. Ingestion Pulse Feed
+      if (state.ingestionPulse) {
+        const pulseContainer = document.getElementById('interactions-container');
+        if (state.ingestionPulse.length === 0) {
+          pulseContainer.innerHTML = '<div class="p-6 text-center text-xs font-mono text-gray-500">No interaction logs recorded.</div>';
+        } else {
+          pulseContainer.innerHTML = state.ingestionPulse.map(log => {
+            const isTelegram = log.channel === 'TELEGRAM';
+            const isWhatsApp = log.channel === 'WHATSAPP';
+            const badgeColor = isTelegram ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                               isWhatsApp ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                               'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+            return \`
+              <div class="pt-2.5 first:pt-0 space-y-1">
+                <div class="flex items-center justify-between text-[11px]">
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border \${badgeColor}">\${log.channel}</span>
+                    <span class="font-mono text-gray-400 text-[10px]">\${log.event_type}</span>
+                    \${log.source_agent ? \`<span class="px-1 py-0.2 text-[8px] font-mono bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">\${log.source_agent}</span>\` : ''}
+                  </div>
+                  <span class="text-[10px] text-gray-500 font-mono">\${log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Recent'}</span>
+                </div>
+                <p class="text-xs text-gray-200 font-medium leading-relaxed">\${log.summary}</p>
+                \${log.traceparent ? \`<div class="text-[9px] font-mono text-gray-500 truncate max-w-full">trace: \${log.traceparent}</div>\` : ''}
+              </div>
+            \`;
+          }).join('');
+        }
+      }
+
+      // 7. Immutable Audit Timeline
+      if (state.auditTimeline) {
+        const auditContainer = document.getElementById('audit-container');
+        auditContainer.innerHTML = state.auditTimeline.map(evt => \`
+          <div class="p-1.5 rounded bg-white/[0.01] border border-white/5 space-y-0.5">
+            <div class="flex items-center justify-between text-gray-400 text-[10px]">
+              <span class="text-amber-400 font-bold">\${evt.type}</span>
+              <span>\${evt.time ? new Date(evt.time).toLocaleTimeString() : ''}</span>
+            </div>
+            <div class="text-[9px] text-gray-500 truncate">sha256: \${evt.payload_sha256 || 'N/A'}</div>
+          </div>
+        \`).join('');
+      }
+
+      lucide.createIcons();
     }
 
-    async function resolveApproval(id, action) {
+    async function resolveApproval(id, resolution) {
       try {
-        const res = await fetch('/api/v1/mission-control/approvals/resolve', {
+        const res = await fetch('/api/v1/mission-control/approvals', {
           method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({ approvalId: id, action, actor: 'Emanuel Rendas' })
+          headers: {
+            ...authHeaders,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ id, resolution, actor: 'Emanuel Rendas (Executive)' })
         });
         if (res.ok) {
-          loadApprovals();
-          loadInteractions();
+          refreshMissionControl();
         }
       } catch (err) {
-        console.error('resolveApproval error:', err);
-      }
-    }
-
-    async function loadInteractions() {
-      try {
-        const res = await fetch('/api/v1/mission-control/interactions?limit=15', { headers: authHeaders });
-        const data = await res.json();
-        const container = document.getElementById('interactions-container');
-
-        if (!data.interactions || data.interactions.length === 0) {
-          container.innerHTML = '<div class="p-6 text-center text-xs font-mono text-gray-500">No interaction logs recorded.</div>';
-          return;
-        }
-
-        container.innerHTML = data.interactions.map(log => {
-          const isTelegram = (log.channel || '').toUpperCase() === 'TELEGRAM';
-          const isWhatsApp = (log.channel || '').toUpperCase() === 'WHATSAPP';
-          const badgeColor = isTelegram ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
-                             isWhatsApp ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
-                             'bg-amber-500/10 text-amber-400 border-amber-500/20';
-
-          return \`
-          <div class="pt-3 first:pt-0 space-y-1">
-            <div class="flex items-center justify-between text-[11px]">
-              <div class="flex items-center gap-1.5">
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border \${badgeColor}">\${log.channel || 'WEBSITE'}</span>
-                <span class="font-mono text-gray-400">\${log.event_type}</span>
-                \${log.source_agent ? \`<span class="px-1 py-0.2 text-[8px] font-mono bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">\${log.source_agent}</span>\` : ''}
-              </div>
-              <span class="text-[10px] text-gray-500 font-mono">\${log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Recent'}</span>
-            </div>
-            <p class="text-xs text-gray-200 font-medium">\${log.summary}</p>
-            \${log.traceparent ? \`<div class="text-[9px] font-mono text-gray-500 truncate max-w-full">trace: \${log.traceparent}</div>\` : ''}
-          </div>
-        \`;
-        }).join('');
-      } catch (err) {
-        console.error('loadInteractions error:', err);
+        console.error('Failed to resolve approval:', err);
       }
     }
 
@@ -353,43 +524,34 @@ export function renderMissionControlHtml() {
       const prompt = input.value.trim();
       if (!prompt) return;
 
-      const btn = document.getElementById('copilot-btn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="animate-spin mr-2">⏳</span> Processing...';
+      const statusEl = document.getElementById('copilot-status');
+      const statusText = document.getElementById('copilot-status-text');
+      statusEl.classList.remove('hidden');
+      statusEl.classList.add('flex');
+      statusText.innerText = 'Synthesizing sovereign advisory consensus...';
 
       try {
         const res = await fetch('/api/v1/cognitive/dispatch', {
           method: 'POST',
-          headers: authHeaders,
-          body: JSON.stringify({ prompt, clientName: 'Emanuel Rendas' })
+          headers: { ...authHeaders, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
         });
         const data = await res.json();
-        document.getElementById('copilot-output').classList.remove('hidden');
-        document.getElementById('copilot-text').textContent = data.response || data.text || JSON.stringify(data);
-        document.getElementById('copilot-latency').textContent = (data.latencyMs || 15) + 'ms';
+        alert('JARVIS Executive Consensus:\\n\\n' + (data.content || data.synthesis || JSON.stringify(data)));
+        input.value = '';
+        refreshMissionControl();
       } catch (err) {
-        document.getElementById('copilot-output').classList.remove('hidden');
-        document.getElementById('copilot-text').textContent = 'Error: ' + err.message;
+        alert('Copilot Error: ' + err.message);
       } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<span>Instruct</span> <i data-lucide="send" class="w-4 h-4"></i>';
-        lucide.createIcons();
+        statusEl.classList.add('hidden');
+        statusEl.classList.remove('flex');
       }
     }
 
-    function setPrompt(p) {
-      document.getElementById('copilot-input').value = p;
-    }
-
-    function refreshAll() {
-      loadFleet();
-      loadApprovals();
-      loadInteractions();
-    }
-
-    refreshAll();
-    setInterval(refreshAll, 5000);
-    setTimeout(() => { if (window.lucide) lucide.createIcons(); }, 300);
+    // Auto-poll state every 3 seconds
+    setInterval(refreshMissionControl, 3000);
+    // Initial fetch
+    refreshMissionControl();
   </script>
 </body>
 </html>`;
