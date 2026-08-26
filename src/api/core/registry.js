@@ -16,7 +16,7 @@ import { authMiddleware } from '../../security/auth-middleware.js';
 import { logger } from '../../logging/audit-logger.js';
 
 export async function handleRegistryRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
-  const cleanUrl = url.split('?')[0].replace(/\/$/, '');
+  const cleanUrl = url.split('?')[0].replace(/\/$/, '').replace('/api/v1/', '/api/');
 
   // 1. Agent Registry Endpoints (/api/core/agents, /api/core/agents/:id)
   if (cleanUrl === '/api/core/agents' || cleanUrl.startsWith('/api/core/agents/')) {

@@ -23,6 +23,10 @@ import { handleApprovalsRequest } from './mission-control/approvals.js';
 import { handleInteractionsRequest } from './mission-control/interactions.js';
 import { handleRegistryRequest } from './core/registry.js';
 import { handleKnowledgeRequest } from './core/knowledge.js';
+import { handleRuntimeTelemetryRequest } from './runtime/telemetry.js';
+import { handleEventsRequest } from './events/router.js';
+import { handleMemoryAdrRequest } from './memory/adr.js';
+import { cognitiveRouter } from '../core/cognitive-router.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
 import { renderMissionControlHtml } from '../site/mission-control-html.js';
 import { supabase } from '../db/supabase-client.js';
@@ -94,29 +98,47 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/calculators')) {
       response = await handleCalculatorRequest(url, body);
     }
-    // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow, Gemini Advisor)
-    else if (url.startsWith('/api/opal') || url.startsWith('/api/mixboard') || url.startsWith('/api/flow') || url.startsWith('/api/ai')) {
+    // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow, Gemini Advisor) - Canonical /api/v1 and Legacy /api
+    else if (url.startsWith('/api/v1/opal') || url.startsWith('/api/opal') || url.startsWith('/api/v1/mixboard') || url.startsWith('/api/mixboard') || url.startsWith('/api/v1/flow') || url.startsWith('/api/flow') || url.startsWith('/api/v1/ai') || url.startsWith('/api/ai')) {
       response = await handleAiToolsRequest(url, method, body, effectiveQuery, headers);
     }
-    // 8b. Mission Control Fleet Telemetry (/api/mission-control/fleet)
-    else if (url.startsWith('/api/mission-control/fleet')) {
+    // 8a. Cognitive Multi-Tier Router (/api/v1/cognitive/dispatch, /api/cognitive/dispatch)
+    else if (url.startsWith('/api/v1/cognitive/dispatch') || url.startsWith('/api/cognitive/dispatch') || url === '/api/v1/cognitive' || url === '/api/cognitive') {
+      const prompt = body.prompt || body.message || body.context || effectiveQuery.prompt || '';
+      const cogRes = await cognitiveRouter.dispatch(prompt, { ...effectiveQuery, ...body, correlationId });
+      response = { status: 200, body: { success: true, ...cogRes } };
+    }
+    // 8b. Mission Control Fleet Telemetry (/api/v1/mission-control/fleet, /api/mission-control/fleet)
+    else if (url.startsWith('/api/v1/mission-control/fleet') || url.startsWith('/api/mission-control/fleet')) {
       response = await handleFleetRequest(url, method, body, effectiveQuery, headers);
     }
-    // 8c. Mission Control Executive Approvals (/api/mission-control/approvals)
-    else if (url.startsWith('/api/mission-control/approvals')) {
+    // 8c. Mission Control Executive Approvals (/api/v1/mission-control/approvals, /api/mission-control/approvals)
+    else if (url.startsWith('/api/v1/mission-control/approvals') || url.startsWith('/api/mission-control/approvals')) {
       response = await handleApprovalsRequest(url, method, body, effectiveQuery, headers);
     }
-    // 8d. Mission Control Ingestion Stream (/api/mission-control/interactions)
-    else if (url.startsWith('/api/mission-control/interactions')) {
+    // 8d. Mission Control Ingestion Stream (/api/v1/mission-control/interactions, /api/mission-control/interactions)
+    else if (url.startsWith('/api/v1/mission-control/interactions') || url.startsWith('/api/mission-control/interactions')) {
       response = await handleInteractionsRequest(url, method, body, effectiveQuery, headers);
     }
-    // 8e. Enterprise Core Registries (/api/core/agents, /api/core/tools, /api/core/workflows)
-    else if (url.startsWith('/api/core/agents') || url.startsWith('/api/core/tools') || url.startsWith('/api/core/workflows')) {
+    // 8e. Enterprise Core Registries (/api/v1/core/agents, /api/v1/core/tools, /api/v1/core/workflows)
+    else if (url.startsWith('/api/v1/core/agents') || url.startsWith('/api/core/agents') || url.startsWith('/api/v1/core/tools') || url.startsWith('/api/core/tools') || url.startsWith('/api/v1/core/workflows') || url.startsWith('/api/core/workflows')) {
       response = await handleRegistryRequest(url, method, body, effectiveQuery, headers);
     }
-    // 8f. Enterprise Knowledge Graph (/api/core/knowledge)
-    else if (url.startsWith('/api/core/knowledge')) {
+    // 8f. Enterprise Knowledge Graph (/api/v1/core/knowledge, /api/core/knowledge)
+    else if (url.startsWith('/api/v1/core/knowledge') || url.startsWith('/api/core/knowledge')) {
       response = await handleKnowledgeRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 8g. Runtime Telemetry Split (/api/v1/runtime/telemetry/*, /api/v1/runtime/health-matrix, /api/runtime/*)
+    else if (url.startsWith('/api/v1/runtime') || url.startsWith('/api/runtime')) {
+      response = await handleRuntimeTelemetryRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 8h. CloudEvents v1.1 Store & Recovery (/api/v1/events/*, /api/events/*)
+    else if (url.startsWith('/api/v1/events') || url.startsWith('/api/events')) {
+      response = await handleEventsRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 8i. Architectural Decision Records (/api/v1/memory/adr, /api/memory/adr)
+    else if (url.startsWith('/api/v1/memory/adr') || url.startsWith('/api/memory/adr')) {
+      response = await handleMemoryAdrRequest(url, method, body, effectiveQuery, headers);
     }
     // 9. Assessment Submission
     else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {
@@ -126,20 +148,20 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/lead') || url.startsWith('/api/brief')) {
       response = await handleLeadSubmission(body);
     }
-    // 10b. CRM & Ingestion Pipeline (/api/crm)
-    else if (url.startsWith('/api/crm')) {
+    // 10b. CRM & Ingestion Pipeline (/api/v1/crm, /api/crm)
+    else if (url.startsWith('/api/v1/crm') || url.startsWith('/api/crm')) {
       response = await handleCrmRequest(url, method, body, effectiveQuery, headers);
     }
     // 11. Webhook Endpoints (n8n & WhatsApp)
-    else if (url.startsWith('/api/webhooks')) {
+    else if (url.startsWith('/api/v1/webhooks') || url.startsWith('/api/webhooks')) {
       response = await handleWebhookRequest(url, method, body, effectiveQuery, headers);
     }
     // 12. Shared Agent API
-    else if (url.startsWith('/api/agents')) {
+    else if (url.startsWith('/api/v1/agents') || url.startsWith('/api/agents')) {
       response = await handleAgentRequest(url, method, body, headers);
     }
     // 13. Social Media & Content Automation API
-    else if (url.startsWith('/api/social')) {
+    else if (url.startsWith('/api/v1/social') || url.startsWith('/api/social')) {
       response = await handleSocialRequest(url, method, body, effectiveQuery, headers);
     } else {
       response = { status: 404, body: { error: `Endpoint not found: ${url}` } };
@@ -148,11 +170,22 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     const durationMs = Date.now() - startTime;
     metricsCollector.recordLatency(`http_${url.split('/')[2] || 'root'}`, durationMs);
 
+    // Compute deprecation header if calling unversioned legacy endpoint
+    const isLegacyAlias = url.startsWith('/api/') && !url.startsWith('/api/v1/');
+    const extraHeaders = isLegacyAlias
+      ? {
+          Deprecation: '@deprecated Use /api/v1/... instead',
+          Link: `<${url.replace('/api/', '/api/v1/')}>; rel="canonical"`,
+          Sunset: '2026-12-31',
+        }
+      : {};
+
     return {
       ...response,
       headers: {
         'Content-Type': response.headers?.['Content-Type'] || 'application/json',
         'X-Correlation-ID': correlationId,
+        ...extraHeaders,
         ...(response.headers || {}),
       },
     };

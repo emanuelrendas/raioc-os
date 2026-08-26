@@ -16,7 +16,7 @@ import { authMiddleware } from '../../security/auth-middleware.js';
 import { logger } from '../../logging/audit-logger.js';
 
 export async function handleKnowledgeRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
-  const cleanUrl = url.split('?')[0].replace(/\/$/, '');
+  const cleanUrl = url.split('?')[0].replace(/\/$/, '').replace('/api/v1/', '/api/');
 
   // 1. Knowledge Graph Traversal & Subgraph Retrieval (/api/core/knowledge/graph)
   if (cleanUrl === '/api/core/knowledge/graph' || cleanUrl === '/api/core/knowledge') {

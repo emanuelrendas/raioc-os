@@ -207,7 +207,7 @@ export function renderMissionControlHtml() {
 
     async function loadFleet() {
       try {
-        const res = await fetch('/api/mission-control/fleet', { headers: authHeaders });
+        const res = await fetch('/api/v1/mission-control/fleet', { headers: authHeaders });
         const data = await res.json();
         const container = document.getElementById('fleet-container');
         document.getElementById('fleet-count').textContent = (data.fleet?.length || 0) + ' Agents Online';
@@ -258,7 +258,7 @@ export function renderMissionControlHtml() {
 
     async function loadApprovals() {
       try {
-        const res = await fetch('/api/mission-control/approvals', { headers: authHeaders });
+        const res = await fetch('/api/v1/mission-control/approvals', { headers: authHeaders });
         const data = await res.json();
         const container = document.getElementById('approvals-container');
         document.getElementById('approvals-badge').textContent = (data.approvals?.length || 0) + ' PENDING';
@@ -295,7 +295,7 @@ export function renderMissionControlHtml() {
 
     async function resolveApproval(id, action) {
       try {
-        const res = await fetch('/api/mission-control/approvals/resolve', {
+        const res = await fetch('/api/v1/mission-control/approvals/resolve', {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({ approvalId: id, action, actor: 'Emanuel Rendas' })
@@ -311,7 +311,7 @@ export function renderMissionControlHtml() {
 
     async function loadInteractions() {
       try {
-        const res = await fetch('/api/mission-control/interactions?limit=15', { headers: authHeaders });
+        const res = await fetch('/api/v1/mission-control/interactions?limit=15', { headers: authHeaders });
         const data = await res.json();
         const container = document.getElementById('interactions-container');
 
@@ -348,7 +348,7 @@ export function renderMissionControlHtml() {
       btn.innerHTML = '<span class="animate-spin mr-2">⏳</span> Processing...';
 
       try {
-        const res = await fetch('/api/ai/gemini-advisor', {
+        const res = await fetch('/api/v1/cognitive/dispatch', {
           method: 'POST',
           headers: authHeaders,
           body: JSON.stringify({ prompt, clientName: 'Emanuel Rendas' })

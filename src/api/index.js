@@ -17,3 +17,7 @@ export { handleApprovalsRequest } from './mission-control/approvals.js';
 export { handleInteractionsRequest } from './mission-control/interactions.js';
 export { handleRegistryRequest } from './core/registry.js';
 export { handleKnowledgeRequest } from './core/knowledge.js';
+export { handleRuntimeTelemetryRequest } from './runtime/telemetry.js';
+export { handleEventsRequest } from './events/router.js';
+export { handleMemoryAdrRequest } from './memory/adr.js';
+

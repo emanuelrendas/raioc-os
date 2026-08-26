@@ -27,21 +27,21 @@ export default function MissionControlDashboard() {
       };
 
       // 1. Fetch Fleet Telemetry
-      const fleetRes = await fetch('/api/mission-control/fleet', { headers });
+      const fleetRes = await fetch('/api/v1/mission-control/fleet', { headers });
       if (fleetRes.ok) {
         const data = await fleetRes.json();
         if (data.fleet) setFleet(data.fleet);
       }
 
       // 2. Fetch Approvals Queue
-      const apprRes = await fetch('/api/mission-control/approvals', { headers });
+      const apprRes = await fetch('/api/v1/mission-control/approvals', { headers });
       if (apprRes.ok) {
         const data = await apprRes.json();
         if (data.approvals) setApprovals(data.approvals);
       }
 
       // 3. Fetch Interactions Feed
-      const intRes = await fetch('/api/mission-control/interactions?limit=15', { headers });
+      const intRes = await fetch('/api/v1/mission-control/interactions?limit=15', { headers });
       if (intRes.ok) {
         const data = await intRes.json();
         if (data.interactions) setInteractions(data.interactions);
@@ -63,7 +63,7 @@ export default function MissionControlDashboard() {
   const handleResolveApproval = async (approvalId, action) => {
     setResolvingId(approvalId);
     try {
-      const res = await fetch('/api/mission-control/approvals/resolve', {
+      const res = await fetch('/api/v1/mission-control/approvals/resolve', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ export default function MissionControlDashboard() {
     setCopilotResponse(null);
 
     try {
-      const res = await fetch('/api/ai/gemini-advisor', {
+      const res = await fetch('/api/v1/cognitive/dispatch', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
