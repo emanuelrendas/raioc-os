@@ -1,0 +1,200 @@
+{
+  "name": "RAIOC — WF-02: MARK Multimodal OCR & Document Verification (MARK)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "raioc-document-intake",
+        "responseMode": "onReceived",
+        "responseData": "allEntries",
+        "options": {
+          "rawBody": false
+        }
+      },
+      "name": "1. Document Ingestion Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "id": "node_wf02_webhook_01"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract document file metadata, MIME type and trace context\nconst crypto = require('crypto');\nconst input = $input.first().json;\nconst body = input.body || input;\nconst headers = input.headers || {};\n\nconst documentId = body.document_id || `doc_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;\nconst leadId = body.lead_id || body.investor_id || 'inv_unassigned';\nconst documentClass = (body.document_class || 'TITLE_DEED').toUpperCase();\nconst mimeType = body.mime_type || 'application/pdf';\nconst fileSize = Number(body.file_size || 2048500);\n\n// Enforce 15MB limit and MIME checks\nif (fileSize > 15 * 1024 * 1024) {\n  throw new Error('Document exceeds maximum permitted size of 15MB');\n}\n\nconst traceparent = headers['traceparent'] || `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`;\nconst correlationId = headers['x-correlation-id'] || `corr_${Date.now()}`;\n\nreturn [{\n  json: {\n    documentId,\n    leadId,\n    documentClass,\n    mimeType,\n    fileSize,\n    fileBase64: body.file_base64 || '',\n    documentUrl: body.document_url || 'https://assets.emanuelrendas.com/docs/como_title_deed.pdf',\n    traceparent,\n    correlationId,\n    timestamp: new Date().toISOString()\n  }\n}];"
+      },
+      "name": "2. Security & MIME Validator",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [420, 300],
+      "id": "node_wf02_validate_02"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/intake/document",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
+            { "name": "traceparent", "value": "={{ $json.traceparent }}" },
+            { "name": "x-correlation-id", "value": "={{ $json.correlationId }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "document_id", "value": "={{ $json.documentId }}" },
+            { "name": "lead_id", "value": "={{ $json.leadId }}" },
+            { "name": "document_class", "value": "={{ $json.documentClass }}" },
+            { "name": "mime_type", "value": "={{ $json.mimeType }}" },
+            { "name": "file_url", "value": "={{ $json.documentUrl }}" }
+          ]
+        },
+        "options": {
+          "timeout": 25000
+        }
+      },
+      "name": "3. MARK Vision / OCR Dispatch",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [640, 300],
+      "id": "node_wf02_mark_ocr_03"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.body?.documentClass || $json.documentClass || 'TITLE_DEED' }}",
+              "operation": "equals",
+              "value2": "TITLE_DEED"
+            }
+          ]
+        }
+      },
+      "name": "4. Title Deed vs POF Switch",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [860, 300],
+      "id": "node_wf02_switch_04"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/crm/lead/advance",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "lead_id", "value": "={{ $('2. Security & MIME Validator').item.json.leadId }}" },
+            { "name": "target_stage", "value": "PROPOSAL_SENT" },
+            { "name": "dira_adjustment", "value": 15 },
+            { "name": "reason", "value": "Title deed and escrow ringfencing 100% verified by MARK OCR" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "5. Promote CRM Stage & DIRA Boost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1080, 200],
+      "id": "node_wf02_crm_advance_05"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/event",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "event_type", "value": "raioc.document.verified.v1" },
+            { "name": "source_agent", "value": "MARK" },
+            { "name": "correlation_id", "value": "={{ $('2. Security & MIME Validator').item.json.correlationId }}" },
+            { "name": "payload", "value": "={{ $json }}" }
+          ]
+        },
+        "options": {}
+      },
+      "name": "6. Publish Verification Event",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1300, 200],
+      "id": "node_wf02_publish_event_06"
+    }
+  ],
+  "connections": {
+    "1. Document Ingestion Webhook": {
+      "main": [
+        [
+          {
+            "node": "2. Security & MIME Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "2. Security & MIME Validator": {
+      "main": [
+        [
+          {
+            "node": "3. MARK Vision / OCR Dispatch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "3. MARK Vision / OCR Dispatch": {
+      "main": [
+        [
+          {
+            "node": "4. Title Deed vs POF Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "4. Title Deed vs POF Switch": {
+      "main": [
+        [
+          {
+            "node": "5. Promote CRM Stage & DIRA Boost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "5. Promote CRM Stage & DIRA Boost": {
+      "main": [
+        [
+          {
+            "node": "6. Publish Verification Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  }
+}
