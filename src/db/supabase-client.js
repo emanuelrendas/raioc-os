@@ -3023,6 +3023,7 @@ export class SupabaseClient {
       budget_usd: Number(investorData.budget_usd || investorData.budgetUsd) || 2720000,
       target_thesis: investorData.target_thesis || investorData.targetThesis || 'Opal ROI / Escrow Guarantee',
       thesis_type: investorData.thesis_type || 'OPAL_ROI_ESCROW_GUARANTEE',
+      dira_score: Number(investorData.dira_score || investorData.diraScore) || 90,
       riis_score: Number(investorData.riis_score || investorData.riisScore) || 80,
       dira_risk_level: investorData.dira_risk_level || 'LOW',
       golden_visa_eligible: investorData.golden_visa_eligible !== false,
@@ -3037,7 +3038,7 @@ export class SupabaseClient {
     };
 
     if (this.isMock) {
-      const idx = this.mockStore.investors.findIndex((i) => i.id === record.id || i.reference_id === record.reference_id);
+      const idx = this.mockStore.investors.findIndex((i) => (record.id && i.id === record.id) || (record.reference_id && i.reference_id === record.reference_id));
       if (idx >= 0) {
         this.mockStore.investors[idx] = { ...this.mockStore.investors[idx], ...record };
       } else {

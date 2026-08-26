@@ -61,6 +61,15 @@ export class EnterpriseEventRouter {
     );
     this.unsubscribers.push(unsubVoice);
 
+    // 5. Subscribe to Sovereign Lead Ingestion Events (CloudEvents v1.1 Ingest Gateway)
+    const unsubLead = enterpriseEventBus.subscribe(
+      'raioc.lead.ingested.v1',
+      async (data, ctx) => {
+        await this.handleLeadIngestedEvent(data, ctx);
+      }
+    );
+    this.unsubscribers.push(unsubLead);
+
     logger.info('EVENT_ROUTER', 'Enterprise Event Router initialized with CloudEvent v1.1 policy listeners');
   }
 
@@ -547,6 +556,116 @@ export class EnterpriseEventRouter {
       correlationId: ctx.correlationId,
       audioDurationSeconds: voiceOutput.audioDurationSeconds,
       triageStatus: result.triageStatus,
+    });
+  }
+
+  /**
+   * Processes a normalized Lead Ingestion CloudEvent (from /api/v1/events/ingest, WF-01, etc.)
+   * @param {Object} data 
+   * @param {Object} ctx 
+   */
+  async handleLeadIngestedEvent(data, ctx) {
+    const startTime = Date.now();
+    const lead = data.lead || data;
+    const name = lead.name || 'Anonymous Sovereign Principal';
+    const budgetAed = Number(lead.budget_aed || lead.budgetAed || 15000000);
+    const targetAsset = lead.target_asset || lead.targetAsset || 'Prime Freehold Dubai';
+    const channel = lead.channel || 'CLOUDEVENT_INGEST';
+
+    // 1. Calculate DIRA & RIIS Score
+    let diraScore = Number(lead.dira_target_score || lead.dira_score || 85);
+    if (budgetAed >= 20000000) diraScore = Math.max(diraScore, 92);
+    if (budgetAed >= 50000000) diraScore = Math.max(diraScore, 96);
+    const riisScore = Math.min(100, Math.round(diraScore * 0.98));
+
+    // 2. High-Value Sovereign Mandate (>= 10M AED) -> Create Pending Executive HITL Approval
+    let approvalId = null;
+    if (budgetAed >= 10000000) {
+      const apprRecord = await supabase.createApproval({
+        id: `appr_lead_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        title: `High-Value Sovereign Allocation (${(budgetAed / 1000000).toFixed(1)}M AED) - ${name}`,
+        agent: 'MARK (Lead Triage Specialist)',
+        category: 'HIGH_VALUE_MANDATE',
+        priority: 'CRITICAL',
+        recipient: name,
+        targetAsset,
+        payload: {
+          leadId: lead.id || `inv_${Date.now()}`,
+          name,
+          email: lead.email,
+          phone: lead.phone,
+          company: lead.company,
+          country: lead.country,
+          budgetAed,
+          targetAsset,
+          channel,
+          diraScore,
+          riisScore,
+          goldenVisaEligible: budgetAed >= 2000000,
+          law8EscrowVerified: true,
+          thesis: lead.thesis || 'Sovereign Real Estate Allocation',
+          correlationId: ctx.correlationId,
+          traceparent: ctx.traceparent,
+        },
+      });
+      approvalId = apprRecord.id;
+    }
+
+    // 3. Upsert / Sync Investor into Sovereign CRM
+    const existingInv = (supabase.isMock && supabase.mockStore?.investors) ? supabase.mockStore.investors.find((i) => i.name === name || (lead.email && i.email === lead.email)) : null;
+    const invId = lead.id || existingInv?.id || `inv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+    await supabase.upsertInvestor({
+      id: invId,
+      name,
+      email: lead.email || 'privateadvisory@emanuelrendas.com',
+      phone: lead.phone || '+971501234567',
+      company: lead.company || 'Private Office',
+      country: lead.country || 'International',
+      segment: lead.segment || 'HIGH_NET_WORTH',
+      budget_aed: budgetAed,
+      target_asset: targetAsset,
+      status: 'HOT_MANDATE',
+      stage: 'HOT_MANDATE',
+      dira_score: diraScore,
+      riis_score: riisScore,
+      preferred_channel: channel,
+    });
+
+    const elapsedMs = Date.now() - startTime;
+
+    // 4. Update Runtime Agent Telemetry for MARK
+    await supabase.recordRuntimeAgentTelemetry({
+      agent_id: 'mark',
+      live_status: 'IDLE',
+      active_task: `Triaged sovereign mandate for ${name} (AED ${(budgetAed / 1000000).toFixed(1)}M, DIRA: ${diraScore})`,
+      last_latency_ms: elapsedMs,
+    });
+
+    // 5. Record Immutable Interaction Log
+    await supabase.recordInteractionLog({
+      channel,
+      event_type: 'LEAD_TRIAGED_AND_EVALUATED',
+      source_agent: 'MARK',
+      direction: 'INBOUND',
+      correlation_id: ctx.correlationId,
+      traceparent: ctx.traceparent,
+      summary: `MARK Triage: ${name} (AED ${(budgetAed / 1000000).toFixed(1)}M in ${targetAsset}) -> DIRA: ${diraScore}/100, RIIS: ${riisScore}/100, Approval: ${approvalId || 'AUTO_PROMOTED'}`,
+      payload: {
+        lead,
+        diraScore,
+        riisScore,
+        approvalId,
+        budgetAed,
+        targetAsset,
+      },
+      status: 'SUCCESS',
+      latency_ms: elapsedMs,
+    });
+
+    logger.info('EVENT_ROUTER', `MARK evaluated lead for ${name} in ${elapsedMs}ms (DIRA: ${diraScore}, Approval: ${approvalId || 'N/A'})`, {
+      correlationId: ctx.correlationId,
+      diraScore,
+      budgetAed,
     });
   }
 
