@@ -307,3 +307,10 @@ export function startApiServer(port = 3000) {
     });
   });
 }
+
+// Auto-start API server when run directly (e.g. npm run dev)
+if (process.argv[1] && (process.argv[1].endsWith('server.js') || process.argv[1].endsWith('api\\server.js') || process.argv[1].endsWith('api/server.js'))) {
+  const port = process.env.PORT || 3000;
+  startApiServer(port);
+}
+

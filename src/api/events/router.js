@@ -49,6 +49,57 @@ export async function handleEventsRequest(url, method = 'GET', body = {}, query 
     };
   }
 
+  // 1b. POST /api/v1/events/ingest
+  if (url.includes('/events/ingest')) {
+    if (method !== 'POST') {
+      return { status: 405, body: { success: false, error: `Method ${method} not allowed on /events/ingest` } };
+    }
+
+    const auth = authMiddleware.authenticateRequest(headers);
+    if (!auth.authenticated) {
+      return { status: 401, body: { success: false, error: 'Unauthorized: Event ingestion requires authentication' } };
+    }
+
+    const { specversion, type, source, id, data, payload, traceparent, correlation_id, causation_id, payload_sha256 } = body;
+
+    if (specversion && specversion !== '1.0') {
+      return { status: 422, body: { success: false, error: "INVALID_CLOUDEVENT: 'specversion' must be exactly '1.0'." } };
+    }
+
+    if (!type || !source) {
+      return { status: 422, body: { success: false, error: "INVALID_CLOUDEVENT: 'type' and 'source' are required." } };
+    }
+
+    const eventData = data || payload || {};
+    const cloudEvent = await enterpriseEventBus.publishEvent(type, source, eventData, {
+      correlationId: correlation_id || headers['x-correlation-id'],
+      causationId: causation_id || id,
+      traceparent: traceparent || headers.traceparent,
+    });
+
+    return {
+      status: 202,
+      headers: {
+        'Content-Type': 'application/cloudevents+json; charset=utf-8',
+        'traceparent': cloudEvent.traceparent,
+        'x-correlation-id': cloudEvent.correlation_id,
+      },
+      body: {
+        success: true,
+        specversion: '1.0',
+        id: `ack_${cloudEvent.id}`,
+        type: `${type}.acknowledged`,
+        source: 'raioc.gateway.events.ingest',
+        time: new Date().toISOString(),
+        traceparent: cloudEvent.traceparent,
+        correlation_id: cloudEvent.correlation_id,
+        causation_id: cloudEvent.causation_id,
+        payload_sha256: cloudEvent.payload_sha256 || payload_sha256,
+        status: 'ACCEPTED',
+      },
+    };
+  }
+
   // 2. POST /api/v1/events/reclaim
   if (url.includes('/events/reclaim')) {
     if (method !== 'POST') {

@@ -5,9 +5,11 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
+    "dev": "node src/api/server.js",
     "start": "node src/index.js",
     "cycle": "node src/core/run-cycle.js",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "simulate": "node scripts/load-simulator.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.109.0",
