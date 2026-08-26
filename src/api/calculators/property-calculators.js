@@ -16,7 +16,7 @@ export class PropertyCalculators {
    * @returns {Object} Detailed acquisition cost breakdown with IKL provenance
    */
   calculateAcquisitionCost(params = {}) {
-    const price = Number(params.propertyPriceAed || params.price || 0);
+    const price = Number(params.propertyPriceAed || params.purchasePriceAed || params.purchasePrice || params.propertyPrice || params.price || 0);
     const isOffPlan = Boolean(params.isOffPlan);
     const mortgageAmount = Number(params.mortgageAmountAed || 0);
 

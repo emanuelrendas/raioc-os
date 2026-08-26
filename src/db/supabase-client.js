@@ -1779,6 +1779,58 @@ export class SupabaseClient {
     }
   }
 
+  async createApproval(data = {}) {
+    const record = {
+      id: data.id || `appr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: data.title || 'Executive Approval Request',
+      agent: data.agent || 'MARK (Lead Triage Specialist)',
+      category: data.category || 'HIGH_VALUE_DISPATCH',
+      status: data.status || 'PENDING',
+      priority: data.priority || 'HIGH',
+      recipient: data.recipient || 'Private Investor',
+      target_asset: data.target_asset || data.targetAsset || 'Prime Freehold Asset',
+      targetAsset: data.targetAsset || data.target_asset || 'Prime Freehold Asset',
+      payload: data.payload || {},
+      created_at: data.created_at || new Date().toISOString(),
+      createdAt: data.createdAt || data.created_at || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      if (this.mockStore.executive_approvals.length === 0) {
+        await this.fetchApprovals();
+      }
+      const existingIdx = this.mockStore.executive_approvals.findIndex((a) => a.id === record.id);
+      if (existingIdx >= 0) {
+        this.mockStore.executive_approvals[existingIdx] = { ...this.mockStore.executive_approvals[existingIdx], ...record };
+      } else {
+        this.mockStore.executive_approvals.unshift(record);
+      }
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/executive_approvals`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        return rows[0] || record;
+      }
+      this.mockStore.executive_approvals.unshift(record);
+      return record;
+    } catch {
+      this.mockStore.executive_approvals.unshift(record);
+      return record;
+    }
+  }
+
   async logInteraction(interactionData = {}) {
     const record = {
       id: interactionData.id || `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -1914,47 +1966,6 @@ export class SupabaseClient {
       return defaultLogs.slice(0, limit);
     } catch {
       return defaultLogs.slice(0, limit);
-    }
-  }
-
-  async createApproval(approvalData) {
-    const record = {
-      id: approvalData.id || `appr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      title: approvalData.title || 'Executive Action Required',
-      agent: approvalData.agent || approvalData.sourceAgent || 'JARVIS',
-      category: approvalData.category || 'GENERAL_DISPATCH',
-      status: 'PENDING',
-      priority: approvalData.priority || 'HIGH',
-      recipient: approvalData.recipient || 'Private Investor',
-      targetAsset: approvalData.targetAsset || 'Dubai Prime Freehold',
-      payload: approvalData.payload || {},
-      createdAt: approvalData.createdAt || new Date().toISOString(),
-    };
-
-    if (this.isMock) {
-      this.mockStore.executive_approvals.unshift(record);
-      return record;
-    }
-
-    try {
-      const res = await fetch(`${this.url}/rest/v1/executive_approvals`, {
-        method: 'POST',
-        headers: {
-          apikey: this.key,
-          Authorization: `Bearer ${this.key}`,
-          'Content-Type': 'application/json',
-          Prefer: 'return=representation',
-        },
-        body: JSON.stringify(record),
-      });
-      if (res.ok) {
-        const rows = await res.json();
-        return rows[0] || record;
-      }
-      return record;
-    } catch {
-      this.mockStore.executive_approvals.unshift(record);
-      return record;
     }
   }
 
