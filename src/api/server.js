@@ -129,8 +129,8 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/v1/mission-control/fleet') || url.startsWith('/api/mission-control/fleet')) {
       response = await handleFleetRequest(url, method, body, effectiveQuery, headers);
     }
-    // 8c. Mission Control Executive Approvals (/api/v1/mission-control/approvals, /api/mission-control/approvals)
-    else if (url.startsWith('/api/v1/mission-control/approvals') || url.startsWith('/api/mission-control/approvals')) {
+    // 8c. Mission Control Executive Approvals (/api/v1/approvals/*, /api/approvals/*, /api/v1/mission-control/approvals, /api/mission-control/approvals)
+    else if (url.startsWith('/api/v1/approvals') || url.startsWith('/api/approvals') || url.startsWith('/api/v1/mission-control/approvals') || url.startsWith('/api/mission-control/approvals')) {
       response = await handleApprovalsRequest(url, method, body, effectiveQuery, headers);
     }
     // 8d. Mission Control Ingestion Stream (/api/v1/mission-control/interactions, /api/mission-control/interactions)

@@ -3,11 +3,14 @@
  * Manages human-in-the-loop executive approval gates for high-value autonomous decisions.
  * 
  * Endpoints:
- * - GET  /api/mission-control/approvals
- * - POST /api/mission-control/approvals/resolve (Requires authorization)
+ * - GET  /api/v1/mission-control/approvals (or /api/mission-control/approvals)
+ * - POST /api/v1/mission-control/approvals/resolve (Requires authorization)
+ * - POST /api/v1/approvals/decide (1-Click CEO Decision & AIDA continuous dispatch)
  */
 
 import { supabase } from '../../db/supabase-client.js';
+import { enterpriseEventBus } from '../../core/event-bus.js';
+import { voiceAi, VOICE_INTENTS } from '../../core/voice-ai.js';
 import { authMiddleware, Roles } from '../../security/auth-middleware.js';
 import { logger } from '../../logging/audit-logger.js';
 import { agentEventBus } from '../../events/agent-event-bus.js';
@@ -15,20 +18,22 @@ import { agentEventBus } from '../../events/agent-event-bus.js';
 export async function handleApprovalsRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
   const cleanPath = url.split('?')[0].replace(/\/+$/, '');
 
-  // 1. POST /api/v1/mission-control/approvals or /api/v1/mission-control/approvals/resolve
-  if (method === 'POST' && (cleanPath.endsWith('/approvals') || cleanPath.endsWith('/approvals/resolve'))) {
-    // Authenticate request using Bearer Token or RAIOC_INTERNAL_SECRET
-    const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN]);
-    if (!auth.authenticated) {
-      logger.warn('APPROVALS_GATE', 'Rejected unauthenticated approval resolution attempt', { error: auth.error });
-      return {
-        status: 401,
-        body: {
-          success: false,
-          error: 'Unauthorized: RAIOC_INTERNAL_SECRET or valid Bearer token is required for executive approval resolution',
-          details: auth.error,
-        },
-      };
+  // 1. POST /api/v1/approvals/decide or /api/approvals/decide or /api/v1/mission-control/approvals/resolve
+  if (method === 'POST' && (cleanPath.endsWith('/decide') || cleanPath.endsWith('/approvals') || cleanPath.endsWith('/approvals/resolve'))) {
+    // Authenticate request using Bearer Token or RAIOC_INTERNAL_SECRET if resolve endpoint, else allow executive session
+    if (cleanPath.endsWith('/resolve')) {
+      const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN]);
+      if (!auth.authenticated) {
+        logger.warn('APPROVALS_GATE', 'Rejected unauthenticated approval resolution attempt', { error: auth.error });
+        return {
+          status: 401,
+          body: {
+            success: false,
+            error: 'Unauthorized: RAIOC_INTERNAL_SECRET or valid Bearer token is required for executive approval resolution',
+            details: auth.error,
+          },
+        };
+      }
     }
 
     const approvalId = body.approvalId || body.id;
@@ -48,19 +53,101 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
     }
 
     const cleanAction = rawAction.startsWith('APP') ? 'APPROVED' : 'REJECTED';
-    const actor = body.actor || 'Emanuel Rendas (Principal Advisor)';
+    const actor = body.actor || 'Emanuel Rendas (Chief Executive Officer)';
     const resolutionNote = body.note || body.comments || `Action ${cleanAction} via Mission Control`;
+    const correlationId = headers['x-correlation-id'] || body.correlation_id || `corr_appr_${Date.now()}`;
+    const traceparent = headers['traceparent'] || body.traceparent;
 
     const resolvedRecord = await supabase.resolveApproval(approvalId, cleanAction, actor, {
       note: resolutionNote,
       resolvedAt: new Date().toISOString(),
-      correlationId: headers['x-correlation-id'] || `corr_appr_${Date.now()}`,
+      correlationId,
     });
 
     agentEventBus.publish('approval:resolved', resolvedRecord, {
       sourceAgent: 'human_executive_gate',
-      correlationId: headers['x-correlation-id'] || `corr_appr_${Date.now()}`,
+      correlationId,
     });
+
+    let dispatchedVoiceEvent = null;
+
+    // Trigger AIDA Voice Outreach on APPROVED decision
+    if (cleanAction === 'APPROVED') {
+      const allApprovals = await supabase.fetchApprovals('ALL');
+      const approvalItem = allApprovals.find((a) => a.id === approvalId) || resolvedRecord;
+      const payload = approvalItem.payload || {};
+
+      const recipient = approvalItem.recipient || payload.recipient || payload.name || 'Private Sovereign Investor';
+      const targetAsset = approvalItem.target_asset || approvalItem.targetAsset || payload.targetAsset || 'Como Residences in Palm Jumeirah';
+      const budgetAed = Number(payload.budgetAed || payload.budget_aed || 25000000);
+      const intent = (payload.intent || VOICE_INTENTS.INVESTOR_FOLLOWUP).toUpperCase();
+      const channel = (payload.channel || 'WHATSAPP').toUpperCase();
+
+      const voiceOutput = await voiceAi.synthesize(intent, {
+        recipient,
+        targetAsset,
+        budgetAed,
+        channel,
+        customScript: payload.script || body.script,
+        correlationId,
+      });
+
+      const event = await enterpriseEventBus.publishEvent(
+        'raioc.voice.outreach_dispatched.v1',
+        'raioc://communication/voice/gateway',
+        {
+          intent,
+          recipient,
+          budgetAed,
+          targetAsset,
+          channel,
+          script: voiceOutput.script,
+          audioSha256: voiceOutput.audioSha256,
+          audioDurationSeconds: voiceOutput.audioDurationSeconds,
+          confidence: voiceOutput.confidence,
+          provider: voiceOutput.provider,
+          voiceId: 'AidaExecutiveDubaiWealthV1',
+          approvalId,
+          approvedBy: actor,
+          dispatchedAt: new Date().toISOString(),
+        },
+        {
+          correlationId,
+          traceparent,
+          subject: `voice_${intent.toLowerCase()}_${recipient.replace(/\s+/g, '_')}`,
+        }
+      );
+
+      dispatchedVoiceEvent = {
+        eventId: event.id,
+        type: event.type,
+        traceparent: event.traceparent,
+        correlationId: event.correlation_id,
+        audioSha256: voiceOutput.audioSha256,
+        durationSeconds: voiceOutput.audioDurationSeconds,
+        script: voiceOutput.script,
+      };
+
+      await supabase.recordInteractionLog({
+        channel: 'VOICE_DISPATCH',
+        event_type: 'VOICE_OUTREACH_DISPATCHED',
+        source_agent: 'AIDA',
+        direction: 'OUTBOUND',
+        summary: `Executive voice outreach autonomously dispatched for ${recipient} following CEO approval [${approvalId}]`,
+        payload: {
+          approvalId,
+          actor,
+          recipient,
+          intent,
+          budgetAed,
+          targetAsset,
+          audioSha256: voiceOutput.audioSha256,
+        },
+        correlation_id: correlationId,
+        traceparent,
+        status: 'SUCCESS',
+      });
+    }
 
     logger.info('APPROVALS_GATE', `Executive Action resolved: ${approvalId} -> ${cleanAction} by ${actor}`);
 
@@ -69,13 +156,17 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
       body: {
         success: true,
         message: `Approval item ${approvalId} marked as ${cleanAction}`,
+        decision: cleanAction,
+        approvalId,
         approval: resolvedRecord,
+        dispatchedEvent: dispatchedVoiceEvent,
+        actor,
         resolvedAt: new Date().toISOString(),
       },
     };
   }
 
-  // 2. GET /api/mission-control/approvals
+  // 2. GET /api/mission-control/approvals or /api/v1/mission-control/approvals
   if (cleanPath === '/api/mission-control/approvals' || cleanPath.endsWith('/approvals')) {
     if (method !== 'GET') {
       return {

@@ -9,6 +9,7 @@
 
 import { supabase } from '../../../db/supabase-client.js';
 import { enterpriseEventBus } from '../../../core/event-bus.js';
+import { sentinelMeshMonitor } from '../../../core/sentinel-mesh-monitor.js';
 import { logger } from '../../../logging/audit-logger.js';
 
 export async function handleMissionControlV1State(url, method = 'GET', body = {}, query = {}, headers = {}) {
@@ -256,6 +257,16 @@ export async function handleMissionControlV1State(url, method = 'GET', body = {}
     const executionDuration = Date.now() - startTime;
     logger.info('MISSION_CONTROL', `Consolidated V1 state compiled in ${executionDuration}ms`);
 
+    const meshStatus = sentinelMeshMonitor.getMeshStatus();
+    const isDegraded = meshStatus.circuitBreakerState === 'CIRCUIT_OPEN';
+    const fleetHealth = isDegraded ? 'DEGRADED' : 'HEALTHY';
+
+    let averageLatencyMs = 12;
+    if (agentFleet.length > 0) {
+      const sumLatency = agentFleet.reduce((sum, a) => sum + (Number(a.last_latency_ms) || 12), 0);
+      averageLatencyMs = Math.round(sumLatency / agentFleet.length);
+    }
+
     return {
       status: 200,
       headers: {
@@ -264,13 +275,38 @@ export async function handleMissionControlV1State(url, method = 'GET', body = {}
       body: {
         success: true,
         timestamp: new Date().toISOString(),
-        healthBar,
+        fleetHealth,
+        circuitBreakerState: meshStatus.circuitBreakerState,
+        sentinelStatus: meshStatus.status,
+        totalPipelineAed,
+        activeLeadsCount,
+        closedWonAed,
+        averageLatencyMs,
+        pendingApprovalsCount: approvalsQueue.length,
+        pendingApprovals: approvalsQueue,
+        metrics: {
+          totalPipelineAed,
+          closedWonAed,
+          activeLeadsCount,
+          pendingApprovalsCount: approvalsQueue.length,
+          averageLatencyMs,
+          errorRate5m: meshStatus.metrics.currentErrorRate,
+          systemHealthPct: isDegraded ? 84.5 : healthBar.systemHealthPct,
+        },
+        healthBar: {
+          ...healthBar,
+          averageLatencyMs,
+          fleetHealth,
+        },
         agentFleet,
         crmPipeline,
         ingestionPulse,
         workflowMonitor,
         approvalsQueue,
-        infrastructure,
+        infrastructure: {
+          ...infrastructure,
+          sentinelMesh: meshStatus,
+        },
         auditTimeline,
         // Backward-compatibility aliases
         kpiStrip: {
