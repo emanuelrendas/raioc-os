@@ -1,6 +1,6 @@
 /**
- * RAIOC OS - Policy Event Router & Multi-Agent Dispatcher (Sprint 2 / Phase 7 & 8)
- * Listens on Enterprise Event Bus v1.1 for incoming channel events (Telegram, WhatsApp Cloud API),
+ * RAIOC OS - Policy Event Router & Multi-Agent Dispatcher (Sprint 2 / Phase 7 & 8 & MARK Vision)
+ * Listens on Enterprise Event Bus v1.1 for incoming channel events (Telegram, WhatsApp, Document Intake),
  * performs policy routing, dispatches to specialist agents (MARK, ATLAS, JARVIS),
  * records runtime telemetry, and maintains immutable audit logs with cryptographic hash chaining.
  */
@@ -8,6 +8,8 @@
 import { enterpriseEventBus } from './event-bus.js';
 import { supabase } from '../db/supabase-client.js';
 import { logger } from '../logging/audit-logger.js';
+import { documentVision } from './document-vision.js';
+import { markTriage } from './mark-triage.js';
 
 export class EnterpriseEventRouter {
   constructor() {
@@ -39,6 +41,15 @@ export class EnterpriseEventRouter {
       }
     );
     this.unsubscribers.push(unsubWhatsApp);
+
+    // 3. Subscribe to Multimodal Document Intake Events (MARK Vision)
+    const unsubDocument = enterpriseEventBus.subscribe(
+      'raioc.document.intake.uploaded.v1',
+      async (data, ctx) => {
+        await this.handleDocumentIntakeEvent(data, ctx);
+      }
+    );
+    this.unsubscribers.push(unsubDocument);
 
     logger.info('EVENT_ROUTER', 'Enterprise Event Router initialized with CloudEvent v1.1 policy listeners');
   }
@@ -369,6 +380,86 @@ export class EnterpriseEventRouter {
     logger.info('EVENT_ROUTER', `Routed WhatsApp message to [${routedAgent}] via ${targetEventType}`, {
       correlationId: ctx.correlationId,
       routedAgent,
+    });
+  }
+
+  /**
+   * Processes a Multimodal Document Intake CloudEvent (MARK OCR Vision Upgrade)
+   * @param {Object} data 
+   * @param {Object} ctx 
+   */
+  async handleDocumentIntakeEvent(data, ctx) {
+    const startTime = Date.now();
+    logger.info('EVENT_ROUTER', `Processing Document Intake Event [${data.documentType || 'SCAN'}] for Investor ${data.investorId || 'Inbound'}...`);
+
+    // 1. Multimodal OCR & Vision Intelligence Extraction
+    const extracted = await documentVision.extract({
+      documentType: data.documentType,
+      fileBase64: data.fileBase64,
+      mimeType: data.mimeType,
+      fileName: data.fileName,
+      textContent: data.textContent,
+      correlationId: ctx.correlationId,
+    });
+
+    // 2. MARK Triage Evaluation & Investor CRM Updates
+    const triageResult = await markTriage.evaluateDocumentTriage(extracted, data.investorId, {
+      correlationId: ctx.correlationId,
+      causationId: ctx.eventId,
+      traceparent: ctx.traceparent,
+    });
+
+    const elapsedMs = Date.now() - startTime;
+
+    // 3. Update Runtime Tool Telemetry for 'mark_ocr_vision'
+    const existingToolTelemetry = (await supabase.getToolRuntimeTelemetry('mark_ocr_vision')) || {};
+    await supabase.recordRuntimeToolTelemetry({
+      tool_id: 'mark_ocr_vision',
+      live_health_status: 'HEALTHY',
+      current_latency_ms: elapsedMs,
+      total_calls_today: (existingToolTelemetry.total_calls_today || 0) + 1,
+      quota_remaining: Math.max(0, (existingToolTelemetry.quota_remaining || 25000) - 1),
+    });
+
+    // 4. Update Runtime Agent Telemetry for 'mark_lead_triage'
+    await supabase.recordRuntimeAgentTelemetry({
+      agent_id: 'mark',
+      live_status: 'IDLE',
+      active_task: `Completed OCR analysis of ${extracted.documentClass} for ${data.investorId || 'Inbound'}`,
+      last_latency_ms: elapsedMs,
+    });
+
+    // 5. Record Immutable Interaction Log (Sanitized - NEVER store raw base64)
+    await supabase.recordInteractionLog({
+      investor_id: data.investorId || null,
+      channel: 'DOCUMENT_OCR',
+      event_type: 'DOCUMENT_INTAKE_PROCESSED',
+      source_agent: 'MARK',
+      direction: 'INBOUND',
+      correlation_id: ctx.correlationId,
+      traceparent: ctx.traceparent,
+      summary: `MARK OCR Vision: Processed ${extracted.documentClass} [Confidence: ${(extracted.confidence * 100).toFixed(0)}%] for Investor ${data.investorId || 'Inbound'}`,
+      payload: {
+        documentClass: extracted.documentClass,
+        fileSha256: data.fileSha256,
+        fileName: data.fileName,
+        confidence: extracted.confidence,
+        requiresManualReview: extracted.requiresManualReview,
+        triageResult: {
+          status: triageResult.triageStatus,
+          diraScoreDelta: triageResult.diraScoreDelta,
+          updatedStage: triageResult.updatedStage,
+          approvalId: triageResult.approvalId,
+        },
+      },
+      status: 'SUCCESS',
+      latency_ms: elapsedMs,
+    });
+
+    logger.info('EVENT_ROUTER', `MARK OCR Vision processed ${extracted.documentClass} in ${elapsedMs}ms`, {
+      correlationId: ctx.correlationId,
+      confidence: extracted.confidence,
+      triageStatus: triageResult.triageStatus,
     });
   }
 

@@ -256,6 +256,17 @@ export class SupabaseClient {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
+      {
+        id: 'mark_ocr_vision',
+        name: 'MARK Multimodal OCR & Document Intelligence Engine',
+        category: 'ANALYSIS',
+        health_status: 'HEALTHY',
+        latency_ms: 65,
+        quota_limits: { rate_limit_per_min: 300, daily_quota: 25000 },
+        dependencies: ['gemini_api', 'cognitive_router'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
     ];
 
     for (const t of initialTools) {
@@ -2979,6 +2990,10 @@ export class SupabaseClient {
     } catch {
       return this.mockStore.investors.find((i) => i.id === id || i.reference_id === id) || null;
     }
+  }
+
+  async fetchInvestorById(id) {
+    return await this.getInvestor(id);
   }
 
   async upsertInvestor(investorData = {}) {

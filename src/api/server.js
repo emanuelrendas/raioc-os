@@ -29,6 +29,7 @@ import { handleEventsRequest } from './events/router.js';
 import { handleMemoryAdrRequest } from './memory/adr.js';
 import { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
 import { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
+import { handleDocumentIntakeRequest } from './v1/intake/document.js';
 import { cognitiveRouter } from '../core/cognitive-router.js';
 import { enterpriseEventRouter } from '../core/event-router.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
@@ -90,7 +91,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url === '/api/event' || url.startsWith('/api/event/')) {
       response = await handleEventRequest(method, body);
     }
-    // 5. Multi-channel Intake
+    // 5. Document & Lead Intake (/api/v1/intake/document, /api/intake/document, /api/intake)
+    else if (url.startsWith('/api/v1/intake/document') || url.startsWith('/api/intake/document')) {
+      response = await handleDocumentIntakeRequest(url, method, body, effectiveQuery, headers);
+    }
     else if (url === '/api/intake' || url.startsWith('/api/intake/')) {
       response = await handleIntakeRequest(method, body);
     }
