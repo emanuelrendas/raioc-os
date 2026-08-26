@@ -31,6 +31,8 @@ import { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
 import { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
 import { handleDocumentIntakeRequest } from './v1/intake/document.js';
 import { handleVoiceCommunicationRequest } from './v1/communication/voice.js';
+import { argosMarketIntelligence } from '../core/argos-market-intelligence.js';
+import { corridorProjectionEngine } from './analytics/corridor-projections.js';
 import { cognitiveRouter } from '../core/cognitive-router.js';
 import { enterpriseEventRouter } from '../core/event-router.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
@@ -44,12 +46,26 @@ import { connectorHealthMatrix } from '../monitoring/connector-health-matrix.js'
 import { logger } from '../logging/audit-logger.js';
 
 export async function routeApiRequest(reqPath, method = 'GET', body = {}, query = {}, headers = {}) {
-  const url = reqPath.split('?')[0];
-  const queryString = reqPath.includes('?') ? reqPath.split('?')[1] : '';
+  let effectivePath = reqPath;
+  let effectiveMethod = method;
+  let effectiveBody = body;
+  let effectiveQueryInput = query;
+  let effectiveHeaders = headers;
+
+  if (typeof reqPath === 'object' && reqPath !== null) {
+    effectivePath = reqPath.url || reqPath.path || '/';
+    effectiveMethod = reqPath.method || 'GET';
+    effectiveBody = reqPath.body || {};
+    effectiveQueryInput = reqPath.query || {};
+    effectiveHeaders = reqPath.headers || {};
+  }
+
+  const url = String(effectivePath).split('?')[0];
+  const queryString = String(effectivePath).includes('?') ? String(effectivePath).split('?')[1] : '';
   const parsedQuery = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {};
-  const effectiveQuery = { ...parsedQuery, ...query };
+  const effectiveQuery = { ...parsedQuery, ...effectiveQueryInput };
   const startTime = Date.now();
-  const correlationId = headers['x-correlation-id'] || headers['X-Correlation-ID'] || correlationTracer.generateCorrelationId('api');
+  const correlationId = effectiveHeaders['x-correlation-id'] || effectiveHeaders['X-Correlation-ID'] || correlationTracer.generateCorrelationId('api');
 
   metricsCollector.incrementCounter('http_requests_total');
 
@@ -80,7 +96,28 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url === '/dashboard' || url === '/api/test-email' || url === '/api/chat' || url.startsWith('/api/chat') || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
       response = await handleTelemetryRequest(url, { headers, query: effectiveQuery, body });
     }
-    // 2. DLD Market Data
+    // 2a. ARGOS DLD Transaction Ingestion & Whale Alerts (/api/v1/market/dld-sync, /api/market/dld-sync)
+    else if (url.startsWith('/api/v1/market/dld-sync') || url.startsWith('/api/market/dld-sync')) {
+      if (method === 'POST') {
+        const rawTransactions = body.transactions || body.data || (body.priceAed || body.price || body.corridor ? [body] : []);
+        const result = await argosMarketIntelligence.processBatch(rawTransactions, {
+          correlationId,
+          traceparent: headers.traceparent,
+        });
+        response = { status: 200, body: { success: true, agent: 'ARGOS', ...result } };
+      } else {
+        const whaleAlerts = argosMarketIntelligence.getWhaleAlerts(20);
+        const recentTransactions = argosMarketIntelligence.getRecentTransactions(50);
+        response = { status: 200, body: { success: true, whaleAlertCount: whaleAlerts.length, whaleAlerts, recentTransactions } };
+      }
+    }
+    // 2b. Corridor Analytical Projections (/api/v1/analytics/corridor-insights, /api/analytics/corridor-insights)
+    else if (url.startsWith('/api/v1/analytics/corridor-insights') || url.startsWith('/api/analytics/corridor-insights')) {
+      const corridor = effectiveQuery.corridor || effectiveQuery.community || body.corridor || 'all';
+      const insights = corridorProjectionEngine.getCorridorInsights(corridor);
+      response = { status: 200, body: insights };
+    }
+    // 2c. DLD Market Data
     else if (url === '/api/dld' || url.startsWith('/api/dld/')) {
       response = await handleDldRequest();
     }

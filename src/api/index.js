@@ -2,8 +2,9 @@
  * RAIOC OS - Web API Module
  */
 
-export { routeApiRequest, startApiServer } from './server.js';
+export { routeApiRequest, routeApiRequest as handleRequest, startApiServer } from './server.js';
 export { propertyCalculators, PropertyCalculators } from './calculators/property-calculators.js';
+export { corridorProjectionEngine, CorridorProjectionEngine } from './analytics/corridor-projections.js';
 export { handleIklRequest } from './routes/ikl-routes.js';
 export { handleCalculatorRequest } from './routes/calculator-routes.js';
 export { handleAssessmentSubmission } from './routes/assessment-routes.js';
