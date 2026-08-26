@@ -30,6 +30,7 @@ import { handleMemoryAdrRequest } from './memory/adr.js';
 import { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
 import { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
 import { handleDocumentIntakeRequest } from './v1/intake/document.js';
+import { handleVoiceCommunicationRequest } from './v1/communication/voice.js';
 import { cognitiveRouter } from '../core/cognitive-router.js';
 import { enterpriseEventRouter } from '../core/event-router.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
@@ -94,6 +95,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     // 5. Document & Lead Intake (/api/v1/intake/document, /api/intake/document, /api/intake)
     else if (url.startsWith('/api/v1/intake/document') || url.startsWith('/api/intake/document')) {
       response = await handleDocumentIntakeRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 5a. AIDA Voice AI Communication (/api/v1/communication/voice, /api/communication/voice)
+    else if (url.startsWith('/api/v1/communication/voice') || url.startsWith('/api/communication/voice')) {
+      response = await handleVoiceCommunicationRequest(url, method, body, effectiveQuery, headers);
     }
     else if (url === '/api/intake' || url.startsWith('/api/intake/')) {
       response = await handleIntakeRequest(method, body);

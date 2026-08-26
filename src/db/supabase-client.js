@@ -267,6 +267,17 @@ export class SupabaseClient {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
+      {
+        id: 'aida_voice_ai',
+        name: 'AIDA Executive Voice AI & Synthesis Engine',
+        category: 'COMMUNICATION',
+        health_status: 'HEALTHY',
+        latency_ms: 45,
+        quota_limits: { rate_limit_per_min: 300, daily_quota: 25000 },
+        dependencies: ['elevenlabs_enterprise', 'cognitive_router'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
     ];
 
     for (const t of initialTools) {

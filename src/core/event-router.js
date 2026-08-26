@@ -10,6 +10,7 @@ import { supabase } from '../db/supabase-client.js';
 import { logger } from '../logging/audit-logger.js';
 import { documentVision } from './document-vision.js';
 import { markTriage } from './mark-triage.js';
+import { aidaCommunication } from './aida-communication.js';
 
 export class EnterpriseEventRouter {
   constructor() {
@@ -50,6 +51,15 @@ export class EnterpriseEventRouter {
       }
     );
     this.unsubscribers.push(unsubDocument);
+
+    // 4. Subscribe to AIDA Voice AI Communication Events (Sprint 3)
+    const unsubVoice = enterpriseEventBus.subscribe(
+      'raioc.communication.voice.requested.v1',
+      async (data, ctx) => {
+        await this.handleVoiceCommunicationEvent(data, ctx);
+      }
+    );
+    this.unsubscribers.push(unsubVoice);
 
     logger.info('EVENT_ROUTER', 'Enterprise Event Router initialized with CloudEvent v1.1 policy listeners');
   }
@@ -460,6 +470,77 @@ export class EnterpriseEventRouter {
       correlationId: ctx.correlationId,
       confidence: extracted.confidence,
       triageStatus: triageResult.triageStatus,
+    });
+  }
+
+  /**
+   * Processes a Voice Communication CloudEvent (AIDA Voice AI Upgrade)
+   * @param {Object} data 
+   * @param {Object} ctx 
+   */
+  async handleVoiceCommunicationEvent(data, ctx) {
+    const startTime = Date.now();
+    logger.info('EVENT_ROUTER', `Processing Voice Communication Event [${data.intent}] for ${data.recipient || 'Investor'}...`);
+
+    // 1. Process Voice Request via AIDA Communication Engine
+    const result = await aidaCommunication.processVoiceRequest(data, {
+      correlationId: ctx.correlationId,
+      causationId: ctx.eventId,
+      traceparent: ctx.traceparent,
+    });
+
+    const elapsedMs = Date.now() - startTime;
+    const voiceOutput = result.voiceOutput || {};
+
+    // 2. Update Runtime Tool Telemetry for 'aida_voice_ai'
+    const existingToolTelemetry = (await supabase.getToolRuntimeTelemetry('aida_voice_ai')) || {};
+    await supabase.recordRuntimeToolTelemetry({
+      tool_id: 'aida_voice_ai',
+      live_health_status: 'HEALTHY',
+      current_latency_ms: elapsedMs,
+      total_calls_today: (existingToolTelemetry.total_calls_today || 0) + 1,
+      quota_remaining: Math.max(0, (existingToolTelemetry.quota_remaining || 10000) - 1),
+    });
+
+    // 3. Update Runtime Agent Telemetry for 'aida'
+    await supabase.recordRuntimeAgentTelemetry({
+      agent_id: 'aida',
+      live_status: 'IDLE',
+      active_task: `Synthesized executive voice note (${voiceOutput.audioDurationSeconds || 30}s) for ${data.recipient || 'Investor'}`,
+      last_latency_ms: elapsedMs,
+    });
+
+    // 4. Record Immutable Interaction Log (Sanitized - NEVER store raw audio base64)
+    await supabase.recordInteractionLog({
+      investor_id: data.investorId || null,
+      channel: 'VOICE_DISPATCH',
+      event_type: 'VOICE_SYNTHESIS_COMPLETED',
+      source_agent: 'AIDA',
+      direction: 'OUTBOUND',
+      correlation_id: ctx.correlationId,
+      traceparent: ctx.traceparent,
+      summary: `AIDA Voice AI: Synthesized ${data.intent} for ${data.recipient || 'Investor'} (${voiceOutput.audioDurationSeconds || 30}s spoken) via ${data.channel || 'WHATSAPP'}`,
+      payload: {
+        intent: data.intent,
+        messageType: data.messageType,
+        recipient: data.recipient,
+        targetAsset: data.targetAsset,
+        audioSha256: voiceOutput.audioSha256,
+        audioDurationSeconds: voiceOutput.audioDurationSeconds,
+        confidence: voiceOutput.confidence,
+        provider: voiceOutput.provider,
+        triageStatus: result.triageStatus,
+        approvalId: result.approvalId,
+        channel: data.channel || 'WHATSAPP',
+      },
+      status: 'SUCCESS',
+      latency_ms: elapsedMs,
+    });
+
+    logger.info('EVENT_ROUTER', `AIDA Voice AI synthesized ${data.intent} for ${data.recipient} in ${elapsedMs}ms`, {
+      correlationId: ctx.correlationId,
+      audioDurationSeconds: voiceOutput.audioDurationSeconds,
+      triageStatus: result.triageStatus,
     });
   }
 

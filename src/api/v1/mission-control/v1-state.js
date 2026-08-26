@@ -158,6 +158,7 @@ export async function handleMissionControlV1State(url, method = 'GET', body = {}
       if (ch.includes('TELEGRAM')) channelBadge = 'TELEGRAM';
       else if (ch.includes('WHATSAPP')) channelBadge = 'WHATSAPP';
       else if (ch.includes('DOCUMENT') || ch.includes('OCR')) channelBadge = 'DOCUMENT_OCR';
+      else if (ch.includes('VOICE')) channelBadge = 'VOICE_DISPATCH';
       else if (ch.includes('EMAIL')) channelBadge = 'EMAIL';
       else if (ch.includes('CRM') || ch.includes('N8N')) channelBadge = 'N8N_CRM';
       else if (ch.includes('API')) channelBadge = 'API';

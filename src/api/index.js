@@ -23,4 +23,5 @@ export { handleMemoryAdrRequest } from './memory/adr.js';
 export { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
 export { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
 export { handleDocumentIntakeRequest } from './v1/intake/document.js';
+export { handleVoiceCommunicationRequest } from './v1/communication/voice.js';
 export { handleMissionControlV1State } from './mission-control/v1-state.js';

@@ -493,10 +493,12 @@ export function renderMissionControlHtml() {
             const isTelegram = log.channel === 'TELEGRAM';
             const isWhatsApp = log.channel === 'WHATSAPP';
             const isDocument = log.channel === 'DOCUMENT_OCR' || (log.channel && log.channel.includes('DOC'));
+            const isVoice = log.channel === 'VOICE_DISPATCH' || (log.channel && log.channel.includes('VOICE'));
             const badgeColor = isTelegram ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
                                isWhatsApp ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
                                isDocument ? 'bg-purple-500/10 text-purple-400 border-purple-500/30' :
-                               'bg-amber-500/10 text-amber-400 border-amber-500/20';
+                               isVoice ? 'bg-amber-500/15 text-amber-300 border-amber-500/40' :
+                               'bg-zinc-500/10 text-zinc-400 border-zinc-500/20';
 
             return \`
               <div class="pt-2.5 first:pt-0 space-y-1">
