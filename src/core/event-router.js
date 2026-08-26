@@ -433,6 +433,12 @@ export class EnterpriseEventRouter {
 
     // 4. Update Runtime Agent Telemetry for 'mark_lead_triage'
     await supabase.recordRuntimeAgentTelemetry({
+      agent_id: 'mark_lead_triage',
+      live_status: 'IDLE',
+      active_task: `Completed OCR analysis of ${extracted.documentClass} for ${data.investorId || 'Inbound'}`,
+      last_latency_ms: elapsedMs,
+    });
+    await supabase.recordRuntimeAgentTelemetry({
       agent_id: 'mark',
       live_status: 'IDLE',
       active_task: `Completed OCR analysis of ${extracted.documentClass} for ${data.investorId || 'Inbound'}`,
