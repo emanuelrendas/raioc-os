@@ -109,6 +109,7 @@ export const config = {
   telegram: {
     enabled: process.env.TELEGRAM_ENABLED !== 'false',
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',
+    secretToken: process.env.TELEGRAM_SECRET_TOKEN || process.env.TELEGRAM_BOT_SECRET || 'raioc_telegram_secret_2026',
     chatId: process.env.TELEGRAM_CHAT_ID || '',
     timeoutMs: parseInt(process.env.TELEGRAM_TIMEOUT_MS || '10000', 10),
   },

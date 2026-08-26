@@ -1559,17 +1559,67 @@ export class SupabaseClient {
     }
   }
 
+  async createApproval(approvalData) {
+    const record = {
+      id: approvalData.id || `appr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      title: approvalData.title || 'Executive Action Required',
+      agent: approvalData.agent || approvalData.sourceAgent || 'JARVIS',
+      category: approvalData.category || 'GENERAL_DISPATCH',
+      status: 'PENDING',
+      priority: approvalData.priority || 'HIGH',
+      recipient: approvalData.recipient || 'Private Investor',
+      targetAsset: approvalData.targetAsset || 'Dubai Prime Freehold',
+      payload: approvalData.payload || {},
+      createdAt: approvalData.createdAt || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.executive_approvals.unshift(record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/executive_approvals`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        return rows[0] || record;
+      }
+      return record;
+    } catch {
+      this.mockStore.executive_approvals.unshift(record);
+      return record;
+    }
+  }
+
   async recordInteractionLog(logData) {
+    const rawPayload = typeof logData.payload === 'string' ? logData.payload : JSON.stringify(logData.payload || {});
+    const payloadSha256 = logData.payload_sha256 || createHash('sha256').update(rawPayload).digest('hex');
+
+    const lastLog = this.mockStore.interaction_logs[0] || null;
+    const prevHash = logData.prev_record_hash !== undefined ? logData.prev_record_hash : (lastLog ? (lastLog.payload_sha256 || 'GENESIS') : null);
+
     const record = {
       id: logData.id || `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
       investor_id: logData.investor_id || logData.investorId || null,
       correlation_id: logData.correlation_id || logData.correlationId || null,
+      traceparent: logData.traceparent || null,
       channel: logData.channel || 'WEBSITE',
       event_type: logData.event_type || logData.eventType || 'SYSTEM_EVENT',
       source_agent: logData.source_agent || logData.sourceAgent || 'JARVIS',
       direction: logData.direction || 'INBOUND',
       summary: logData.summary || 'Interaction logged',
       payload: logData.payload || {},
+      payload_sha256: payloadSha256,
+      prev_record_hash: prevHash,
       response_data: logData.response_data || logData.responseData || {},
       latency_ms: logData.latency_ms || logData.latencyMs || 0,
       status: logData.status || 'SUCCESS',
@@ -1595,6 +1645,7 @@ export class SupabaseClient {
       });
       return res.ok ? record : record;
     } catch {
+      this.mockStore.interaction_logs.unshift(record);
       return record;
     }
   }

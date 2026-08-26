@@ -101,7 +101,7 @@ export class EnterpriseEventBus {
     }
 
     // 5. In-Memory Dispatch to Subscribers
-    this.dispatchToSubscribers(cloudEvent);
+    await this.dispatchToSubscribers(cloudEvent);
 
     return cloudEvent;
   }
@@ -110,10 +110,11 @@ export class EnterpriseEventBus {
    * Dispatches event to local registered handlers
    * @param {Object} cloudEvent 
    */
-  dispatchToSubscribers(cloudEvent) {
+  async dispatchToSubscribers(cloudEvent) {
     const specificHandlers = this.handlers.get(cloudEvent.type) || new Set();
     const allHandlers = [...specificHandlers, ...this.wildcardHandlers];
 
+    const promises = [];
     for (const handler of allHandlers) {
       try {
         // Automatically inject trace context into handler execution
@@ -127,14 +128,20 @@ export class EnterpriseEventBus {
           cloudEvent,
         });
 
-        if (result && typeof result.catch === 'function') {
-          result.catch((err) => {
-            logger.error('EVENT_BUS', `Async handler error for event ${cloudEvent.type}`, { error: err.message });
-          });
+        if (result && typeof result.then === 'function') {
+          promises.push(
+            result.catch((err) => {
+              logger.error('EVENT_BUS', `Async handler error for event ${cloudEvent.type}`, { error: err.message });
+            })
+          );
         }
       } catch (err) {
         logger.error('EVENT_BUS', `Sync handler error for event ${cloudEvent.type}`, { error: err.message });
       }
+    }
+
+    if (promises.length > 0) {
+      await Promise.all(promises);
     }
   }
 
@@ -181,6 +188,14 @@ export class EnterpriseEventBus {
    */
   getEventById(id) {
     return this.eventLog.find((e) => e.id === id) || null;
+  }
+
+  /**
+   * Clears event history while preserving subscriber handlers
+   */
+  clearHistory() {
+    this.eventLog = [];
+    this.lastEventHash = null;
   }
 
   /**

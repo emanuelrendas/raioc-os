@@ -20,4 +20,6 @@ export { handleKnowledgeRequest } from './core/knowledge.js';
 export { handleRuntimeTelemetryRequest } from './runtime/telemetry.js';
 export { handleEventsRequest } from './events/router.js';
 export { handleMemoryAdrRequest } from './memory/adr.js';
+export { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
+
 

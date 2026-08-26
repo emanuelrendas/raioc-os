@@ -320,18 +320,28 @@ export function renderMissionControlHtml() {
           return;
         }
 
-        container.innerHTML = data.interactions.map(log => \`
+        container.innerHTML = data.interactions.map(log => {
+          const isTelegram = (log.channel || '').toUpperCase() === 'TELEGRAM';
+          const isWhatsApp = (log.channel || '').toUpperCase() === 'WHATSAPP';
+          const badgeColor = isTelegram ? 'bg-sky-500/10 text-sky-400 border-sky-500/30' :
+                             isWhatsApp ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' :
+                             'bg-amber-500/10 text-amber-400 border-amber-500/20';
+
+          return \`
           <div class="pt-3 first:pt-0 space-y-1">
             <div class="flex items-center justify-between text-[11px]">
               <div class="flex items-center gap-1.5">
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">\${log.channel || 'WEBSITE'}</span>
+                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border \${badgeColor}">\${log.channel || 'WEBSITE'}</span>
                 <span class="font-mono text-gray-400">\${log.event_type}</span>
+                \${log.source_agent ? \`<span class="px-1 py-0.2 text-[8px] font-mono bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">\${log.source_agent}</span>\` : ''}
               </div>
               <span class="text-[10px] text-gray-500 font-mono">\${log.created_at ? new Date(log.created_at).toLocaleTimeString() : 'Recent'}</span>
             </div>
             <p class="text-xs text-gray-200 font-medium">\${log.summary}</p>
+            \${log.traceparent ? \`<div class="text-[9px] font-mono text-gray-500 truncate max-w-full">trace: \${log.traceparent}</div>\` : ''}
           </div>
-        \`).join('');
+        \`;
+        }).join('');
       } catch (err) {
         console.error('loadInteractions error:', err);
       }
