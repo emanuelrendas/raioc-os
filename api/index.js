@@ -16,10 +16,21 @@ import { sitePages } from '../src/site/site-pages.js';
 
 export default async function handler(req, res) {
   const headers = req.headers || {};
-  const query = req.query || {};
+  let query = req.query || {};
   const method = req.method || 'GET';
   const body = req.body || {};
   const host = (headers['x-forwarded-host'] || headers.host || '').toLowerCase();
+
+  // Extract query parameters from req.url if req.query was not passed
+  if (Object.keys(query).length === 0 && req.url && req.url.includes('?')) {
+    try {
+      const rawQuery = req.url.split('?')[1];
+      const params = new URLSearchParams(rawQuery);
+      query = Object.fromEntries(params.entries());
+    } catch {
+      // fallback
+    }
+  }
 
   // Extract and normalize incoming requested URL from query parameter, route matches, or headers
   let url = query.__path || headers['x-matched-path'] || req.url || '/';

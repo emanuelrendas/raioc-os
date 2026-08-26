@@ -161,7 +161,7 @@ export async function handleMissionControlV1State(url, method = 'GET', body = {}
       else if (ch.includes('CRM') || ch.includes('N8N')) channelBadge = 'N8N_CRM';
       else if (ch.includes('API')) channelBadge = 'API';
 
-      const senderName = log.payload?.sender || log.payload?.from || log.payload?.username || log.payload?.name || 'Inbound Mandate';
+      const senderName = log.payload?.sender || log.payload?.profileName || log.payload?.profile_name || log.payload?.from || log.payload?.username || log.payload?.name || log.payload?.senderPhone || log.payload?.sender_phone || 'Inbound Mandate';
       const displaySender = isMasked && senderName !== 'Inbound Mandate'
         ? senderName.replace(/[a-zA-Z]/g, (c, i) => (i % 2 === 0 ? c : '*'))
         : senderName;

@@ -28,6 +28,7 @@ import { handleRuntimeTelemetryRequest } from './runtime/telemetry.js';
 import { handleEventsRequest } from './events/router.js';
 import { handleMemoryAdrRequest } from './memory/adr.js';
 import { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
+import { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
 import { cognitiveRouter } from '../core/cognitive-router.js';
 import { enterpriseEventRouter } from '../core/event-router.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
@@ -166,6 +167,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     // 11b. Channel Webhooks: Telegram Ingestion (/api/v1/channels/telegram/webhook, /api/channels/telegram/webhook)
     else if (url.startsWith('/api/v1/channels/telegram') || url.startsWith('/api/channels/telegram')) {
       response = await handleTelegramWebhookRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 11c. Channel Webhooks: WhatsApp Cloud API Ingestion (/api/v1/channels/whatsapp/webhook, /api/channels/whatsapp/webhook)
+    else if (url.startsWith('/api/v1/channels/whatsapp') || url.startsWith('/api/channels/whatsapp')) {
+      response = await handleWhatsAppWebhookRequest(url, method, body, effectiveQuery, headers);
     }
     // 12. Shared Agent API
     else if (url.startsWith('/api/v1/agents') || url.startsWith('/api/agents')) {

@@ -21,7 +21,5 @@ export { handleRuntimeTelemetryRequest } from './runtime/telemetry.js';
 export { handleEventsRequest } from './events/router.js';
 export { handleMemoryAdrRequest } from './memory/adr.js';
 export { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
+export { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
 export { handleMissionControlV1State } from './mission-control/v1-state.js';
-
-
-

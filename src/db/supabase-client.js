@@ -234,6 +234,28 @@ export class SupabaseClient {
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       },
+      {
+        id: 'whatsapp_cloud_api',
+        name: 'Meta WhatsApp Cloud API Gateway',
+        category: 'COMMUNICATION',
+        health_status: 'HEALTHY',
+        latency_ms: 15,
+        quota_limits: { rate_limit_per_min: 1000, daily_quota: 100000 },
+        dependencies: ['vercel_gateway'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'telegram_bot',
+        name: 'Telegram Bot API Ingestion Gateway',
+        category: 'COMMUNICATION',
+        health_status: 'HEALTHY',
+        latency_ms: 12,
+        quota_limits: { rate_limit_per_min: 600, daily_quota: 50000 },
+        dependencies: ['vercel_gateway'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
     ];
 
     for (const t of initialTools) {

@@ -12,6 +12,7 @@ import { supabase } from '../../db/supabase-client.js';
 
 import { commentWatchdogAgent } from '../../agents/agent-engage.js';
 import { dmConversionAgent } from '../../agents/agent-dm.js';
+import { handleWhatsAppWebhookRequest } from '../v1/channels/whatsapp.js';
 
 export async function handleWebhookRequest(path, method = 'POST', body = {}, query = {}, headers = {}) {
   const normalized = path.replace(/^\/api\/webhooks\/?/, '');
@@ -83,32 +84,9 @@ export async function handleWebhookRequest(path, method = 'POST', body = {}, que
     };
   }
 
-  // 2. WhatsApp Inbound Webhook
+  // 2. WhatsApp Inbound Webhook (Canonical Phase 8 Input Surface)
   if (normalized.startsWith('whatsapp')) {
-    // Verification Challenge (GET)
-    if (method === 'GET') {
-      const mode = query['hub.mode'] || query['mode'];
-      const token = query['hub.verify_token'] || query['token'];
-      const challenge = query['hub.challenge'] || query['challenge'];
-
-      const result = webhookVerifier.verifyWhatsAppChallenge(mode, token, challenge);
-      if (result.success) {
-        return { status: 200, body: result.challenge };
-      }
-      return { status: 403, body: { error: result.error } };
-    }
-
-    // Inbound Messages & Status Updates (POST)
-    const signature = headers['x-hub-signature-256'] || headers['X-Hub-Signature-256'] || '';
-    const isValid = webhookVerifier.verifyWhatsAppSignature(body, signature);
-
-    if (!isValid) {
-      logger.warn('WEBHOOK_API', 'Rejected WhatsApp webhook: Invalid Meta signature');
-      return { status: 401, body: { error: 'Invalid Meta signature' } };
-    }
-
-    logger.info('WEBHOOK_API', 'Received WhatsApp Cloud API event callback');
-    return { status: 200, body: { status: 'EVENT_RECEIVED' } };
+    return await handleWhatsAppWebhookRequest(path, method, body, query, headers);
   }
 
   // 3. Instagram & Meta Graph API Inbound Webhooks
