@@ -295,4 +295,44 @@ describe('INTEGRATION: Mission Control V1 24/7 Wall-Screen Dashboard', () => {
     assert.ok(res.headers.Deprecation);
     assert.ok(res.headers.Link.includes('canonical'));
   });
+
+  // --- 8. Mission Control V2 HTML Template Rendering ---
+
+  test('8. Mission Control V2 UI: HTML Template renders all 6 navigation tabs, world clocks, and interactive drawers', async () => {
+    const res = await routeApiRequest('/admin/mission-control', 'GET');
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['Content-Type'], 'text/html; charset=utf-8');
+
+    const html = res.body;
+    // Verify Brand & Version
+    assert.match(html, /MISSION CONTROL/);
+    assert.match(html, /V2 SOVEREIGN/);
+
+    // Verify 6 Navigation Tabs
+    assert.match(html, /EXECUTIVE OVERVIEW/);
+    assert.match(html, /CRM PIPELINE & DEALS/);
+    assert.match(html, /AGENT FLEET MATRIX/);
+    assert.match(html, /INGESTION PULSE FEED/);
+    assert.match(html, /APPROVALS & GOVERNANCE/);
+    assert.match(html, /INFRASTRUCTURE & CIRCUIT BREAKERS/);
+
+    // Verify 4 Live World Clocks
+    assert.match(html, /clock-dxb/);
+    assert.match(html, /clock-lon/);
+    assert.match(html, /clock-lis/);
+    assert.match(html, /clock-nyc/);
+
+    // Verify Interactive Drawers & Modals
+    assert.match(html, /id="agent-drawer"/);
+    assert.match(html, /id="investor-modal"/);
+    assert.match(html, /id="event-modal"/);
+    assert.match(html, /id="command-modal"/);
+
+    // Verify Quick Action Triggers
+    assert.match(html, /triggerVoiceNoteForLead/);
+    assert.match(html, /triggerWhatsAppBriefForLead/);
+    assert.match(html, /triggerOpalRoiForLead/);
+    assert.match(html, /advanceLeadStagePrompt/);
+  });
 });
