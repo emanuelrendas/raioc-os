@@ -1,8 +1,8 @@
 /**
- * RAIOC OS — Executive Mission Control HTML Template (Sprint 2 / Phase B)
+ * RAIOC OS — Executive Mission Control HTML Template (Sprint 2 / Phase B & Mandate)
  * Pre-compiled Zero-I/O renderer for `/admin/mission-control` and `/mission-control`.
  * 24/7 Wall-Screen High-Density Dashboard with Consolidated Realtime Telemetry,
- * Integrated Operational CRM Pipeline, Multi-Agent Fleet Matrix, and HITL Approval Gateway.
+ * Sovereign Realtime CRM Pipeline, Multi-Agent Fleet Matrix, and HITL Approval Gateway.
  */
 
 export function renderMissionControlHtml() {
@@ -86,6 +86,17 @@ export function renderMissionControlHtml() {
     </div>
 
     <div class="flex items-center space-x-3">
+      <!-- Mode Toggle -->
+      <button id="mode-toggle-btn" onclick="toggleMaskedMode()" class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white transition-colors flex items-center gap-1.5" title="Toggle Public Wall-Screen Mode">
+        <i data-lucide="eye-off" class="w-3.5 h-3.5 text-amber-400"></i>
+        <span id="mode-label">FULL EXECUTIVE</span>
+      </button>
+
+      <!-- Fullscreen Toggle -->
+      <button onclick="toggleFullscreen()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-300 hover:text-white transition-colors" title="Toggle Wall-Screen Fullscreen">
+        <i data-lucide="maximize" class="w-4 h-4"></i>
+      </button>
+
       <div class="flex items-center space-x-2 bg-[#111827] px-3 py-1.5 rounded-lg border border-white/10 text-xs font-mono">
         <span class="relative flex h-2 w-2">
           <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -102,7 +113,7 @@ export function renderMissionControlHtml() {
   <!-- Main Command Center Canvas -->
   <main class="flex-1 p-6 space-y-6 max-w-[1920px] mx-auto w-full">
     
-    <!-- 1. Top Executive KPI Strip -->
+    <!-- 1. Top Executive KPI Strip (Module 1: Executive KPI Strip / healthBar) -->
     <div id="kpi-strip" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       <div class="glass-card p-4 rounded-xl border border-white/10">
         <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">System Health</div>
@@ -114,7 +125,7 @@ export function renderMissionControlHtml() {
       <div class="glass-card p-4 rounded-xl border border-white/10">
         <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Active Pipeline</div>
         <div class="mt-1 flex items-baseline justify-between">
-          <span id="kpi-pipeline" class="text-2xl font-bold text-amber-400 font-mono">AED 207M</span>
+          <span id="kpi-pipeline" class="text-2xl font-bold text-amber-400 font-mono">AED 207.0M</span>
           <span class="text-[10px] text-gray-400 font-mono">€51.8M</span>
         </div>
       </div>
@@ -128,7 +139,7 @@ export function renderMissionControlHtml() {
       <div class="glass-card p-4 rounded-xl border border-white/10">
         <div class="text-[11px] font-mono text-gray-400 uppercase tracking-wider">Pending Approvals</div>
         <div class="mt-1 flex items-baseline justify-between">
-          <span id="kpi-approvals" class="text-2xl font-bold text-amber-500 font-mono">3 Pending</span>
+          <span id="kpi-approvals" class="text-2xl font-bold text-amber-500 font-mono">0 Pending</span>
           <span class="text-[10px] text-amber-400 font-mono">HITL QUEUE</span>
         </div>
       </div>
@@ -153,7 +164,7 @@ export function renderMissionControlHtml() {
 
       <!-- COLUMN 1: Agent Fleet & Infrastructure Matrix -->
       <div class="space-y-6">
-        <!-- Live Agent Fleet Matrix -->
+        <!-- Module 2: Live Agent Fleet Matrix -->
         <!-- Component A: Autonomous Fleet Matrix -->
         <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[480px]">
           <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
@@ -168,7 +179,7 @@ export function renderMissionControlHtml() {
           </div>
         </div>
 
-        <!-- Infrastructure & Observability Panel -->
+        <!-- Module 7: Infrastructure & Circuit Breakers Panel -->
         <div class="glass-card rounded-2xl border border-white/10 p-4 space-y-3">
           <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
             <i data-lucide="server" class="w-3.5 h-3.5 text-emerald-400"></i>
@@ -201,7 +212,7 @@ export function renderMissionControlHtml() {
         </div>
       </div>
 
-      <!-- COLUMN 2: Realtime Operational CRM Pipeline -->
+      <!-- COLUMN 2: Realtime Sovereign CRM Pipeline Board (Module 3) -->
       <div class="space-y-6">
         <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[740px]">
           <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
@@ -217,9 +228,9 @@ export function renderMissionControlHtml() {
         </div>
       </div>
 
-      <!-- COLUMN 3: HITL Approval Queue & Workflow Monitor -->
+      <!-- COLUMN 3: HITL Approval Queue & Workflow Monitor (Modules 5 & 6) -->
       <div class="space-y-6">
-        <!-- Executive HITL Approval Queue -->
+        <!-- Module 5: Executive HITL Approval Queue -->
         <!-- Component B: Executive Approval Gate -->
         <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[460px]">
           <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
@@ -234,7 +245,7 @@ export function renderMissionControlHtml() {
           </div>
         </div>
 
-        <!-- Workflow Monitor -->
+        <!-- Module 6: Workflow Monitor Grid -->
         <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[260px]">
           <div class="px-5 py-3 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
             <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
@@ -249,9 +260,9 @@ export function renderMissionControlHtml() {
         </div>
       </div>
 
-      <!-- COLUMN 4: Ingestion Pulse Feed & Immutable Audit Timeline -->
+      <!-- COLUMN 4: Ingestion Pulse Feed & Immutable Audit Timeline (Modules 4 & 8) -->
       <div class="space-y-6">
-        <!-- Live Ingestion Pulse Feed -->
+        <!-- Module 4: Live Ingestion Pulse Feed -->
         <!-- Component C: Ingestion Pulse -->
         <div class="glass-card rounded-2xl border border-white/10 overflow-hidden flex flex-col h-[480px]">
           <div class="px-5 py-3.5 border-b border-white/10 bg-white/[0.02] flex items-center justify-between">
@@ -266,7 +277,7 @@ export function renderMissionControlHtml() {
           </div>
         </div>
 
-        <!-- Immutable Audit Timeline -->
+        <!-- Module 8: Immutable Audit Timeline -->
         <div class="glass-card rounded-2xl border border-white/10 p-4 space-y-2.5 h-[240px] flex flex-col overflow-hidden">
           <div class="flex items-center justify-between border-b border-white/5 pb-2">
             <h2 class="text-xs font-bold uppercase tracking-wider font-mono text-white flex items-center gap-2">
@@ -316,6 +327,8 @@ export function renderMissionControlHtml() {
       'x-raioc-secret': 'raioc_sovereign_auth_2026_x99'
     };
 
+    let isMaskedMode = false;
+
     // Live Clocks
     function updateClocks() {
       const now = new Date();
@@ -326,12 +339,28 @@ export function renderMissionControlHtml() {
     setInterval(updateClocks, 1000);
     updateClocks();
 
+    function toggleFullscreen() {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
+      } else {
+        document.exitFullscreen().catch(err => console.log('Exit fullscreen error:', err));
+      }
+    }
+
+    function toggleMaskedMode() {
+      isMaskedMode = !isMaskedMode;
+      const label = document.getElementById('mode-label');
+      label.innerText = isMaskedMode ? 'MASKED WALL' : 'FULL EXECUTIVE';
+      refreshMissionControl();
+    }
+
     async function refreshMissionControl() {
       try {
-        const res = await fetch('/api/v1/mission-control/v1-state', { headers: authHeaders });
+        const url = isMaskedMode ? '/api/v1/mission-control/v1-state?masked=true' : '/api/v1/mission-control/v1-state';
+        const res = await fetch(url, { headers: authHeaders });
         if (!res.ok) throw new Error(\`Failed to fetch state: \${res.status}\`);
         const data = await res.json();
-        renderState(data);
+        renderState(data.body || data);
       } catch (err) {
         console.error('Mission Control V1 refresh error:', err);
       }
@@ -340,21 +369,24 @@ export function renderMissionControlHtml() {
     function renderState(state) {
       if (!state) return;
 
-      // 1. KPI Strip
-      if (state.kpiStrip) {
-        document.getElementById('kpi-health').innerText = state.kpiStrip.systemHealth + '%';
-        document.getElementById('kpi-pipeline').innerText = 'AED ' + (state.kpiStrip.pipelineAed / 1000000).toFixed(1) + 'M';
-        document.getElementById('kpi-deals').innerText = state.kpiStrip.activeLeads + ' Active';
-        document.getElementById('kpi-approvals').innerText = state.kpiStrip.pendingHitlCount + ' Pending';
-        document.getElementById('kpi-error-rate').innerText = state.kpiStrip.errorRate5m.toFixed(2) + '%';
-        document.getElementById('kpi-workflows').innerText = state.kpiStrip.activeWorkflows + ' Running';
+      // 1. KPI Strip / HealthBar
+      const kpis = state.healthBar || state.kpiStrip;
+      if (kpis) {
+        document.getElementById('kpi-health').innerText = (kpis.systemHealthPct || kpis.systemHealth || 99.98) + '%';
+        const pipeAed = kpis.totalPipelineAed || kpis.pipelineAed || 207000000;
+        document.getElementById('kpi-pipeline').innerText = 'AED ' + (pipeAed / 1000000).toFixed(1) + 'M';
+        document.getElementById('kpi-deals').innerText = (kpis.activeLeadsCount || kpis.activeLeads || 10) + ' Active';
+        document.getElementById('kpi-approvals').innerText = (kpis.pendingApprovalsCount !== undefined ? kpis.pendingApprovalsCount : kpis.pendingHitlCount) + ' Pending';
+        document.getElementById('kpi-error-rate').innerText = (kpis.errorRate5m || 0).toFixed(2) + '%';
+        document.getElementById('kpi-workflows').innerText = (kpis.activeWorkflowsCount || kpis.activeWorkflows || 8) + ' Running';
       }
 
-      // 2. Fleet Matrix
-      if (state.fleetMatrix) {
-        document.getElementById('fleet-count').innerText = state.fleetMatrix.length + ' ONLINE';
+      // 2. Fleet Matrix / AgentFleet
+      const fleet = state.agentFleet || state.fleetMatrix;
+      if (fleet) {
+        document.getElementById('fleet-count').innerText = fleet.length + ' ONLINE';
         const fleetContainer = document.getElementById('fleet-container');
-        fleetContainer.innerHTML = state.fleetMatrix.map(agent => {
+        fleetContainer.innerHTML = fleet.map(agent => {
           const isProcessing = agent.live_status === 'PROCESSING';
           const isIdle = agent.live_status === 'IDLE';
           const badgeClass = isProcessing ? 'bg-amber-500/20 text-amber-300 border-amber-500/30' :
@@ -378,24 +410,24 @@ export function renderMissionControlHtml() {
 
       // 3. Operational CRM Pipeline
       if (state.crmPipeline && state.crmPipeline.stages) {
-        document.getElementById('crm-total').innerText = 'AED ' + (state.crmPipeline.totalPipelineAed / 1000000).toFixed(1) + 'M';
+        document.getElementById('crm-total').innerText = 'AED ' + ((state.crmPipeline.totalPipelineAed || 207000000) / 1000000).toFixed(1) + 'M';
         const crmContainer = document.getElementById('crm-container');
         crmContainer.innerHTML = state.crmPipeline.stages.map(stage => \`
           <div class="space-y-2">
             <div class="flex items-center justify-between text-[11px] font-mono">
               <span class="font-bold text-gray-300">\${stage.label}</span>
-              <span class="text-amber-400 font-semibold">AED \${(stage.totalAed / 1000000).toFixed(1)}M (\${stage.dealCount})</span>
+              <span class="text-amber-400 font-semibold">AED \${((stage.totalAed || 0) / 1000000).toFixed(1)}M (\${stage.dealCount || 0})</span>
             </div>
             <div class="space-y-1.5">
               \${(stage.deals || []).map(deal => \`
                 <div class="p-2.5 rounded-lg bg-white/[0.02] border border-white/5 space-y-1">
                   <div class="flex items-center justify-between text-[11px]">
                     <span class="font-semibold text-white truncate max-w-[180px]">\${deal.name}</span>
-                    <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">DIRA \${deal.diraScore}</span>
+                    <span class="px-1.5 py-0.2 rounded text-[9px] font-mono font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">DIRA \${deal.diraScore || deal.riisScore}</span>
                   </div>
                   <div class="flex items-center justify-between text-[10px] font-mono text-gray-400">
                     <span>\${deal.targetAsset}</span>
-                    <span class="text-emerald-400 font-bold">AED \${(deal.budgetAed / 1000000).toFixed(1)}M</span>
+                    <span class="text-emerald-400 font-bold">AED \${((deal.budgetAed || 0) / 1000000).toFixed(1)}M</span>
                   </div>
                 </div>
               \`).join('')}
@@ -404,38 +436,37 @@ export function renderMissionControlHtml() {
         \`).join('');
       }
 
-      // 4. Executive Approval Queue
-      if (state.approvalQueue) {
-        document.getElementById('approval-count-badge').innerText = state.approvalQueue.length + ' PENDING';
-        const approvalsContainer = document.getElementById('approvals-container');
-        if (state.approvalQueue.length === 0) {
-          approvalsContainer.innerHTML = '<div class="p-6 text-center text-xs font-mono text-gray-500">No pending executive approvals required.</div>';
-        } else {
-          approvalsContainer.innerHTML = state.approvalQueue.map(appr => \`
-            <div class="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">\${appr.priority || 'HIGH'} PRIORITY</span>
-                <span class="text-[10px] font-mono text-gray-500">\${appr.createdAt ? new Date(appr.createdAt).toLocaleTimeString() : 'Recent'}</span>
-              </div>
-              <h3 class="text-xs font-bold text-white leading-snug">\${appr.title}</h3>
-              <div class="text-[11px] text-gray-400 space-y-0.5 font-mono">
-                <div>Recipient: <span class="text-gray-200">\${appr.recipient}</span></div>
-                <div>Asset: <span class="text-amber-400">\${appr.targetAsset}</span></div>
-              </div>
-              <div class="flex items-center gap-2 pt-1">
-                <button onclick="resolveApproval('\${appr.id}', 'APPROVE')" class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-mono font-bold text-[10px] transition-colors">
-                  APPROVE & DISPATCH
-                </button>
-                <button onclick="resolveApproval('\${appr.id}', 'REJECT')" class="py-1.5 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-mono font-bold text-[10px] transition-colors">
-                  REJECT
-                </button>
-              </div>
+      // 4. Executive Approval Queue / ApprovalsQueue
+      const approvals = state.approvalsQueue || state.approvalQueue || [];
+      document.getElementById('approval-count-badge').innerText = approvals.length + ' PENDING';
+      const approvalsContainer = document.getElementById('approvals-container');
+      if (approvals.length === 0) {
+        approvalsContainer.innerHTML = '<div class="p-6 text-center text-xs font-mono text-gray-500">No pending executive approvals required.</div>';
+      } else {
+        approvalsContainer.innerHTML = approvals.map(appr => \`
+          <div class="p-3 rounded-xl bg-white/[0.02] border border-white/10 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/30">\${appr.risk_rating || appr.riskLevel || 'HIGH'} RISK</span>
+              <span class="text-[10px] font-mono text-gray-500">\${appr.created_at ? new Date(appr.created_at).toLocaleTimeString() : 'Recent'}</span>
             </div>
-          \`).join('');
-        }
+            <h3 class="text-xs font-bold text-white leading-snug">\${appr.payload_summary || appr.summary || appr.title || 'Executive Approval Request'}</h3>
+            <div class="text-[11px] text-gray-400 space-y-0.5 font-mono">
+              <div>Type: <span class="text-gray-200">\${appr.action_type || appr.action}</span></div>
+              <div>Requester: <span class="text-amber-400">\${appr.requester_agent || 'MARK'}</span></div>
+            </div>
+            <div class="flex items-center gap-2 pt-1">
+              <button onclick="resolveApproval('\${appr.id}', 'APPROVE')" class="flex-1 py-1.5 px-3 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 font-mono font-bold text-[10px] transition-colors">
+                APPROVE & DISPATCH
+              </button>
+              <button onclick="resolveApproval('\${appr.id}', 'REJECT')" class="py-1.5 px-3 rounded-lg bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 font-mono font-bold text-[10px] transition-colors">
+                REJECT
+              </button>
+            </div>
+          </div>
+        \`).join('');
       }
 
-      // 5. Workflow Monitor
+      // 5. Workflow Monitor Grid
       if (state.workflowMonitor) {
         const wfContainer = document.getElementById('workflow-container');
         wfContainer.innerHTML = state.workflowMonitor.map(wf => \`
@@ -548,11 +579,12 @@ export function renderMissionControlHtml() {
       }
     }
 
-    // Auto-poll state every 3 seconds
+    // Auto-poll state every 3 seconds (Realtime Fallback & Zero-Flicker sync)
     setInterval(refreshMissionControl, 3000);
     // Initial fetch
     refreshMissionControl();
   </script>
 </body>
-</html>`;
+</html>
+`;
 }

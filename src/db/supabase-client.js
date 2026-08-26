@@ -35,6 +35,7 @@ export class SupabaseClient {
       enterprise_memory_adr: new Map(),
       executive_approvals: [],
       interaction_logs: [],
+      investors: [],
       system_health: [],
       system_metrics: [],
       connector_health: new Map(),
@@ -490,6 +491,272 @@ export class SupabaseClient {
     for (const adr of initialAdrs) {
       this.mockStore.enterprise_memory_adr.set(adr.adr_id, adr);
     }
+
+    // 9. Seed Sovereign Investors (CRM Pipeline)
+    const initialInvestors = [
+      {
+        id: 'inv_sterling_001',
+        reference_id: 'REF-TG-STERLING-001',
+        name: 'Lord Alistair Sterling',
+        email: 'sterling@sterling-capital.co.uk',
+        phone: '+44 20 7946 0991',
+        company: 'Sterling Capital Sovereign Fund',
+        country: 'United Kingdom',
+        segment: 'UK_NONDOM',
+        status: 'NEW_LEAD',
+        stage: 'NEW_LEAD',
+        budget_aed: 20000000,
+        budget_usd: 5445000,
+        target_thesis: 'Golden Visa & Equity Appreciation',
+        thesis_type: 'ESCROW_GUARANTEE_SOVEREIGN_SAFE_HAVEN',
+        riis_score: 88,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'TELEGRAM',
+        target_asset: 'Palm Jebel Ali Off-Plan Corridor',
+        notes: 'Inbound Telegram mandate via @sterling_capital for 20M AED allocation',
+        tags: ['UK_NONDOM', 'TELEGRAM', 'GOLDEN_VISA'],
+        created_at: new Date(Date.now() - 120000).toISOString(),
+        updated_at: new Date(Date.now() - 120000).toISOString(),
+      },
+      {
+        id: 'inv_madrid_002',
+        reference_id: 'REF-WEB-MADRID-002',
+        name: 'Carlos Mendoza (Madrid Family Office)',
+        email: 'carlos.mendoza@mendoza-fo.es',
+        phone: '+34 91 123 4567',
+        company: 'Mendoza Patrimonial S.L.',
+        country: 'Spain',
+        segment: 'ES_HNW',
+        status: 'NEW_LEAD',
+        stage: 'NEW_LEAD',
+        budget_aed: 18000000,
+        budget_usd: 4900000,
+        target_thesis: 'Spanish Wealth Tax Hedge',
+        thesis_type: 'OPAL_ROI_CAPITAL_SHIELD',
+        riis_score: 82,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'WEBSITE',
+        target_asset: 'Como Residences (Nakheel)',
+        notes: 'Wealth tax hedge allocation inquiry',
+        tags: ['ES_HNW', 'WEBSITE', 'TAX_HEDGE'],
+        created_at: new Date(Date.now() - 360000).toISOString(),
+        updated_at: new Date(Date.now() - 360000).toISOString(),
+      },
+      {
+        id: 'inv_lisbon_003',
+        reference_id: 'REF-WA-LISBON-003',
+        name: 'Dr. Afonso Henriques',
+        email: 'afonso@lisbon-capital.pt',
+        phone: '+351 91 234 5678',
+        company: 'Dr. Afonso Henriques Family Office',
+        country: 'Portugal',
+        segment: 'PT_HNW',
+        status: 'NEW_LEAD',
+        stage: 'NEW_LEAD',
+        budget_aed: 10000000,
+        budget_usd: 2720000,
+        target_thesis: 'Portugal NHR Arbitrage',
+        thesis_type: 'OPAL_ROI_ESCROW_GUARANTEE',
+        riis_score: 80,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'WHATSAPP',
+        target_asset: 'Valia at Dubai Creek Harbour',
+        notes: 'Post-NHR Portugal capital reallocation',
+        tags: ['PT_HNW', 'WHATSAPP', 'NHR_ARBITRAGE'],
+        created_at: new Date(Date.now() - 720000).toISOString(),
+        updated_at: new Date(Date.now() - 720000).toISOString(),
+      },
+      {
+        id: 'inv_pt_goncalo_004',
+        reference_id: 'REF-CRM-PT-004',
+        name: 'Dr. Gonçalo de Albuquerque',
+        email: 'goncalo@albuquerque-capital.pt',
+        phone: '+351 96 789 0123',
+        company: 'Albuquerque Private Trust',
+        country: 'Portugal',
+        segment: 'PT_HNW',
+        status: 'QUALIFIED',
+        stage: 'QUALIFIED',
+        budget_aed: 15000000,
+        budget_usd: 4080000,
+        target_thesis: 'Opal ROI / 100% Escrow Law 8',
+        thesis_type: 'OPAL_ROI_ESCROW_GUARANTEE',
+        riis_score: 86,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'EMAIL',
+        target_asset: 'Como Residences',
+        notes: 'Qualified investor profile with DIRA 86 assessment',
+        tags: ['PT_HNW', 'QUALIFIED', 'ESCROW_GUARANTEE'],
+        created_at: new Date(Date.now() - 1800000).toISOString(),
+        updated_at: new Date(Date.now() - 1800000).toISOString(),
+      },
+      {
+        id: 'inv_ch_elena_005',
+        reference_id: 'REF-TG-SWISS-005',
+        name: 'Elena von Stauffen (Geneva Trust)',
+        email: 'elena@stauffen-trust.ch',
+        phone: '+41 22 765 4321',
+        company: 'Stauffen Heritage Trust',
+        country: 'Switzerland',
+        segment: 'FAMILY_OFFICE',
+        status: 'QUALIFIED',
+        stage: 'QUALIFIED',
+        budget_aed: 12000000,
+        budget_usd: 3260000,
+        target_thesis: 'Sovereign Capital Shield',
+        thesis_type: 'OPAL_ROI_CAPITAL_SHIELD',
+        riis_score: 84,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'TELEGRAM',
+        target_asset: 'Dubai Hills Prime Villa',
+        notes: 'Yield modeling inquiry routed to ATLAS',
+        tags: ['SWISS_TRUST', 'TELEGRAM', 'QUALIFIED'],
+        created_at: new Date(Date.now() - 3600000).toISOString(),
+        updated_at: new Date(Date.now() - 360000).toISOString(),
+      },
+      {
+        id: 'inv_ae_mansoor_006',
+        reference_id: 'REF-DIR-MANSOOR-006',
+        name: 'Al-Mansoor Sovereign Family Office',
+        email: 'advisory@almansoor-sovereign.ae',
+        phone: '+971 4 321 0000',
+        company: 'Al-Mansoor Holding Ltd',
+        country: 'United Arab Emirates',
+        segment: 'SOVEREIGN_FUND',
+        status: 'HOT_MANDATE',
+        stage: 'HOT_MANDATE',
+        budget_aed: 22000000,
+        budget_usd: 5990000,
+        target_thesis: 'DLD Green List Verified Allocation',
+        thesis_type: 'OPAL_ROI_ESCROW_GUARANTEE',
+        riis_score: 94,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'MANUAL_ADVISORY',
+        target_asset: 'Valia at Dubai Creek Harbour (4 Units)',
+        notes: 'Direct advisory allocation in pre-launch tranche',
+        tags: ['DLD_GREENLIST', 'HOT_MANDATE', 'MULTI_UNIT'],
+        created_at: new Date(Date.now() - 5400000).toISOString(),
+        updated_at: new Date(Date.now() - 5400000).toISOString(),
+      },
+      {
+        id: 'inv_uk_kensington_007',
+        reference_id: 'REF-EM-KENSINGTON-007',
+        name: 'Lord Arthur Kensington',
+        email: 'kensington@kensington-holdings.co.uk',
+        phone: '+44 20 7123 4567',
+        company: 'Kensington International Holdings',
+        country: 'United Kingdom',
+        segment: 'UK_NONDOM',
+        status: 'HOT_MANDATE',
+        stage: 'HOT_MANDATE',
+        budget_aed: 25000000,
+        budget_usd: 6800000,
+        target_thesis: 'UK Non-Dom Abolition Sovereign Shield',
+        thesis_type: 'ESCROW_GUARANTEE_SOVEREIGN_SAFE_HAVEN',
+        riis_score: 92,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'EMAIL',
+        target_asset: 'Rosehill (Dubai Hills Estate)',
+        notes: 'Offshore reallocation against UK non-dom changes',
+        tags: ['UK_NONDOM', 'HOT_MANDATE', 'DIFC_SHIELD'],
+        created_at: new Date(Date.now() - 7200000).toISOString(),
+        updated_at: new Date(Date.now() - 7200000).toISOString(),
+      },
+      {
+        id: 'inv_pt_lisbon_cap_008',
+        reference_id: 'REF-PORT-LISCAP-008',
+        name: 'Lisbon Capital Partners (Multi-Family Office)',
+        email: 'investments@lisbon-capital-partners.com',
+        phone: '+351 21 000 1122',
+        company: 'Lisbon Capital Partners MFO',
+        country: 'Portugal',
+        segment: 'INSTITUTIONAL',
+        status: 'PROPOSAL_SENT',
+        stage: 'PROPOSAL_SENT',
+        budget_aed: 35000000,
+        budget_usd: 9530000,
+        target_thesis: 'Multi-Family Sovereign Office Shield',
+        thesis_type: 'OPAL_ROI_CAPITAL_SHIELD',
+        riis_score: 90,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'MANUAL_ADVISORY',
+        target_asset: 'DIFC Shielded Freehold Commercial & Residential',
+        notes: 'Institutional Memorandum delivered for 35M AED mandate',
+        tags: ['MFO', 'INSTITUTIONAL', 'PROPOSAL_SENT'],
+        created_at: new Date(Date.now() - 14400000).toISOString(),
+        updated_at: new Date(Date.now() - 14400000).toISOString(),
+      },
+      {
+        id: 'inv_closed_alpha_009',
+        reference_id: 'REF-ESCROW-ALPHA-009',
+        name: 'Sovereign Tranche Alpha (Dubai South Aero Corridor)',
+        email: 'alpha@sovereign-tranche.ae',
+        phone: '+971 4 800 1111',
+        company: 'Aero Corridor Sovereign SPV',
+        country: 'United Arab Emirates',
+        segment: 'SOVEREIGN_FUND',
+        status: 'CLOSED_WON',
+        stage: 'CLOSED_WON',
+        budget_aed: 30000000,
+        budget_usd: 8168000,
+        target_thesis: '100% Law 8 Escrow Ringfenced',
+        thesis_type: 'OPAL_ROI_ESCROW_GUARANTEE',
+        riis_score: 96,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'MANUAL_ADVISORY',
+        target_asset: 'DLD Regulated Trust Assets',
+        notes: 'Escrow funded and verified under Law No. 8',
+        tags: ['CLOSED_WON', 'ESCROW_FUNDED', 'SOVEREIGN'],
+        created_at: new Date(Date.now() - 86400000).toISOString(),
+        updated_at: new Date(Date.now() - 86400000).toISOString(),
+      },
+      {
+        id: 'inv_closed_zurich_010',
+        reference_id: 'REF-PB-ZURICH-010',
+        name: 'Zurich Private Wealth Trust',
+        email: 'trustees@zurich-pwt.ch',
+        phone: '+41 44 200 3344',
+        company: 'Zurich Private Wealth Trust Ltd',
+        country: 'Switzerland',
+        segment: 'FAMILY_OFFICE',
+        status: 'CLOSED_WON',
+        stage: 'CLOSED_WON',
+        budget_aed: 20000000,
+        budget_usd: 5445000,
+        target_thesis: 'Direct Freehold Golden Visa Acquisition',
+        thesis_type: 'OPAL_ROI_ESCROW_GUARANTEE',
+        riis_score: 95,
+        dira_risk_level: 'LOW',
+        golden_visa_eligible: true,
+        escrow_protected: true,
+        preferred_channel: 'MANUAL_ADVISORY',
+        target_asset: 'Palm Jumeirah Luxury Villa',
+        notes: 'Full Golden Visa compliance and acquisition complete',
+        tags: ['CLOSED_WON', 'GOLDEN_VISA', 'SWISS_TRUST'],
+        created_at: new Date(Date.now() - 172800000).toISOString(),
+        updated_at: new Date(Date.now() - 172800000).toISOString(),
+      },
+    ];
+
+    this.mockStore.investors = [...initialInvestors];
   }
 
   // --- Lead & Assessment Operations ---
@@ -1465,6 +1732,53 @@ export class SupabaseClient {
       return { id, status: cleanStatus, actor, resolvedAt: new Date().toISOString() };
     } catch {
       return { id, status: cleanStatus, actor, resolvedAt: new Date().toISOString() };
+    }
+  }
+
+  async logInteraction(interactionData = {}) {
+    const record = {
+      id: interactionData.id || `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      investor_id: interactionData.investor_id || interactionData.investorId || null,
+      correlation_id: interactionData.correlation_id || interactionData.correlationId || `corr_${Date.now()}`,
+      channel: (interactionData.channel || 'WEBSITE').toUpperCase(),
+      event_type: interactionData.event_type || interactionData.eventType || 'GENERAL_INTERACTION',
+      source_agent: interactionData.source_agent || interactionData.sourceAgent || 'JARVIS',
+      direction: interactionData.direction || 'INBOUND',
+      summary: interactionData.summary || 'Interaction logged',
+      payload: interactionData.payload || {},
+      traceparent: interactionData.traceparent || interactionData.payload?.traceparent || null,
+      payload_sha256: interactionData.payload_sha256 || interactionData.payload?.payload_sha256 || null,
+      response_data: interactionData.response_data || interactionData.responseData || {},
+      latency_ms: interactionData.latency_ms || interactionData.latencyMs || 1,
+      status: interactionData.status || 'SUCCESS',
+      error_message: interactionData.error_message || null,
+      created_at: interactionData.created_at || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.interaction_logs.unshift(record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/interaction_logs`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        return rows[0] || record;
+      }
+      return record;
+    } catch {
+      this.mockStore.interaction_logs.unshift(record);
+      return record;
     }
   }
 
@@ -2587,6 +2901,165 @@ export class SupabaseClient {
     }
   }
 
+  // --- Sovereign Investor CRM Operations ---
+
+  async fetchInvestors(query = {}) {
+    if (this.isMock) {
+      let results = [...this.mockStore.investors];
+      if (query.segment) {
+        results = results.filter((i) => i.segment === query.segment);
+      }
+      if (query.status || query.stage) {
+        const targetStage = (query.status || query.stage).toUpperCase();
+        results = results.filter((i) => (i.stage || i.status || '').toUpperCase() === targetStage);
+      }
+      if (query.country) {
+        results = results.filter((i) => (i.country || '').toLowerCase() === query.country.toLowerCase());
+      }
+      return results;
+    }
+
+    try {
+      let q = `${this.url}/rest/v1/investors?select=*&order=updated_at.desc`;
+      if (query.segment) q += `&segment=eq.${query.segment}`;
+      if (query.status || query.stage) q += `&status=eq.${query.status || query.stage}`;
+      const res = await fetch(q, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`Supabase fetchInvestors error: ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch investors from database', { error: err.message });
+      return [...this.mockStore.investors];
+    }
+  }
+
+  async getInvestor(id) {
+    if (this.isMock) {
+      return this.mockStore.investors.find((i) => i.id === id || i.reference_id === id) || null;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/investors?id=eq.${id}&select=*`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list[0] || null;
+    } catch {
+      return this.mockStore.investors.find((i) => i.id === id || i.reference_id === id) || null;
+    }
+  }
+
+  async upsertInvestor(investorData = {}) {
+    const record = {
+      id: investorData.id || `inv_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      reference_id: investorData.reference_id || `REF-${Date.now()}`,
+      name: investorData.name || 'Private Investor',
+      email: investorData.email || null,
+      phone: investorData.phone || null,
+      company: investorData.company || null,
+      country: investorData.country || 'United Arab Emirates',
+      segment: investorData.segment || 'PT_HNW',
+      status: investorData.status || investorData.stage || 'NEW_LEAD',
+      stage: investorData.stage || investorData.status || 'NEW_LEAD',
+      budget_aed: Number(investorData.budget_aed || investorData.budgetAed) || 10000000,
+      budget_usd: Number(investorData.budget_usd || investorData.budgetUsd) || 2720000,
+      target_thesis: investorData.target_thesis || investorData.targetThesis || 'Opal ROI / Escrow Guarantee',
+      thesis_type: investorData.thesis_type || 'OPAL_ROI_ESCROW_GUARANTEE',
+      riis_score: Number(investorData.riis_score || investorData.riisScore) || 80,
+      dira_risk_level: investorData.dira_risk_level || 'LOW',
+      golden_visa_eligible: investorData.golden_visa_eligible !== false,
+      escrow_protected: investorData.escrow_protected !== false,
+      preferred_channel: investorData.preferred_channel || 'EMAIL',
+      target_asset: investorData.target_asset || investorData.targetAsset || 'Dubai Prime Freehold',
+      notes: investorData.notes || '',
+      tags: investorData.tags || [],
+      metadata: investorData.metadata || {},
+      created_at: investorData.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      const idx = this.mockStore.investors.findIndex((i) => i.id === record.id || i.reference_id === record.reference_id);
+      if (idx >= 0) {
+        this.mockStore.investors[idx] = { ...this.mockStore.investors[idx], ...record };
+      } else {
+        this.mockStore.investors.unshift(record);
+      }
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/investors`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (!res.ok) throw new Error(`Supabase upsertInvestor error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || record;
+    } catch {
+      const idx = this.mockStore.investors.findIndex((i) => i.id === record.id || i.reference_id === record.reference_id);
+      if (idx >= 0) {
+        this.mockStore.investors[idx] = { ...this.mockStore.investors[idx], ...record };
+      } else {
+        this.mockStore.investors.unshift(record);
+      }
+      return record;
+    }
+  }
+
+  async updateInvestor(id, updates = {}) {
+    const existing = await this.getInvestor(id);
+    if (!existing) return null;
+
+    const updated = {
+      ...existing,
+      ...updates,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      const idx = this.mockStore.investors.findIndex((i) => i.id === id || i.reference_id === id);
+      if (idx >= 0) this.mockStore.investors[idx] = updated;
+      return updated;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/investors?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(updates),
+      });
+      if (!res.ok) throw new Error(`Supabase updateInvestor error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || updated;
+    } catch {
+      const idx = this.mockStore.investors.findIndex((i) => i.id === id || i.reference_id === id);
+      if (idx >= 0) this.mockStore.investors[idx] = updated;
+      return updated;
+    }
+  }
+
   getOperationalStoreSnapshot() {
     return {
       agents: Array.from(this.mockStore.agent_status.values()),
@@ -2596,6 +3069,7 @@ export class SupabaseClient {
       coreWorkflows: Array.from(this.mockStore.core_workflow_registry.values()),
       knowledgeNodes: Array.from(this.mockStore.knowledge_nodes.values()),
       knowledgeEdges: Array.from(this.mockStore.knowledge_edges.values()),
+      investors: this.mockStore.investors,
       approvals: this.mockStore.executive_approvals,
       interactions: this.mockStore.interaction_logs,
       connectors: Array.from(this.mockStore.connector_health.values()),
