@@ -15,3 +15,5 @@ export { handleCrmRequest } from './routes/crm-routes.js';
 export { handleFleetRequest } from './mission-control/fleet.js';
 export { handleApprovalsRequest } from './mission-control/approvals.js';
 export { handleInteractionsRequest } from './mission-control/interactions.js';
+export { handleRegistryRequest } from './core/registry.js';
+export { handleKnowledgeRequest } from './core/knowledge.js';

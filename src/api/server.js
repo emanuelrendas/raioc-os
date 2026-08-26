@@ -21,6 +21,8 @@ import { handleCrmRequest } from './routes/crm-routes.js';
 import { handleFleetRequest } from './mission-control/fleet.js';
 import { handleApprovalsRequest } from './mission-control/approvals.js';
 import { handleInteractionsRequest } from './mission-control/interactions.js';
+import { handleRegistryRequest } from './core/registry.js';
+import { handleKnowledgeRequest } from './core/knowledge.js';
 import { renderExecutiveBriefHtml } from '../site/brief-viewer-html.js';
 import { renderMissionControlHtml } from '../site/mission-control-html.js';
 import { supabase } from '../db/supabase-client.js';
@@ -33,6 +35,9 @@ import { logger } from '../logging/audit-logger.js';
 
 export async function routeApiRequest(reqPath, method = 'GET', body = {}, query = {}, headers = {}) {
   const url = reqPath.split('?')[0];
+  const queryString = reqPath.includes('?') ? reqPath.split('?')[1] : '';
+  const parsedQuery = queryString ? Object.fromEntries(new URLSearchParams(queryString)) : {};
+  const effectiveQuery = { ...parsedQuery, ...query };
   const startTime = Date.now();
   const correlationId = headers['x-correlation-id'] || headers['X-Correlation-ID'] || correlationTracer.generateCorrelationId('api');
 
@@ -63,7 +68,7 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 1. Dashboard UI, Executive Telemetry & Chat (/dashboard, /api/chat, /api/dashboard/*, /api/executive/*, /api/telemetry/*, /health, /api/health, /api/test-email)
     else if (url === '/dashboard' || url === '/api/test-email' || url === '/api/chat' || url.startsWith('/api/chat') || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
-      response = await handleTelemetryRequest(url, { headers, query, body });
+      response = await handleTelemetryRequest(url, { headers, query: effectiveQuery, body });
     }
     // 2. DLD Market Data
     else if (url === '/api/dld' || url.startsWith('/api/dld/')) {
@@ -83,7 +88,7 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 6. IKL Endpoints
     else if (url.startsWith('/api/ikl')) {
-      response = await handleIklRequest(url, query);
+      response = await handleIklRequest(url, effectiveQuery);
     }
     // 7. Calculator Endpoints
     else if (url.startsWith('/api/calculators')) {
@@ -91,19 +96,27 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow, Gemini Advisor)
     else if (url.startsWith('/api/opal') || url.startsWith('/api/mixboard') || url.startsWith('/api/flow') || url.startsWith('/api/ai')) {
-      response = await handleAiToolsRequest(url, method, body, query, headers);
+      response = await handleAiToolsRequest(url, method, body, effectiveQuery, headers);
     }
     // 8b. Mission Control Fleet Telemetry (/api/mission-control/fleet)
     else if (url.startsWith('/api/mission-control/fleet')) {
-      response = await handleFleetRequest(url, method, body, query, headers);
+      response = await handleFleetRequest(url, method, body, effectiveQuery, headers);
     }
     // 8c. Mission Control Executive Approvals (/api/mission-control/approvals)
     else if (url.startsWith('/api/mission-control/approvals')) {
-      response = await handleApprovalsRequest(url, method, body, query, headers);
+      response = await handleApprovalsRequest(url, method, body, effectiveQuery, headers);
     }
     // 8d. Mission Control Ingestion Stream (/api/mission-control/interactions)
     else if (url.startsWith('/api/mission-control/interactions')) {
-      response = await handleInteractionsRequest(url, method, body, query, headers);
+      response = await handleInteractionsRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 8e. Enterprise Core Registries (/api/core/agents, /api/core/tools, /api/core/workflows)
+    else if (url.startsWith('/api/core/agents') || url.startsWith('/api/core/tools') || url.startsWith('/api/core/workflows')) {
+      response = await handleRegistryRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 8f. Enterprise Knowledge Graph (/api/core/knowledge)
+    else if (url.startsWith('/api/core/knowledge')) {
+      response = await handleKnowledgeRequest(url, method, body, effectiveQuery, headers);
     }
     // 9. Assessment Submission
     else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {
@@ -115,11 +128,11 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 10b. CRM & Ingestion Pipeline (/api/crm)
     else if (url.startsWith('/api/crm')) {
-      response = await handleCrmRequest(url, method, body, query, headers);
+      response = await handleCrmRequest(url, method, body, effectiveQuery, headers);
     }
     // 11. Webhook Endpoints (n8n & WhatsApp)
     else if (url.startsWith('/api/webhooks')) {
-      response = await handleWebhookRequest(url, method, body, query, headers);
+      response = await handleWebhookRequest(url, method, body, effectiveQuery, headers);
     }
     // 12. Shared Agent API
     else if (url.startsWith('/api/agents')) {
@@ -127,7 +140,7 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 13. Social Media & Content Automation API
     else if (url.startsWith('/api/social')) {
-      response = await handleSocialRequest(url, method, body, query, headers);
+      response = await handleSocialRequest(url, method, body, effectiveQuery, headers);
     } else {
       response = { status: 404, body: { error: `Endpoint not found: ${url}` } };
     }

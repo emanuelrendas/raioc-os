@@ -22,6 +22,11 @@ export class SupabaseClient {
       telemetry: [],
       agent_status: new Map(),
       agent_fleet_status: new Map(),
+      core_agent_registry: new Map(),
+      core_tool_registry: new Map(),
+      core_workflow_registry: new Map(),
+      knowledge_nodes: new Map(),
+      knowledge_edges: new Map(),
       executive_approvals: [],
       interaction_logs: [],
       system_health: [],
@@ -35,6 +40,354 @@ export class SupabaseClient {
       notifications: [],
       off_plan_projects: [],
     };
+
+    this.initEnterpriseCoreSeeds();
+  }
+
+  initEnterpriseCoreSeeds() {
+    // 1. Seed Core Agents
+    const initialAgents = [
+      {
+        id: 'jarvis_executive_brain',
+        name: 'JARVIS',
+        role: 'Chief Autonomous Orchestration Agent & Executive Brain',
+        model: 'gemini-2.5-flash',
+        capabilities: ['workflow_orchestration', 'cognitive_synthesis', 'cross_agent_triage', 'autonomous_dispatch'],
+        permissions: ['admin:all', 'execute:pipeline', 'resolve:approvals'],
+        cost_budget: { monthly_limit_usd: 1500, current_spend_usd: 42.5, currency: 'USD' },
+        version: '2.5.0',
+        owner: 'CTO',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'mark_lead_triage',
+        name: 'MARK',
+        role: 'Lead Triage, Segmentation & Risk Intelligence Specialist',
+        model: 'gemini-2.5-flash',
+        capabilities: ['dira_scoring', 'riis_evaluation', 'crm_segmentation', 'inbound_triage'],
+        permissions: ['read:leads', 'write:crm', 'score:dira'],
+        cost_budget: { monthly_limit_usd: 600, current_spend_usd: 18.2, currency: 'USD' },
+        version: '2.1.0',
+        owner: 'CTO',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'atlas_opal_calculator',
+        name: 'ATLAS',
+        role: 'Real Estate & Opal ROI Modeling Specialist',
+        model: 'gemini-2.5-flash',
+        capabilities: ['opal_roi_calculation', 'dld_index_valuation', 'yield_forecasting', 'sqft_benchmarking'],
+        permissions: ['read:dld', 'execute:calculators', 'model:yield'],
+        cost_budget: { monthly_limit_usd: 500, current_spend_usd: 12.8, currency: 'USD' },
+        version: '2.0.0',
+        owner: 'CTO',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'aida_flow_mixboard',
+        name: 'AIDA',
+        role: 'Client Relations & Cinematic Media Teaser Specialist',
+        model: 'gemini-2.5-flash',
+        capabilities: ['flow_teaser_generation', 'mixboard_composition', 'whatsapp_dispatch', 'memorandum_drafting'],
+        permissions: ['dispatch:brief', 'generate:media', 'send:whatsapp'],
+        cost_budget: { monthly_limit_usd: 750, current_spend_usd: 24.1, currency: 'USD' },
+        version: '2.0.0',
+        owner: 'CTO',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'lex_compliance_legal',
+        name: 'LEX',
+        role: 'Compliance, Statutory Tax & Golden Visa Specialist',
+        model: 'gemini-2.5-flash',
+        capabilities: ['golden_visa_audit', 'law8_escrow_compliance', 'difc_structuring', 'tax_shielding'],
+        permissions: ['audit:compliance', 'verify:escrow', 'check:visa'],
+        cost_budget: { monthly_limit_usd: 500, current_spend_usd: 8.4, currency: 'USD' },
+        version: '2.0.0',
+        owner: 'CTO',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'sentinel_devops_qa',
+        name: 'SENTINEL',
+        role: 'QA, DevOps & Autonomous System Health Guardian',
+        model: 'gemini-2.5-flash',
+        capabilities: ['health_monitoring', 'gateway_verification', 'latency_auditing', 'self_healing'],
+        permissions: ['monitor:system', 'restart:adapters', 'alert:ops'],
+        cost_budget: { monthly_limit_usd: 400, current_spend_usd: 5.9, currency: 'USD' },
+        version: '2.2.0',
+        owner: 'CTO',
+        status: 'ACTIVE',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    for (const a of initialAgents) {
+      this.mockStore.core_agent_registry.set(a.id, a);
+    }
+
+    // 2. Seed Core Tools
+    const initialTools = [
+      {
+        id: 'gemini_api',
+        name: 'Google Gemini 2.5 Flash API',
+        category: 'AI_MODEL',
+        health_status: 'HEALTHY',
+        latency_ms: 18,
+        quota_limits: { rate_limit_per_min: 300, daily_quota: 50000 },
+        dependencies: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'supabase_database',
+        name: 'Supabase PostgreSQL & Realtime',
+        category: 'DATABASE',
+        health_status: 'HEALTHY',
+        latency_ms: 12,
+        quota_limits: { pool_size: 20, max_connections: 100 },
+        dependencies: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'vercel_gateway',
+        name: 'Vercel Serverless Edge Gateway',
+        category: 'HOSTING',
+        health_status: 'HEALTHY',
+        latency_ms: 8,
+        quota_limits: { max_concurrency: 1000, timeout_sec: 60 },
+        dependencies: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'n8n_orchestration',
+        name: 'n8n Workflow Automation Hub',
+        category: 'ORCHESTRATION',
+        health_status: 'HEALTHY',
+        latency_ms: 25,
+        quota_limits: { rate_limit_per_min: 120, concurrency: 10 },
+        dependencies: ['gemini_api', 'supabase_database'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'opal_engine',
+        name: 'Google Opal ROI & Visa Calculator',
+        category: 'CALCULATOR',
+        health_status: 'HEALTHY',
+        latency_ms: 5,
+        quota_limits: { rate_limit_per_min: 600, cache_ttl_sec: 300 },
+        dependencies: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'flow_engine',
+        name: 'Flow Cinematic Video Hook Engine',
+        category: 'MULTIMEDIA',
+        health_status: 'HEALTHY',
+        latency_ms: 35,
+        quota_limits: { rate_limit_per_min: 60, video_renders_per_day: 500 },
+        dependencies: ['gemini_api'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'mixboard_engine',
+        name: 'Mixboard Visual Concept Board Generator',
+        category: 'MULTIMEDIA',
+        health_status: 'HEALTHY',
+        latency_ms: 30,
+        quota_limits: { rate_limit_per_min: 60, boards_per_day: 500 },
+        dependencies: ['gemini_api'],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'youtube_data_api',
+        name: 'YouTube Data API v3 Feed Engine',
+        category: 'COMMUNICATION',
+        health_status: 'HEALTHY',
+        latency_ms: 45,
+        quota_limits: { rate_limit_per_min: 100, daily_quota: 10000 },
+        dependencies: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    for (const t of initialTools) {
+      this.mockStore.core_tool_registry.set(t.id, t);
+    }
+
+    // 3. Seed Core Workflows
+    const initialWorkflows = [
+      {
+        id: 'wf_google_tools_orchestration',
+        name: 'Google Tools & Multi-Agent Orchestration',
+        orchestrator: 'n8n',
+        trigger_type: 'EVENT',
+        input_schema: { type: 'object', properties: { event: { type: 'string' } } },
+        output_schema: { type: 'object', properties: { success: { type: 'boolean' } } },
+        owner: 'CTO',
+        is_active: true,
+        version: '1.0.0',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'wf_lead_ingestion_triage',
+        name: 'Multi-Channel Ingestion & DIRA Scoring Pipeline',
+        orchestrator: 'raioc_event_bus',
+        trigger_type: 'WEBHOOK',
+        input_schema: { type: 'object', properties: { lead: { type: 'object' } } },
+        output_schema: { type: 'object', properties: { riis: { type: 'number' } } },
+        owner: 'CTO',
+        is_active: true,
+        version: '1.2.0',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'wf_outbound_dispatch',
+        name: 'Encrypted Executive Brief & WhatsApp Dispatch',
+        orchestrator: 'raioc_event_bus',
+        trigger_type: 'EVENT',
+        input_schema: { type: 'object', properties: { briefId: { type: 'string' } } },
+        output_schema: { type: 'object', properties: { dispatched: { type: 'boolean' } } },
+        owner: 'CTO',
+        is_active: true,
+        version: '1.1.0',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'wf_golden_visa_audit',
+        name: 'Golden Visa & Escrow Law 8 Compliance Audit',
+        orchestrator: 'cloud_functions',
+        trigger_type: 'MANUAL',
+        input_schema: { type: 'object', properties: { propertyValueAed: { type: 'number' } } },
+        output_schema: { type: 'object', properties: { qualified: { type: 'boolean' } } },
+        owner: 'CTO',
+        is_active: true,
+        version: '1.0.0',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    for (const w of initialWorkflows) {
+      this.mockStore.core_workflow_registry.set(w.id, w);
+    }
+
+    // 4. Seed Knowledge Nodes
+    const initialNodes = [
+      {
+        id: 'node_uae_law8_escrow',
+        entity_type: 'REGULATION',
+        label: 'UAE Law No. 8 of 2007 (Escrow Account Framework)',
+        properties: { jurisdiction: 'Dubai', authority: 'RERA / DLD', escrow_retention_pct: 5, statutory_protection: 'STRICT' },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'node_golden_visa_res65_2022',
+        entity_type: 'REGULATION',
+        label: 'UAE Cabinet Resolution No. 65 of 2022 (Golden Visa)',
+        properties: { minimum_investment_aed: 2000000, duration_years: 10, mortgage_permitted: true },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'node_palm_jumeirah',
+        entity_type: 'MARKET_ZONE',
+        label: 'Palm Jumeirah Prime Freehold Zone',
+        properties: { avg_yield_pct: 7.4, capital_appreciation_yoy_pct: 16.2, freehold_status: true },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'node_como_residences',
+        entity_type: 'PROPERTY_ASSET',
+        label: 'Como Residences by Nakheel (Palm Jumeirah)',
+        properties: { developer: 'Nakheel', starting_price_aed: 21000000, escrow_number: 'ESC-2024-COMO', projected_yield_pct: 7.8 },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'node_pt_nhr_investor_profile',
+        entity_type: 'INVESTOR_PROFILE',
+        label: 'Portuguese NHR & Family Office Investor Thesis',
+        properties: { target_yield_min: 7.0, currency_hedge: 'AED_USD_PEGGED', tax_arbitrage_focus: 'ZERO_CAP_GAINS' },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: 'node_difc_foundation_shield',
+        entity_type: 'FRAMEWORK',
+        label: 'DIFC Foundation & Wealth Shielding Structure',
+        properties: { governance: 'Common Law', asset_protection: 'SOVEREIGN', regulatory_body: 'DFSA' },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ];
+
+    for (const n of initialNodes) {
+      this.mockStore.knowledge_nodes.set(n.id, n);
+    }
+
+    // 5. Seed Knowledge Edges
+    const initialEdges = [
+      {
+        id: 'edge_law8_governs_como',
+        source_node_id: 'node_uae_law8_escrow',
+        target_node_id: 'node_como_residences',
+        relationship_type: 'GOVERNS',
+        metadata: { escrow_verified: true, guarantee_held: '100% Ringfenced' },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'edge_gv_qualifies_pt_nhr',
+        source_node_id: 'node_como_residences',
+        target_node_id: 'node_golden_visa_res65_2022',
+        relationship_type: 'QUALIFIES_UNDER',
+        metadata: { threshold_exceeded_by_pct: 950 },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'edge_como_located_palm',
+        source_node_id: 'node_como_residences',
+        target_node_id: 'node_palm_jumeirah',
+        relationship_type: 'ALLOCATED_IN',
+        metadata: { prime_waterfront: true },
+        created_at: new Date().toISOString(),
+      },
+      {
+        id: 'edge_difc_shields_pt_nhr',
+        source_node_id: 'node_difc_foundation_shield',
+        target_node_id: 'node_pt_nhr_investor_profile',
+        relationship_type: 'SHIELDED_BY',
+        metadata: { trust_structure: 'Institutional Family Trust' },
+        created_at: new Date().toISOString(),
+      },
+    ];
+
+    for (const e of initialEdges) {
+      this.mockStore.knowledge_edges.set(e.id, e);
+    }
   }
 
   // --- Lead & Assessment Operations ---
@@ -803,67 +1156,28 @@ export class SupabaseClient {
   // --- Mission Control Fleet Telemetry & Approvals ---
 
   async fetchFleetStatus() {
-    const defaultRoster = [
-      {
-        agentId: 'jarvis_executive_brain',
-        name: 'JARVIS (CEO & Sovereign Executive Orchestrator)',
-        role: 'Chief Autonomous Orchestration Agent & Executive Brain',
-        status: 'IDLE',
-        currentTask: 'Autonomous cycle telemetry loop & sovereign asset indexing',
-        metrics: { latencyMs: 14, tasksCompleted: 142, tasksFailed: 0, learningScore: 98.5, efficiencyIndex: 99 },
-        lastHeartbeat: new Date().toISOString(),
-      },
-      {
-        agentId: 'mark_lead_triage',
-        name: 'MARK (Sales & Lead Triage Specialist)',
-        role: 'Lead Triage, Multi-Channel Ingestion & RIIS Scoring',
-        status: 'PROCESSING',
-        currentTask: 'Evaluating inbound sovereign family office allocation mandates',
-        metrics: { latencyMs: 18, tasksCompleted: 98, tasksFailed: 1, learningScore: 95.0, efficiencyIndex: 96 },
-        lastHeartbeat: new Date().toISOString(),
-      },
-      {
-        agentId: 'atlas_opal_calculator',
-        name: 'ATLAS (Google Opal & Prime Market Intelligence)',
-        role: 'Opal ROI Statutory Shielding & Real Estate Valuations',
-        status: 'IDLE',
-        currentTask: 'Calibrating Law 8 Escrow models and Golden Visa yield bands',
-        metrics: { latencyMs: 8, tasksCompleted: 215, tasksFailed: 0, learningScore: 99.2, efficiencyIndex: 100 },
-        lastHeartbeat: new Date().toISOString(),
-      },
-      {
-        agentId: 'aida_flow_mixboard',
-        name: 'AIDA (Flow & Mixboard Multimodal Generator)',
-        role: 'Client Relations, Flow Cinematic Video & Moodboard Engine',
-        status: 'IDLE',
-        currentTask: 'Synthesizing Palm Jumeirah & Aerotropolis concept boards',
-        metrics: { latencyMs: 24, tasksCompleted: 64, tasksFailed: 0, learningScore: 94.0, efficiencyIndex: 95 },
-        lastHeartbeat: new Date().toISOString(),
-      },
-      {
-        agentId: 'sentinel_devops_qa',
-        name: 'SENTINEL (DevOps, QA & Health Watchdog)',
-        role: 'Operational Watchdog, Telemetry Mesh & Fault Recovery',
-        status: 'IDLE',
-        currentTask: 'Continuous single-gateway latency & connector pulse verification',
-        metrics: { latencyMs: 4, tasksCompleted: 380, tasksFailed: 0, learningScore: 99.9, efficiencyIndex: 100 },
-        lastHeartbeat: new Date().toISOString(),
-      },
-      {
-        agentId: 'lex_compliance_visa',
-        name: 'LEX (Regulatory, Golden Visa & Tax Specialist)',
-        role: 'Statutory Shielding, Law 8 Escrow & DIFC Common Law Governance',
-        status: 'IDLE',
-        currentTask: 'Auditing 4% DLD fee exemptions & sovereign trust frameworks',
-        metrics: { latencyMs: 12, tasksCompleted: 112, tasksFailed: 0, learningScore: 97.4, efficiencyIndex: 98 },
-        lastHeartbeat: new Date().toISOString(),
-      },
-    ];
+    const coreAgents = await this.fetchCoreAgents();
+    const defaultRoster = coreAgents.map((a) => ({
+      agentId: a.id,
+      name: `${a.name} (${a.role.split('&')[0].trim()})`,
+      role: a.role,
+      status: 'IDLE',
+      currentTask: a.capabilities?.[0] ? `Executing: ${a.capabilities[0]}` : 'Awaiting autonomous dispatch trigger',
+      metrics: { latencyMs: 12, tasksCompleted: 100, tasksFailed: 0, learningScore: 98.0, efficiencyIndex: 99 },
+      lastHeartbeat: new Date().toISOString(),
+    }));
 
     if (this.isMock) {
       if (this.mockStore.agent_fleet_status.size === 0) {
         for (const agent of defaultRoster) {
           this.mockStore.agent_fleet_status.set(agent.agentId, agent);
+        }
+      } else {
+        // Ensure any newly added core agent is present
+        for (const agent of defaultRoster) {
+          if (!this.mockStore.agent_fleet_status.has(agent.agentId)) {
+            this.mockStore.agent_fleet_status.set(agent.agentId, agent);
+          }
         }
       }
       return Array.from(this.mockStore.agent_fleet_status.values());
@@ -1183,10 +1497,549 @@ export class SupabaseClient {
     }
   }
 
+  // --- Enterprise Core: Agent Registry Operations ---
+
+  async fetchCoreAgents(query = {}) {
+    if (this.isMock) {
+      let agents = Array.from(this.mockStore.core_agent_registry.values());
+      if (query.status) {
+        agents = agents.filter((a) => a.status.toLowerCase() === query.status.toLowerCase());
+      }
+      if (query.capability) {
+        agents = agents.filter((a) => Array.isArray(a.capabilities) && a.capabilities.includes(query.capability));
+      }
+      if (query.role) {
+        agents = agents.filter((a) => a.role.toLowerCase().includes(query.role.toLowerCase()));
+      }
+      if (query.model) {
+        agents = agents.filter((a) => a.model.toLowerCase() === query.model.toLowerCase());
+      }
+      return agents;
+    }
+
+    try {
+      let q = `${this.url}/rest/v1/core_agent_registry?select=*`;
+      if (query.status) q += `&status=eq.${query.status}`;
+      if (query.model) q += `&model=eq.${query.model}`;
+      const res = await fetch(q, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`Supabase fetchCoreAgents error: ${res.status}`);
+      let data = await res.json();
+      if (query.capability) {
+        data = data.filter((a) => Array.isArray(a.capabilities) && a.capabilities.includes(query.capability));
+      }
+      return data;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch core agents', { error: err.message });
+      return Array.from(this.mockStore.core_agent_registry.values());
+    }
+  }
+
+  async getCoreAgent(id) {
+    if (this.isMock) {
+      return this.mockStore.core_agent_registry.get(id) || null;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_agent_registry?id=eq.${id}&select=*`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list[0] || null;
+    } catch {
+      return this.mockStore.core_agent_registry.get(id) || null;
+    }
+  }
+
+  async upsertCoreAgent(agentData = {}) {
+    const record = {
+      id: agentData.id || `agent_${Date.now()}`,
+      name: agentData.name || 'Autonomous Agent',
+      role: agentData.role || 'Specialist',
+      model: agentData.model || 'gemini-2.5-flash',
+      capabilities: agentData.capabilities || [],
+      permissions: agentData.permissions || [],
+      cost_budget: agentData.cost_budget || { monthly_limit_usd: 500, current_spend_usd: 0, currency: 'USD' },
+      version: agentData.version || '1.0.0',
+      owner: agentData.owner || 'CTO',
+      status: agentData.status || 'ACTIVE',
+      metadata: agentData.metadata || {},
+      created_at: agentData.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.core_agent_registry.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_agent_registry`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (!res.ok) throw new Error(`Supabase upsertCoreAgent error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || record;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to upsert core agent', { error: err.message });
+      this.mockStore.core_agent_registry.set(record.id, record);
+      return record;
+    }
+  }
+
+  async deleteCoreAgent(id) {
+    if (this.isMock) {
+      const existed = this.mockStore.core_agent_registry.has(id);
+      this.mockStore.core_agent_registry.delete(id);
+      return existed;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_agent_registry?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+        },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  // --- Enterprise Core: Tool Registry Operations ---
+
+  async fetchCoreTools(query = {}) {
+    if (this.isMock) {
+      let tools = Array.from(this.mockStore.core_tool_registry.values());
+      if (query.category) {
+        tools = tools.filter((t) => t.category.toLowerCase() === query.category.toLowerCase());
+      }
+      if (query.health_status || query.health) {
+        const h = query.health_status || query.health;
+        tools = tools.filter((t) => t.health_status.toLowerCase() === h.toLowerCase());
+      }
+      return tools;
+    }
+
+    try {
+      let q = `${this.url}/rest/v1/core_tool_registry?select=*`;
+      if (query.category) q += `&category=eq.${query.category}`;
+      if (query.health_status) q += `&health_status=eq.${query.health_status}`;
+      const res = await fetch(q, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`Supabase fetchCoreTools error: ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch core tools', { error: err.message });
+      return Array.from(this.mockStore.core_tool_registry.values());
+    }
+  }
+
+  async getCoreTool(id) {
+    if (this.isMock) {
+      return this.mockStore.core_tool_registry.get(id) || null;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_tool_registry?id=eq.${id}&select=*`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list[0] || null;
+    } catch {
+      return this.mockStore.core_tool_registry.get(id) || null;
+    }
+  }
+
+  async upsertCoreTool(toolData = {}) {
+    const record = {
+      id: toolData.id || `tool_${Date.now()}`,
+      name: toolData.name || 'Enterprise Tool',
+      category: toolData.category || 'AI_MODEL',
+      health_status: toolData.health_status || 'HEALTHY',
+      latency_ms: Number(toolData.latency_ms) || 15,
+      quota_limits: toolData.quota_limits || { rate_limit_per_min: 120, daily_quota: 20000 },
+      dependencies: toolData.dependencies || [],
+      metadata: toolData.metadata || {},
+      created_at: toolData.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.core_tool_registry.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_tool_registry`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (!res.ok) throw new Error(`Supabase upsertCoreTool error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || record;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to upsert core tool', { error: err.message });
+      this.mockStore.core_tool_registry.set(record.id, record);
+      return record;
+    }
+  }
+
+  // --- Enterprise Core: Workflow Registry Operations ---
+
+  async fetchCoreWorkflows(query = {}) {
+    if (this.isMock) {
+      let workflows = Array.from(this.mockStore.core_workflow_registry.values());
+      if (query.is_active !== undefined) {
+        const boolActive = query.is_active === true || query.is_active === 'true';
+        workflows = workflows.filter((w) => w.is_active === boolActive);
+      }
+      if (query.orchestrator) {
+        workflows = workflows.filter((w) => w.orchestrator.toLowerCase() === query.orchestrator.toLowerCase());
+      }
+      if (query.trigger_type) {
+        workflows = workflows.filter((w) => w.trigger_type.toLowerCase() === query.trigger_type.toLowerCase());
+      }
+      return workflows;
+    }
+
+    try {
+      let q = `${this.url}/rest/v1/core_workflow_registry?select=*`;
+      if (query.is_active !== undefined) q += `&is_active=eq.${query.is_active}`;
+      if (query.orchestrator) q += `&orchestrator=eq.${query.orchestrator}`;
+      const res = await fetch(q, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`Supabase fetchCoreWorkflows error: ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch core workflows', { error: err.message });
+      return Array.from(this.mockStore.core_workflow_registry.values());
+    }
+  }
+
+  async getCoreWorkflow(id) {
+    if (this.isMock) {
+      return this.mockStore.core_workflow_registry.get(id) || null;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_workflow_registry?id=eq.${id}&select=*`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list[0] || null;
+    } catch {
+      return this.mockStore.core_workflow_registry.get(id) || null;
+    }
+  }
+
+  async upsertCoreWorkflow(workflowData = {}) {
+    const record = {
+      id: workflowData.id || `wf_${Date.now()}`,
+      name: workflowData.name || 'Automation Workflow',
+      orchestrator: workflowData.orchestrator || 'raioc_event_bus',
+      trigger_type: workflowData.trigger_type || 'EVENT',
+      input_schema: workflowData.input_schema || {},
+      output_schema: workflowData.output_schema || {},
+      owner: workflowData.owner || 'CTO',
+      is_active: workflowData.is_active !== false,
+      version: workflowData.version || '1.0.0',
+      metadata: workflowData.metadata || {},
+      created_at: workflowData.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.core_workflow_registry.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/core_workflow_registry`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (!res.ok) throw new Error(`Supabase upsertCoreWorkflow error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || record;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to upsert core workflow', { error: err.message });
+      this.mockStore.core_workflow_registry.set(record.id, record);
+      return record;
+    }
+  }
+
+  // --- Enterprise Knowledge Graph Operations ---
+
+  async fetchKnowledgeGraph(options = {}) {
+    if (this.isMock) {
+      let nodes = Array.from(this.mockStore.knowledge_nodes.values());
+      let edges = Array.from(this.mockStore.knowledge_edges.values());
+
+      if (options.entity_type) {
+        nodes = nodes.filter((n) => n.entity_type.toLowerCase() === options.entity_type.toLowerCase());
+        const validNodeIds = new Set(nodes.map((n) => n.id));
+        edges = edges.filter((e) => validNodeIds.has(e.source_node_id) || validNodeIds.has(e.target_node_id));
+      }
+
+      if (options.nodeId) {
+        const connectedEdges = edges.filter((e) => e.source_node_id === options.nodeId || e.target_node_id === options.nodeId);
+        const relatedNodeIds = new Set([options.nodeId, ...connectedEdges.map((e) => e.source_node_id), ...connectedEdges.map((e) => e.target_node_id)]);
+        nodes = nodes.filter((n) => relatedNodeIds.has(n.id));
+        edges = connectedEdges;
+      }
+
+      if (options.relationship_type) {
+        edges = edges.filter((e) => e.relationship_type.toLowerCase() === options.relationship_type.toLowerCase());
+      }
+
+      return {
+        nodes,
+        edges,
+        stats: {
+          totalNodes: nodes.length,
+          totalEdges: edges.length,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }
+
+    try {
+      const [nodesRes, edgesRes] = await Promise.all([
+        fetch(`${this.url}/rest/v1/knowledge_nodes?select=*`, {
+          headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+        }),
+        fetch(`${this.url}/rest/v1/knowledge_edges?select=*`, {
+          headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+        }),
+      ]);
+
+      const nodes = nodesRes.ok ? await nodesRes.json() : [];
+      const edges = edgesRes.ok ? await edgesRes.json() : [];
+
+      return {
+        nodes,
+        edges,
+        stats: {
+          totalNodes: nodes.length,
+          totalEdges: edges.length,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch knowledge graph', { error: err.message });
+      return {
+        nodes: Array.from(this.mockStore.knowledge_nodes.values()),
+        edges: Array.from(this.mockStore.knowledge_edges.values()),
+        stats: {
+          totalNodes: this.mockStore.knowledge_nodes.size,
+          totalEdges: this.mockStore.knowledge_edges.size,
+          timestamp: new Date().toISOString(),
+        },
+      };
+    }
+  }
+
+  async getKnowledgeNode(id) {
+    if (this.isMock) {
+      return this.mockStore.knowledge_nodes.get(id) || null;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/knowledge_nodes?id=eq.${id}&select=*`, {
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list[0] || null;
+    } catch {
+      return this.mockStore.knowledge_nodes.get(id) || null;
+    }
+  }
+
+  async upsertKnowledgeNode(nodeData = {}) {
+    const record = {
+      id: nodeData.id || `node_${Date.now()}`,
+      entity_type: nodeData.entity_type || nodeData.entityType || 'FRAMEWORK',
+      label: nodeData.label || 'Entity Node',
+      properties: nodeData.properties || {},
+      created_at: nodeData.created_at || new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.knowledge_nodes.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/knowledge_nodes`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (!res.ok) throw new Error(`Supabase upsertKnowledgeNode error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || record;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to upsert knowledge node', { error: err.message });
+      this.mockStore.knowledge_nodes.set(record.id, record);
+      return record;
+    }
+  }
+
+  async deleteKnowledgeNode(id) {
+    if (this.isMock) {
+      const existed = this.mockStore.knowledge_nodes.has(id);
+      this.mockStore.knowledge_nodes.delete(id);
+      // Cascade delete connected edges
+      for (const [edgeId, edge] of this.mockStore.knowledge_edges.entries()) {
+        if (edge.source_node_id === id || edge.target_node_id === id) {
+          this.mockStore.knowledge_edges.delete(edgeId);
+        }
+      }
+      return existed;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/knowledge_nodes?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
+  async getKnowledgeEdge(id) {
+    if (this.isMock) {
+      return this.mockStore.knowledge_edges.get(id) || null;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/knowledge_edges?id=eq.${id}&select=*`, {
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      if (!res.ok) return null;
+      const list = await res.json();
+      return list[0] || null;
+    } catch {
+      return this.mockStore.knowledge_edges.get(id) || null;
+    }
+  }
+
+  async upsertKnowledgeEdge(edgeData = {}) {
+    const record = {
+      id: edgeData.id || `edge_${Date.now()}`,
+      source_node_id: edgeData.source_node_id || edgeData.sourceNodeId || '',
+      target_node_id: edgeData.target_node_id || edgeData.targetNodeId || '',
+      relationship_type: edgeData.relationship_type || edgeData.relationshipType || 'LINKED_TO',
+      metadata: edgeData.metadata || {},
+      created_at: edgeData.created_at || new Date().toISOString(),
+    };
+
+    if (this.isMock) {
+      this.mockStore.knowledge_edges.set(record.id, record);
+      return record;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/knowledge_edges`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'resolution=merge-duplicates,return=representation',
+        },
+        body: JSON.stringify(record),
+      });
+      if (!res.ok) throw new Error(`Supabase upsertKnowledgeEdge error: ${res.statusText}`);
+      const data = await res.json();
+      return data[0] || record;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to upsert knowledge edge', { error: err.message });
+      this.mockStore.knowledge_edges.set(record.id, record);
+      return record;
+    }
+  }
+
+  async deleteKnowledgeEdge(id) {
+    if (this.isMock) {
+      const existed = this.mockStore.knowledge_edges.has(id);
+      this.mockStore.knowledge_edges.delete(id);
+      return existed;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/knowledge_edges?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
+
   getOperationalStoreSnapshot() {
     return {
       agents: Array.from(this.mockStore.agent_status.values()),
       fleet: Array.from(this.mockStore.agent_fleet_status.values()),
+      coreAgents: Array.from(this.mockStore.core_agent_registry.values()),
+      coreTools: Array.from(this.mockStore.core_tool_registry.values()),
+      coreWorkflows: Array.from(this.mockStore.core_workflow_registry.values()),
+      knowledgeNodes: Array.from(this.mockStore.knowledge_nodes.values()),
+      knowledgeEdges: Array.from(this.mockStore.knowledge_edges.values()),
       approvals: this.mockStore.executive_approvals,
       interactions: this.mockStore.interaction_logs,
       connectors: Array.from(this.mockStore.connector_health.values()),
@@ -1200,4 +2053,5 @@ export class SupabaseClient {
 }
 
 export const supabase = new SupabaseClient();
+
 
