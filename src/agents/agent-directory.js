@@ -59,6 +59,10 @@ export class AgentDirectory {
     return Array.from(this.agents.values()).map((a) => a.getStatus());
   }
 
+  getAllAgents() {
+    return Array.from(this.agents.values());
+  }
+
   enableAutonomousMesh() {
     for (const agent of this.agents.values()) {
       if (typeof agent.enableAutonomousMesh === 'function') {

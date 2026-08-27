@@ -35,6 +35,15 @@ class MemoryRssMonitor {
     };
   }
 
+  getMetrics() {
+    const mem = this.getMemoryMetrics();
+    return {
+      ...mem,
+      warningThresholdMb: MEMORY_THRESHOLDS.WARNING_MB,
+      criticalThresholdMb: MEMORY_THRESHOLDS.CRITICAL_MB,
+    };
+  }
+
   /**
    * Performs an immediate memory health check and triggers warnings / drains if thresholds are exceeded
    * @param {Function} [onCriticalDrain] - Optional callback to invoke when RSS exceeds 250MB in persistent mode

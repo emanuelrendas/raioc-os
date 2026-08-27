@@ -121,6 +121,7 @@ export async function generatePrivateBrief(params = {}) {
     locale: targetLocale,
     documentMarkdown,
     documentSha256,
+    sha256Hash: documentSha256,
     statutoryValidation: {
       escrowLawCompliant: true,
       escrowReference: corridor.regulatory_anchors.escrow_law,
