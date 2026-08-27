@@ -5,6 +5,13 @@
 import { secretsManager } from './secrets-manager.js';
 
 export function isServerlessRuntime() {
+  if (
+    process.env.RUNTIME_MODE === 'persistent_daemon' ||
+    process.env.RUNTIME_MODE === 'container' ||
+    process.env.DAEMON_MODE === 'true'
+  ) {
+    return false;
+  }
   return Boolean(
     process.env.VERCEL === '1' ||
     process.env.AWS_LAMBDA_FUNCTION_NAME ||

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  raioc-os:
+    container_name: raioc-os-daemon
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: raioc-os:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - RUNTIME_MODE=persistent_daemon
+      - DAEMON_MODE=true
+      - PORT=3000
+      - INTERNAL_SERVICE_KEY=${INTERNAL_SERVICE_KEY:-raioc_sovereign_auth_2026_x99}
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY:-}
+      - WHATSAPP_ACCESS_TOKEN=${WHATSAPP_ACCESS_TOKEN:-}
+      - WHATSAPP_PHONE_NUMBER_ID=${WHATSAPP_PHONE_NUMBER_ID:-}
+      - WHATSAPP_WEBHOOK_SECRET=${WHATSAPP_WEBHOOK_SECRET:-wa_sec_secret_key_888}
+      - N8N_WEBHOOK_SECRET=${N8N_WEBHOOK_SECRET:-n8n_sec_secret_key_999}
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2048M
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "node", "-e", "const http = require('http'); const req = http.get('http://localhost:' + (process.env.PORT || 3000) + '/api/v1/mission-control/v1-state', (res) => process.exit(res.statusCode >= 200 && res.statusCode < 400 ? 0 : 1)); req.on('error', () => process.exit(1)); req.setTimeout(4000, () => { req.destroy(); process.exit(1); });"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s

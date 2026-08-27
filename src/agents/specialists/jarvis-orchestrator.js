@@ -140,6 +140,10 @@ export class JarvisOrchestrator extends BaseSpecialistAgent {
     };
   }
 
+  start(intervalMs = 30000) {
+    return this.startContinuousExecutiveLoop(intervalMs);
+  }
+
   stopContinuousExecutiveLoop() {
     if (this.loopTimer) {
       clearInterval(this.loopTimer);
@@ -147,6 +151,10 @@ export class JarvisOrchestrator extends BaseSpecialistAgent {
     }
     this.isLoopRunning = false;
     logger.info('JARVIS', 'Stopped continuous JOS executive loop.');
+  }
+
+  stop() {
+    return this.stopContinuousExecutiveLoop();
   }
 
   /**

@@ -273,6 +273,10 @@ export class SentinelMeshMonitor {
     logger.info('SENTINEL_PROBE', `Autonomous 60s mesh probing started (Interval: ${intervalMs}ms)`);
   }
 
+  start(intervalMs = 60000) {
+    return this.startMeshProbing(intervalMs);
+  }
+
   /**
    * Stops background probing
    */
@@ -282,6 +286,10 @@ export class SentinelMeshMonitor {
       this.probeTimer = null;
     }
     this.isProbingActive = false;
+  }
+
+  stop() {
+    return this.stopMeshProbing();
   }
 }
 
