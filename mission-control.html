@@ -1643,6 +1643,27 @@
     // =========================================================================
     // LIVE VOICE SYSTEM (CHATGPT / GEMINI LIVE FLUID ORB & BIDIRECTIONAL STREAM)
     // =========================================================================
+    // Global Micro-Energy RMS Calculator for Web Audio & Continuous VAD
+    function calculateMicRmsEnergy(analyserNodeParam, dataArrayParam) {
+      const node = analyserNodeParam || (typeof analyserNode !== 'undefined' ? analyserNode : null);
+      if (!node) return 0;
+      try {
+        const timeData = dataArrayParam || new Uint8Array(node.frequencyBinCount);
+        node.getByteTimeDomainData(timeData);
+        let sum = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          const val = (timeData[i] - 128) / 128;
+          sum += val * val;
+        }
+        return Math.sqrt(sum / timeData.length);
+      } catch (_) {
+        return 0;
+      }
+    }
+    if (typeof window !== 'undefined') {
+      window.calculateMicRmsEnergy = calculateMicRmsEnergy;
+    }
+
     let voiceSessionActive = false;
     let audioContext = null;
     let analyserNode = null;
@@ -1957,7 +1978,7 @@ Orquestras e delegas com precisão para:
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
               console.warn('[VOICE_ENGINE:MIC_WARN] Microphone permission not granted, utilizing synthetic audio simulator:', err);
-              reportVoiceTelemetry('VOICE_MIC_DENIED', { error: err.message });
+              reportVoiceTelemetry('VOICE_MIC_DENIED', { error: err.name || err.message });
               return null;
             });
 
@@ -1965,24 +1986,9 @@ Orquestras e delegas com precisão para:
               const source = audioContext.createMediaStreamSource(micStream);
               source.connect(analyserNode);
               reportVoiceTelemetry('VOICE_MIC_CONNECTED');
+            } else {
+              setTranscriptCaption('[⚠️ MICROFONE BLOQUEADO NO NAVEGADOR] Ative o microfone nas permissões do browser ou envie mensagens por texto abaixo.');
             }
-          }
-        }
-
-        // Calculate RMS energy on microphone stream for continuous Voice Activity Detection (VAD)
-        function calculateMicRmsEnergy() {
-          if (!analyserNode) return 0;
-          try {
-            const timeData = new Uint8Array(analyserNode.frequencyBinCount);
-            analyserNode.getByteTimeDomainData(timeData);
-            let sumSquares = 0;
-            for (let i = 0; i < timeData.length; i++) {
-              const norm = (timeData[i] - 128) / 128;
-              sumSquares += norm * norm;
-            }
-            return Math.sqrt(sumSquares / timeData.length);
-          } catch (_) {
-            return 0;
           }
         }
 
@@ -2402,18 +2408,26 @@ Orquestras e delegas com precisão para:
 
         let audioVolume = 0;
         let rmsEnergy = 0;
-        if (analyserNode && !isMicMuted) {
-          analyserNode.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-          audioVolume = sum / (dataArray.length * 255);
-          rmsEnergy = calculateMicRmsEnergy();
-        } else {
-          // Synthetic breathing volume
-          audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
-          if (voiceState === 'speaking') {
-            audioVolume = (Math.sin(t * 8) + Math.cos(t * 12) + 2) * 0.22;
+        try {
+          if (analyserNode && !isMicMuted) {
+            const freqData = dataArray || new Uint8Array(analyserNode.frequencyBinCount);
+            analyserNode.getByteFrequencyData(freqData);
+            let sum = 0;
+            for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+            audioVolume = sum / (freqData.length * 255);
+            if (typeof calculateMicRmsEnergy === 'function') {
+              rmsEnergy = calculateMicRmsEnergy(analyserNode, freqData);
+            }
+          } else {
+            // Synthetic breathing volume
+            audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
+            if (voiceState === 'speaking') {
+              audioVolume = (Math.sin(t * 8) + Math.cos(t * 12) + 2) * 0.22;
+            }
           }
+        } catch (_) {
+          audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
+          rmsEnergy = 0;
         }
 
         // Real-Time Continuous Voice Activity Detection (VAD) via RMS

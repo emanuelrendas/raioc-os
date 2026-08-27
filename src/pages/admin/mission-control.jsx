@@ -9,6 +9,26 @@ import React, { useState, useEffect, useCallback } from 'react';
  * - Event JSON Payload Inspector
  */
 
+// Global Micro-Energy RMS Calculator for Web Audio & Continuous VAD
+export function calculateMicRmsEnergy(analyserNode, dataArray) {
+  if (!analyserNode) return 0;
+  try {
+    const timeData = dataArray || new Uint8Array(analyserNode.frequencyBinCount);
+    analyserNode.getByteTimeDomainData(timeData);
+    let sum = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const val = (timeData[i] - 128) / 128;
+      sum += val * val;
+    }
+    return Math.sqrt(sum / timeData.length);
+  } catch (_) {
+    return 0;
+  }
+}
+if (typeof window !== 'undefined') {
+  window.calculateMicRmsEnergy = calculateMicRmsEnergy;
+}
+
 export default function MissionControlDashboard() {
   const [state, setState] = useState(null);
   const [activeTab, setActiveTab] = useState('overview');
@@ -631,23 +651,6 @@ Orquestras e delegas com precisão para:
     }
   };
 
-  // Calculate RMS energy on microphone stream for continuous Voice Activity Detection (VAD)
-  const calculateMicRmsEnergy = () => {
-    if (!analyserRef.current) return 0;
-    try {
-      const timeData = new Uint8Array(analyserRef.current.frequencyBinCount);
-      analyserRef.current.getByteTimeDomainData(timeData);
-      let sumSquares = 0;
-      for (let i = 0; i < timeData.length; i++) {
-        const norm = (timeData[i] - 128) / 128;
-        sumSquares += norm * norm;
-      }
-      return Math.sqrt(sumSquares / timeData.length);
-    } catch (_) {
-      return 0;
-    }
-  };
-
   // Live Voice Session Controls (ChatGPT / Gemini Live style)
   const startLiveVoiceSession = async () => {
     console.log('[VOICE_ENGINE:INIT] Live Voice Session Initiated');
@@ -668,7 +671,8 @@ Orquestras e delegas com precisão para:
         if (navigator.mediaDevices?.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
             console.warn('[VOICE_ENGINE:MIC_WARN] Microphone permission not granted:', err);
-            reportVoiceTelemetry('VOICE_MIC_DENIED', { error: err.message });
+            reportVoiceTelemetry('VOICE_MIC_DENIED', { error: err.name || err.message });
+            setVoiceTranscript('[⚠️ MICROFONE BLOQUEADO NO NAVEGADOR] Ative o microfone nas permissões do browser ou envie mensagens por texto abaixo.');
             return null;
           });
           if (stream) {
@@ -799,17 +803,25 @@ Orquestras e delegas com precisão para:
 
       let audioVolume = 0;
       let rmsEnergy = 0;
-      if (analyserRef.current && !isMicMuted) {
-        analyserRef.current.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
-        audioVolume = sum / (dataArray.length * 255);
-        rmsEnergy = calculateMicRmsEnergy();
-      } else {
-        audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
-        if (voiceState === 'speaking') {
-          audioVolume = (Math.sin(t * 8) + Math.cos(t * 12) + 2) * 0.22;
+      try {
+        if (analyserRef.current && !isMicMuted) {
+          const freqData = dataArray || new Uint8Array(analyserRef.current.frequencyBinCount);
+          analyserRef.current.getByteFrequencyData(freqData);
+          let sum = 0;
+          for (let i = 0; i < freqData.length; i++) sum += freqData[i];
+          audioVolume = sum / (freqData.length * 255);
+          if (typeof calculateMicRmsEnergy === 'function') {
+            rmsEnergy = calculateMicRmsEnergy(analyserRef.current, freqData);
+          }
+        } else {
+          audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
+          if (voiceState === 'speaking') {
+            audioVolume = (Math.sin(t * 8) + Math.cos(t * 12) + 2) * 0.22;
+          }
         }
+      } catch (_) {
+        audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
+        rmsEnergy = 0;
       }
 
       // Real-Time Continuous Voice Activity Detection (VAD) via RMS

@@ -391,15 +391,17 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.ok(res.body.includes('event: done\n'), 'Must emit done event');
   });
 
-  it('23. Client MediaRecorder Audio Pipeline: mission-control.html contains MediaRecorder, recordedAudioChunks, and RMS VAD', async () => {
+  it('23. Client MediaRecorder Audio Pipeline: mission-control.html contains MediaRecorder, recordedAudioChunks, global calculateMicRmsEnergy and mic permission fallback', async () => {
     const fs = await import('node:fs');
     const html = fs.readFileSync('mission-control.html', 'utf8');
 
     assert.ok(html.includes('MediaRecorder'), 'Must initialize MediaRecorder');
     assert.ok(html.includes('recordedAudioChunks'), 'Must accumulate recorded audio chunks');
-    assert.ok(html.includes('calculateMicRmsEnergy()'), 'Must calculate RMS energy for continuous VAD');
+    assert.ok(html.includes('function calculateMicRmsEnergy'), 'Must define calculateMicRmsEnergy globally');
+    assert.ok(html.includes('window.calculateMicRmsEnergy = calculateMicRmsEnergy'), 'Must expose calculateMicRmsEnergy on window');
     assert.ok(html.includes('[🎙️ A GRAVAR VOZ]'), 'Must show recording voice telemetry caption');
     assert.ok(html.includes('[🟡 A PENSAR / GEMINI]'), 'Must show thinking voice telemetry caption');
+    assert.ok(html.includes('[⚠️ MICROFONE BLOQUEADO NO NAVEGADOR]'), 'Must show microphone blocked warning when permission is denied');
     assert.ok(html.includes('audio: options.audio'), 'Must transmit audio payload to /stream');
   });
 });
