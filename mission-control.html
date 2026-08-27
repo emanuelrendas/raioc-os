@@ -1964,6 +1964,23 @@ Orquestras e delegas com precisão para:
           }
         }
 
+    // Calculate RMS energy on microphone stream to prevent premature cutoff on respiratory micro-pauses
+    function calculateMicRmsEnergy() {
+      if (!analyserNode) return 0;
+      try {
+        const timeData = new Uint8Array(analyserNode.frequencyBinCount);
+        analyserNode.getByteTimeDomainData(timeData);
+        let sumSquares = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          const norm = (timeData[i] - 128) / 128;
+          sumSquares += norm * norm;
+        }
+        return Math.sqrt(sumSquares / timeData.length);
+      } catch (_) {
+        return 0;
+      }
+    }
+
         // Initialize Speech Recognition with adaptive low-latency VAD (500ms - 650ms)
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRec) {
@@ -2012,11 +2029,27 @@ Orquestras e delegas com precisão para:
 
               if (silenceTimer) clearTimeout(silenceTimer);
               silenceTimer = setTimeout(() => {
+                // RMS Energy check to prevent premature cutoff during natural respiratory micro-pauses (< 400ms)
+                const rms = calculateMicRmsEnergy();
+                if (rms > 0.035 && !isBotSpeaking) {
+                  // User is still vocalizing or breathing actively, extend silence timer by 350ms
+                  silenceTimer = setTimeout(() => {
+                    if (accumulatedTranscript && accumulatedTranscript.length > 2 && voiceState === 'listening') {
+                      const toProcess = accumulatedTranscript;
+                      accumulatedTranscript = '';
+                      console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD RMS-Validated Silence Triggered: "' + toProcess + '" (RMS: ' + rms.toFixed(3) + ')');
+                      reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: toProcess.length, wordCount, rms });
+                      processVoiceDirective(toProcess);
+                    }
+                  }, 350);
+                  return;
+                }
+
                 if (accumulatedTranscript && accumulatedTranscript.length > 2 && voiceState === 'listening') {
                   const toProcess = accumulatedTranscript;
                   accumulatedTranscript = '';
-                  console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + toProcess + '"');
-                  reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: toProcess.length, wordCount });
+                  console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + toProcess + '" (RMS: ' + rms.toFixed(3) + ')');
+                  reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: toProcess.length, wordCount, rms });
                   processVoiceDirective(toProcess);
                 }
               }, silenceDelay);

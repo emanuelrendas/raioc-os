@@ -75,6 +75,40 @@ export class SupabaseClient {
     return null;
   }
 
+  /**
+   * Warmup query executing SELECT 1 FROM core_agent_registry LIMIT 1
+   * Enforces fail-closed in production if connection fails.
+   */
+  async warmupDatabase() {
+    if (this.isStrictProduction && (!this.url || !this.key)) {
+      const errMsg = 'FATAL: Supabase database connection failed in production during daemon warmup: Missing database credentials.';
+      logger.error('SUPABASE', errMsg);
+      throw new Error(errMsg);
+    }
+    if (this.url && this.key) {
+      try {
+        const res = await fetch(`${this.url}/rest/v1/core_agent_registry?select=id&limit=1`, {
+          method: 'GET',
+          headers: {
+            'apikey': this.key,
+            'Authorization': `Bearer ${this.key}`,
+          },
+        });
+        if (!res.ok && this.isStrictProduction) {
+          throw new Error(`FATAL: Supabase warmup query returned HTTP ${res.status}`);
+        }
+        logger.info('SUPABASE', 'Database connection warmed up successfully (SELECT 1 FROM core_agent_registry LIMIT 1).');
+        return true;
+      } catch (err) {
+        if (this.isStrictProduction) {
+          logger.error('SUPABASE', `FATAL: Database connection warmup failed in production: ${err.message}`);
+          throw err;
+        }
+      }
+    }
+    return true;
+  }
+
   initEnterpriseCoreSeeds() {
     // 1. Seed Core Agents
     const initialAgents = [
