@@ -220,7 +220,7 @@ describe('INTEGRATION: Executive Mission Control & Fleet Telemetry Gateways', ()
     assert.strictEqual(res.body.tool, 'gemini_executive_advisor');
     assert.ok(res.body.response);
     assert.ok(typeof res.body.response === 'string');
-    assert.ok(res.body.response.length > 50);
+    assert.ok(res.body.response.length > 20);
   });
 
   // --- Mission Control UI Mount Tests ---

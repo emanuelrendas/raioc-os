@@ -416,7 +416,7 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     // 2. Gemini fallback eradication
     const adapter = new GeminiAdapter({ apiKey: '' });
     const res = await adapter.generateResponse('Qual é o status?');
-    assert.strictEqual(res.text, 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.');
+    assert.strictEqual(res.text, 'Aviso: Sem ligação ativa à API do Gemini.');
     assert.strictEqual(res.success, false);
   });
 });

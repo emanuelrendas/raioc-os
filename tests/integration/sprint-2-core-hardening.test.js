@@ -226,7 +226,7 @@ describe('INTEGRATION: Sprint 2 Core Hardening & Architecture Verification', () 
       forceProvider: 'fallback',
     });
     assert.strictEqual(fallbackRes.provider, 'deterministic_sovereign_fallback');
-    assert.ok(fallbackRes.text.includes('dificuldade em contactar a API do Gemini'));
+    assert.ok(fallbackRes.text.includes('Sem ligação ativa à API do Gemini'));
     assert.strictEqual(fallbackRes.fallback, true);
 
     // 4. Test Circuit Breaker failure tripping

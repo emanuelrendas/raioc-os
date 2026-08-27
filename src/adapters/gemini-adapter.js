@@ -173,7 +173,7 @@ export class GeminiAdapter {
     }
 
     // 2. Clear Conversational Notification when Gemini is unavailable
-    const fallbackText = 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.';
+    const fallbackText = 'Aviso: Sem ligação ativa à API do Gemini.';
     return {
       success: false,
       model: this.model,

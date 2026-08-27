@@ -589,7 +589,7 @@ Orquestras e delegas com precisão para:
         }
       } else {
         const data = await res.json();
-        const reply = data.text || 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.';
+        const reply = data.text || 'Aviso: Sem ligação ativa à API do Gemini.';
         voiceConversationHistoryRef.current.push({ role: 'model', text: reply });
         if (data.audioBase64 && !data.fallbackRequired) {
           await playNeuralAudio(data.audioBase64, reply, false);
@@ -605,7 +605,7 @@ Orquestras e delegas com precisão para:
       }
       console.warn('[VOICE_ENGINE:STREAM_FAIL] Stream error, switching to natural fallback:', err);
       reportVoiceTelemetry('VOICE_REQUEST_FAILED', { error: err.message });
-      const fallbackText = 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.';
+      const fallbackText = 'Aviso: Sem ligação ativa à API do Gemini.';
       voiceConversationHistoryRef.current.push({ role: 'model', text: fallbackText });
       speakNaturalVoiceFallback(fallbackText);
     } finally {

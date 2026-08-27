@@ -139,7 +139,7 @@ export class FallbackAdapter {
   }
 
   async generate(prompt, context = {}) {
-    const fallbackText = 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.';
+    const fallbackText = 'Aviso: Sem ligação ativa à API do Gemini.';
     return {
       provider: 'deterministic_sovereign_fallback',
       model: this.model,

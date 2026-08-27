@@ -197,7 +197,7 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
       body: {
         success: false,
         error: err.message,
-        text: 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.',
+        text: 'Aviso: Sem ligação ativa à API do Gemini.',
         latencyMs: Date.now() - startTime,
       },
     };
