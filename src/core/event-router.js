@@ -128,10 +128,19 @@ export class EnterpriseEventRouter {
 
       // Parse estimated budget if provided
       let budgetAed = 5000000;
-      const matchAed = text.match(/(\d+[\d,.]*)\s*(m|million|aed|dirhams)/i);
-      if (matchAed) {
-        const num = parseFloat(matchAed[1].replace(/,/g, ''));
-        budgetAed = matchAed[2].toLowerCase().startsWith('m') ? num * 1000000 : num;
+      const matchNumberM = text.match(/(\d+[\d,.]*)\s*(m|million)/i);
+      const matchAedPrefix = text.match(/aed\s*(\d+[\d,.]*)/i);
+      const matchAedSuffix = text.match(/(\d+[\d,.]*)\s*(aed|dirhams)/i);
+
+      if (matchNumberM) {
+        const num = parseFloat(matchNumberM[1].replace(/,/g, ''));
+        budgetAed = num * 1000000;
+      } else if (matchAedPrefix) {
+        const num = parseFloat(matchAedPrefix[1].replace(/,/g, ''));
+        budgetAed = num >= 1000 ? num : num * 1000000;
+      } else if (matchAedSuffix) {
+        const num = parseFloat(matchAedSuffix[1].replace(/,/g, ''));
+        budgetAed = num >= 1000 ? num : num * 1000000;
       }
 
       leadDetails = {
@@ -292,10 +301,19 @@ export class EnterpriseEventRouter {
 
       // Parse estimated budget if provided
       let budgetAed = 5000000;
-      const matchAed = text.match(/(\d+[\d,.]*)\s*(m|million|aed|dirhams)/i);
-      if (matchAed) {
-        const num = parseFloat(matchAed[1].replace(/,/g, ''));
-        budgetAed = matchAed[2].toLowerCase().startsWith('m') ? num * 1000000 : num;
+      const matchNumberM = text.match(/(\d+[\d,.]*)\s*(m|million)/i);
+      const matchAedPrefix = text.match(/aed\s*(\d+[\d,.]*)/i);
+      const matchAedSuffix = text.match(/(\d+[\d,.]*)\s*(aed|dirhams)/i);
+
+      if (matchNumberM) {
+        const num = parseFloat(matchNumberM[1].replace(/,/g, ''));
+        budgetAed = num * 1000000;
+      } else if (matchAedPrefix) {
+        const num = parseFloat(matchAedPrefix[1].replace(/,/g, ''));
+        budgetAed = num >= 1000 ? num : num * 1000000;
+      } else if (matchAedSuffix) {
+        const num = parseFloat(matchAedSuffix[1].replace(/,/g, ''));
+        budgetAed = num >= 1000 ? num : num * 1000000;
       }
 
       leadDetails = {
