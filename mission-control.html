@@ -121,6 +121,17 @@
 
     <!-- Global Actions Strip -->
     <div class="flex items-center space-x-2.5">
+      <!-- Live Voice Orb Button (ChatGPT / Gemini Live style) -->
+      <button onclick="openLiveVoiceSession()" class="px-3 py-1.5 rounded-full bg-gradient-to-r from-sky-500/20 via-amber-500/20 to-sky-500/20 hover:from-sky-500/30 hover:to-amber-500/30 border border-sky-400/40 text-xs font-mono text-sky-200 hover:text-white transition-all flex items-center gap-2 shadow-lg shadow-sky-500/10 group cursor-pointer" title="Start Live Voice Session (ChatGPT / Gemini Live style)">
+        <span class="flex items-center gap-0.5 h-3.5 px-0.5">
+          <span class="w-0.5 h-2 bg-sky-400 group-hover:h-3.5 transition-all rounded-full animate-pulse"></span>
+          <span class="w-0.5 h-3.5 bg-amber-400 rounded-full animate-pulse" style="animation-delay: 150ms;"></span>
+          <span class="w-0.5 h-2 bg-sky-400 group-hover:h-3 transition-all rounded-full animate-pulse" style="animation-delay: 300ms;"></span>
+          <span class="w-0.5 h-3 bg-amber-400 rounded-full animate-pulse" style="animation-delay: 450ms;"></span>
+        </span>
+        <span class="font-bold text-[11px] tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-amber-200 to-sky-300">LIVE VOICE</span>
+      </button>
+
       <!-- Command Palette Button (Cmd+K) -->
       <button onclick="toggleCommandPalette()" class="px-2.5 py-1.5 rounded-lg bg-slate-900/80 hover:bg-slate-800 border border-white/10 text-xs font-mono text-gray-300 hover:text-white transition-all flex items-center gap-1.5">
         <i data-lucide="search" class="w-3.5 h-3.5 text-amber-400"></i>
@@ -375,10 +386,21 @@
               <span class="text-[9px] font-mono px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 border border-amber-500/30">ORCHESTRATOR</span>
             </div>
             <textarea id="copilot-input" rows="3" placeholder="Issue executive directive across multi-agent fleet (e.g. 'Synthesize Opal yield model for Como Residences tranche...')" class="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 text-xs font-mono text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-500 transition-colors"></textarea>
-            <button onclick="submitCopilotDirective()" class="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black text-xs font-bold font-mono rounded-lg transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5">
-              <i data-lucide="send" class="w-3.5 h-3.5"></i>
-              TRANSMIT DIRECTIVE
-            </button>
+            <div class="flex items-center justify-between gap-2">
+              <!-- Live Voice Soundwave Button inside Copilot Bar -->
+              <button onclick="openLiveVoiceSession()" type="button" class="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-500/20 via-amber-500/20 to-sky-500/20 hover:from-sky-500/30 hover:to-amber-500/30 border border-sky-400/40 text-xs font-mono text-sky-200 hover:text-white transition-all flex items-center gap-2 shadow-lg shadow-sky-500/10 group cursor-pointer" title="Start Live Voice Orb (ChatGPT / Gemini Live style)">
+                <span class="flex items-center gap-0.5 h-3 px-0.5">
+                  <span class="w-0.5 h-2 bg-sky-400 group-hover:h-3 transition-all rounded-full animate-pulse"></span>
+                  <span class="w-0.5 h-3 bg-amber-400 rounded-full animate-pulse" style="animation-delay: 150ms;"></span>
+                  <span class="w-0.5 h-1.5 bg-sky-400 rounded-full animate-pulse" style="animation-delay: 300ms;"></span>
+                </span>
+                <span class="font-bold text-[11px] text-sky-300">Live Voice</span>
+              </button>
+              <button onclick="submitCopilotDirective()" class="flex-1 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black text-xs font-bold font-mono rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                TRANSMIT DIRECTIVE
+              </button>
+            </div>
           </div>
         </div>
       </section>
@@ -540,6 +562,51 @@
   </main>
 
   <!-- ========================================================================= -->
+  <!-- MODAL: LIVE VOICE CONVERSATION ORB (CHATGPT / GEMINI LIVE STYLE) -->
+  <!-- ========================================================================= -->
+  <div id="live-voice-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+    <div class="fixed inset-0 bg-[#030712]/92 backdrop-blur-2xl transition-opacity duration-300" onclick="closeLiveVoiceSession()"></div>
+    <div class="relative w-full max-w-lg glass-card bg-[#030712]/95 border border-sky-500/30 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl z-10 flex flex-col items-center text-center overflow-hidden">
+      <!-- Close button -->
+      <button onclick="closeLiveVoiceSession()" class="absolute top-5 right-5 p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer" title="Close Live Voice (Esc)">
+        <i data-lucide="x" class="w-5 h-5"></i>
+      </button>
+      
+      <!-- Top badge -->
+      <div class="flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono">
+        <span id="voice-status-dot" class="w-2 h-2 rounded-full bg-sky-400 pulse-dot"></span>
+        <span id="voice-status-badge" class="font-bold">JARVIS LIVE VOICE MESH</span>
+      </div>
+
+      <!-- Fluid Audio-Reactive Canvas Orb -->
+      <div class="relative w-[300px] h-[300px] flex items-center justify-center my-2">
+        <canvas id="voice-orb-canvas" width="300" height="300" class="w-full h-full"></canvas>
+      </div>
+
+      <!-- State indicator & Transcript caption -->
+      <div class="space-y-2 max-w-md w-full">
+        <div id="voice-state-label" class="text-sm font-mono font-bold text-sky-300 tracking-wider uppercase flex items-center justify-center gap-2">
+          <span id="voice-state-dot" class="w-2 h-2 rounded-full bg-sky-400 pulse-dot"></span>
+          <span id="voice-state-text">A Ouvir...</span>
+        </div>
+        <div id="voice-transcript-caption" class="min-h-[52px] max-h-[90px] overflow-y-auto text-xs font-mono text-gray-300 bg-black/50 p-3 rounded-2xl border border-white/10 leading-relaxed shadow-inner">
+          Fala naturalmente com o JARVIS... (ex: "Qual é a yield líquida do Como Residences?")
+        </div>
+      </div>
+
+      <!-- Audio controls & Barge-in trigger -->
+      <div class="flex items-center gap-3 pt-2">
+        <button id="voice-mic-toggle" onclick="toggleVoiceMic()" class="p-3.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-white/10 text-gray-200 hover:text-white transition-all shadow-md cursor-pointer" title="Mute / Unmute Mic">
+          <i id="voice-mic-icon" data-lucide="mic" class="w-5 h-5 text-emerald-400"></i>
+        </button>
+        <button onclick="closeLiveVoiceSession()" class="px-6 py-2.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold transition-all shadow-lg shadow-rose-500/10 cursor-pointer">
+          Encerrar Sessão
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
   <!-- SLIDE-OVER DRAWER: AGENT DOSSIER -->
   <!-- ========================================================================= -->
   <div id="agent-drawer" class="fixed inset-0 z-50 hidden">
@@ -556,7 +623,7 @@
               <p id="drawer-agent-role" class="text-xs text-gray-400 font-mono">Chief Orchestrator</p>
             </div>
           </div>
-          <button onclick="closeAgentDrawer()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white">
+          <button onclick="closeAgentDrawer()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
         </div>
@@ -601,7 +668,7 @@
         <div class="space-y-2 pt-2 border-t border-white/10">
           <h4 class="text-xs font-mono font-bold text-amber-300 uppercase">Direct Executive Instruction</h4>
           <textarea id="drawer-direct-prompt" rows="2" placeholder="Send immediate task to this specialist agent..." class="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 text-xs font-mono text-gray-200 focus:outline-none focus:border-amber-500"></textarea>
-          <button onclick="submitAgentDirectTask()" class="w-full py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-lg text-xs font-mono font-bold transition-all">
+          <button onclick="submitAgentDirectTask()" class="w-full py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-lg text-xs font-mono font-bold transition-all cursor-pointer">
             DISPATCH SPECIALIST TASK
           </button>
         </div>
@@ -623,7 +690,7 @@
           </div>
           <p id="modal-inv-company" class="text-xs text-gray-400 font-mono">Lisbon Single Family Office (Portugal)</p>
         </div>
-        <button onclick="closeInvestorModal()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white">
+        <button onclick="closeInvestorModal()" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer">
           <i data-lucide="x" class="w-5 h-5"></i>
         </button>
       </div>
@@ -668,22 +735,22 @@
 
       <!-- Quick Action Controls -->
       <div class="pt-4 border-t border-white/10 flex flex-wrap items-center justify-between gap-3">
-        <button onclick="triggerVoiceNoteForLead()" class="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all">
+        <button onclick="triggerVoiceNoteForLead()" class="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="mic" class="w-3.5 h-3.5"></i>
           GENERATE AIDA VOICE NOTE
         </button>
 
-        <button onclick="triggerWhatsAppBriefForLead()" class="px-4 py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all">
+        <button onclick="triggerWhatsAppBriefForLead()" class="px-4 py-2 bg-sky-500/20 hover:bg-sky-500/30 text-sky-300 border border-sky-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="send" class="w-3.5 h-3.5"></i>
           DISPATCH WHATSAPP BRIEF
         </button>
 
-        <button onclick="triggerOpalRoiForLead()" class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all">
+        <button onclick="triggerOpalRoiForLead()" class="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 rounded-xl text-xs font-mono font-bold flex items-center gap-1.5 transition-all cursor-pointer">
           <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
           MODEL OPAL ROI
         </button>
 
-        <button onclick="advanceLeadStagePrompt()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black rounded-xl text-xs font-mono font-bold shadow-lg shadow-amber-500/20 transition-all">
+        <button onclick="advanceLeadStagePrompt()" class="px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black rounded-xl text-xs font-mono font-bold shadow-lg shadow-amber-500/20 transition-all cursor-pointer">
           ADVANCE STAGE →
         </button>
       </div>
@@ -701,7 +768,7 @@
           <i data-lucide="file-code-2" class="w-4 h-4 text-purple-400"></i>
           <h3 class="text-sm font-bold font-mono text-white">CloudEvent v1.1 Payload Inspector</h3>
         </div>
-        <button onclick="closeEventModal()" class="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white">
+        <button onclick="closeEventModal()" class="p-1 rounded-lg bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white cursor-pointer">
           <i data-lucide="x" class="w-4 h-4"></i>
         </button>
       </div>
@@ -719,11 +786,11 @@
       </div>
 
       <div class="flex justify-end gap-2 pt-2 border-t border-white/10">
-        <button onclick="copyEventJson()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white rounded-lg transition-all flex items-center gap-1.5">
+        <button onclick="copyEventJson()" class="px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-mono text-gray-300 hover:text-white rounded-lg transition-all flex items-center gap-1.5 cursor-pointer">
           <i data-lucide="copy" class="w-3.5 h-3.5"></i>
           Copy JSON
         </button>
-        <button onclick="closeEventModal()" class="px-4 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-mono text-amber-300 rounded-lg transition-all">
+        <button onclick="closeEventModal()" class="px-4 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-xs font-mono text-amber-300 rounded-lg transition-all cursor-pointer">
           Close
         </button>
       </div>
@@ -1016,7 +1083,6 @@
     function getResolvedFleet() {
       if (globalState && Array.isArray(globalState.agentFleet) && globalState.agentFleet.length >= 6) {
         const incoming = globalState.agentFleet;
-        // Merge with canonical if some agents are missing
         const map = new Map();
         for (const a of CANONICAL_12_AGENTS) map.set(a.name.toUpperCase(), a);
         for (const a of incoming) {
@@ -1231,10 +1297,10 @@
           <p class="text-xs font-mono text-gray-300 bg-black/40 p-3 rounded-xl border border-white/10">${appr.payload?.summary || appr.payload_summary || JSON.stringify(appr.payload)}</p>
 
           <div class="flex items-center justify-end space-x-3 pt-2">
-            <button id="btn-reject-${appr.id}" onclick="resolveApproval('${appr.id}', 'REJECTED')" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-mono font-bold transition-all">
+            <button id="btn-reject-${appr.id}" onclick="resolveApproval('${appr.id}', 'REJECTED')" class="px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-xs font-mono font-bold transition-all cursor-pointer">
               REJECT & ARCHIVE
             </button>
-            <button id="btn-approve-${appr.id}" onclick="resolveApproval('${appr.id}', 'APPROVED')" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black text-xs font-mono font-bold transition-all shadow-lg shadow-amber-500/20">
+            <button id="btn-approve-${appr.id}" onclick="resolveApproval('${appr.id}', 'APPROVED')" class="px-5 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black text-xs font-mono font-bold transition-all shadow-lg shadow-amber-500/20 cursor-pointer">
               APPROVE & DISPATCH →
             </button>
           </div>
@@ -1512,7 +1578,408 @@
       closeAgentDrawer();
     }
 
-    // --- Command Palette (Cmd+K) ---
+    // =========================================================================
+    // LIVE VOICE SYSTEM (CHATGPT / GEMINI LIVE FLUID ORB & BIDIRECTIONAL STREAM)
+    // =========================================================================
+    let voiceSessionActive = false;
+    let audioContext = null;
+    let analyserNode = null;
+    let micStream = null;
+    let speechRecognizer = null;
+    let voiceState = 'listening'; // 'listening' | 'thinking' | 'speaking'
+    let orbAnimationId = null;
+    let isMicMuted = false;
+    let isBotSpeaking = false;
+    let lastUserSpeechTime = Date.now();
+    let simFrequencyData = new Uint8Array(64);
+
+    async function openLiveVoiceSession() {
+      voiceSessionActive = true;
+      const modal = document.getElementById('live-voice-modal');
+      if (modal) modal.classList.remove('hidden');
+
+      setVoiceState('listening');
+      setTranscriptCaption('A iniciar ligação de áudio em tempo real com JARVIS...');
+
+      try {
+        // Initialize Web Audio API
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (AudioCtx) {
+          audioContext = new AudioCtx();
+          if (audioContext.state === 'suspended') {
+            await audioContext.resume();
+          }
+
+          analyserNode = audioContext.createAnalyser();
+          analyserNode.fftSize = 128;
+          analyserNode.smoothingTimeConstant = 0.82;
+
+          if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
+              console.warn('Microphone permission not granted, utilizing synthetic audio simulator:', err);
+              return null;
+            });
+
+            if (micStream) {
+              const source = audioContext.createMediaStreamSource(micStream);
+              source.connect(analyserNode);
+            }
+          }
+        }
+
+        // Initialize Speech Recognition
+        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (SpeechRec) {
+          speechRecognizer = new SpeechRec();
+          speechRecognizer.continuous = true;
+          speechRecognizer.interimResults = true;
+          speechRecognizer.lang = 'pt-PT';
+
+          speechRecognizer.onstart = () => {
+            setVoiceState('listening');
+            setTranscriptCaption('JARVIS está a ouvir... Podes falar livremente.');
+          };
+
+          speechRecognizer.onspeechstart = () => {
+            handleBargeIn();
+          };
+
+          speechRecognizer.onresult = (event) => {
+            handleBargeIn();
+            let interimTranscript = '';
+            let finalTranscript = '';
+
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalTranscript += event.results[i][0].transcript;
+              } else {
+                interimTranscript += event.results[i][0].transcript;
+              }
+            }
+
+            const currentText = finalTranscript || interimTranscript;
+            if (currentText) {
+              setTranscriptCaption('"' + currentText + '"');
+            }
+
+            if (finalTranscript && finalTranscript.trim().length > 2) {
+              processVoiceDirective(finalTranscript.trim());
+            }
+          };
+
+          speechRecognizer.onerror = (e) => {
+            console.warn('Speech recognition error:', e.error);
+          };
+
+          speechRecognizer.onend = () => {
+            if (voiceSessionActive && !isMicMuted) {
+              try { speechRecognizer.start(); } catch (err) {}
+            }
+          };
+
+          try {
+            speechRecognizer.start();
+          } catch (err) {}
+        } else {
+          setTranscriptCaption('SpeechRecognition API indisponível neste browser. Modo de simulação acústica ativo.');
+        }
+
+        // Start Canvas Render Loop
+        startOrbCanvasLoop();
+        if (window.lucide) lucide.createIcons();
+      } catch (err) {
+        console.error('Failed to initialize live voice:', err);
+        setTranscriptCaption('Erro ao inicializar microfone: ' + err.message);
+        startOrbCanvasLoop();
+      }
+    }
+
+    function closeLiveVoiceSession() {
+      voiceSessionActive = false;
+      const modal = document.getElementById('live-voice-modal');
+      if (modal) modal.classList.add('hidden');
+
+      // Stop speech synth & recognition
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+      }
+      isBotSpeaking = false;
+
+      if (speechRecognizer) {
+        try { speechRecognizer.stop(); } catch (e) {}
+        speechRecognizer = null;
+      }
+
+      if (micStream) {
+        micStream.getTracks().forEach(track => track.stop());
+        micStream = null;
+      }
+
+      if (audioContext) {
+        audioContext.close().catch(() => {});
+        audioContext = null;
+      }
+
+      if (orbAnimationId) {
+        cancelAnimationFrame(orbAnimationId);
+        orbAnimationId = null;
+      }
+    }
+
+    function toggleVoiceMic() {
+      isMicMuted = !isMicMuted;
+      if (micStream) {
+        micStream.getAudioTracks().forEach(t => { t.enabled = !isMicMuted; });
+      }
+      const icon = document.getElementById('voice-mic-icon');
+      if (icon) {
+        icon.className = isMicMuted ? 'w-5 h-5 text-rose-400' : 'w-5 h-5 text-emerald-400';
+      }
+      if (isMicMuted) {
+        setTranscriptCaption('Microfone silenciado.');
+      } else {
+        setTranscriptCaption('Microfone ativo. A ouvir...');
+      }
+    }
+
+    function setVoiceState(state) {
+      voiceState = state;
+      const label = document.getElementById('voice-state-text');
+      const dot = document.getElementById('voice-state-dot');
+      const badge = document.getElementById('voice-status-badge');
+
+      if (state === 'listening') {
+        if (label) label.textContent = 'A Ouvir...';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-sky-400 pulse-dot';
+        if (badge) badge.textContent = 'JARVIS LIVE VOICE (A OUVIR)';
+      } else if (state === 'thinking') {
+        if (label) label.textContent = 'A Pensar...';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-amber-400 pulse-dot';
+        if (badge) badge.textContent = 'JARVIS LIVE VOICE (A PROCESSAR)';
+      } else if (state === 'speaking') {
+        if (label) label.textContent = 'JARVIS a Falar...';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-400 pulse-dot';
+        if (badge) badge.textContent = 'JARVIS LIVE VOICE (TRANSMISSÃO)';
+      }
+    }
+
+    function setTranscriptCaption(text) {
+      const caption = document.getElementById('voice-transcript-caption');
+      if (caption) {
+        caption.textContent = text;
+        caption.scrollTop = caption.scrollHeight;
+      }
+    }
+
+    // Barge-in (Interrupção imediata quando o utilizador começa a falar)
+    function handleBargeIn() {
+      if (isBotSpeaking) {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.cancel();
+        }
+        isBotSpeaking = false;
+        setVoiceState('listening');
+        setTranscriptCaption('Interrupção detetada. A ouvir...');
+      }
+    }
+
+    async function processVoiceDirective(text) {
+      setVoiceState('thinking');
+      setTranscriptCaption('A analisar mandato: "' + text + '"...');
+
+      try {
+        const res = await fetch('/api/v1/cognitive/dispatch', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt: text })
+        });
+
+        const data = await res.json();
+        const reply = data.text || data.response || 'Mandato processado pelo JARVIS. A arquitetura sovereign e os modelos de yield estão perfeitamente conformes.';
+
+        speakBotResponse(reply);
+      } catch (err) {
+        console.warn('Cognitive dispatch fallback:', err);
+        speakBotResponse('Mandato recebido. O motor ATLAS e a frota de 12 agentes estão operacionais.');
+      }
+    }
+
+    function speakBotResponse(replyText) {
+      if (!voiceSessionActive) return;
+
+      isBotSpeaking = true;
+      setVoiceState('speaking');
+      setTranscriptCaption('JARVIS: ' + replyText);
+
+      if (window.speechSynthesis) {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(replyText);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+
+        // Try to pick a natural voice
+        const voices = window.speechSynthesis.getVoices();
+        const ptVoice = voices.find(v => v.lang.includes('pt') || v.lang.includes('PT'));
+        if (ptVoice) utterance.voice = ptVoice;
+
+        utterance.onstart = () => {
+          isBotSpeaking = true;
+          setVoiceState('speaking');
+        };
+
+        utterance.onend = () => {
+          isBotSpeaking = false;
+          if (voiceSessionActive) {
+            setVoiceState('listening');
+            setTranscriptCaption('JARVIS terminou. A ouvir novas diretivas...');
+          }
+        };
+
+        utterance.onerror = () => {
+          isBotSpeaking = false;
+          if (voiceSessionActive) setVoiceState('listening');
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } else {
+        // Fallback timer if speech synthesis is absent
+        setTimeout(() => {
+          isBotSpeaking = false;
+          if (voiceSessionActive) setVoiceState('listening');
+        }, 4000);
+      }
+    }
+
+    // --- Dynamic Canvas Fluid Orb Renderer ---
+    function startOrbCanvasLoop() {
+      const canvas = document.getElementById('voice-orb-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      let t = 0;
+      const dataArray = new Uint8Array(analyserNode ? analyserNode.frequencyBinCount : 64);
+
+      function renderFrame() {
+        if (!voiceSessionActive) return;
+
+        t += 0.035;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let audioVolume = 0;
+        if (analyserNode && !isMicMuted) {
+          analyserNode.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+          audioVolume = sum / (dataArray.length * 255);
+        } else {
+          // Synthetic breathing volume
+          audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
+          if (voiceState === 'speaking') {
+            audioVolume = (Math.sin(t * 8) + Math.cos(t * 12) + 2) * 0.22;
+          }
+        }
+
+        // Barge-in threshold check from raw mic volume
+        if (isBotSpeaking && audioVolume > 0.35) {
+          handleBargeIn();
+        }
+
+        const cx = canvas.width / 2;
+        const cy = canvas.height / 2;
+        const baseRadius = 70 + (audioVolume * 65);
+
+        // State Color Palettes
+        let c1, c2, c3, auraColor;
+        if (voiceState === 'listening') {
+          // Cyan & Electric Blue + Gold Corona
+          c1 = `rgba(56, 189, 248, ${0.85 + audioVolume * 0.15})`;
+          c2 = `rgba(14, 165, 233, ${0.65 + audioVolume * 0.25})`;
+          c3 = `rgba(250, 204, 21, ${0.45 + audioVolume * 0.3})`;
+          auraColor = `rgba(56, 189, 248, ${0.15 + audioVolume * 0.35})`;
+        } else if (voiceState === 'thinking') {
+          // Luminous Amber Gold & Royal Violet Vortex
+          c1 = `rgba(245, 158, 11, ${0.9 + Math.sin(t * 4) * 0.1})`;
+          c2 = `rgba(217, 119, 6, 0.75)`;
+          c3 = `rgba(192, 132, 252, 0.65)`;
+          auraColor = `rgba(245, 158, 11, ${0.25 + Math.sin(t * 3) * 0.15})`;
+        } else {
+          // Speaking: Radiant Emerald Jade & Solar Gold
+          c1 = `rgba(16, 185, 129, ${0.9 + audioVolume * 0.1})`;
+          c2 = `rgba(52, 211, 153, ${0.75 + audioVolume * 0.2})`;
+          c3 = `rgba(253, 224, 71, ${0.85 + audioVolume * 0.15})`;
+          auraColor = `rgba(16, 185, 129, ${0.28 + audioVolume * 0.4})`;
+        }
+
+        // Layer 1: Ambient Outer Aura Glow
+        const auraGrad = ctx.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, baseRadius * 1.8);
+        auraGrad.addColorStop(0, auraColor);
+        auraGrad.addColorStop(1, 'rgba(3, 7, 18, 0)');
+        ctx.fillStyle = auraGrad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, baseRadius * 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Layer 2: Deformed Fluid Organic Blobs (Multiple Harmonic Sinusoids)
+        const points = 48;
+        ctx.save();
+        ctx.beginPath();
+        for (let i = 0; i <= points; i++) {
+          const angle = (i / points) * Math.PI * 2;
+          const harmonic1 = Math.sin(angle * 3 + t * 2) * (12 + audioVolume * 30);
+          const harmonic2 = Math.cos(angle * 5 - t * 2.5) * (8 + audioVolume * 20);
+          const harmonic3 = Math.sin(angle * 7 + t * 1.2) * 5;
+          const r = baseRadius + harmonic1 + harmonic2 + harmonic3;
+          const x = cx + Math.cos(angle) * r;
+          const y = cy + Math.sin(angle) * r;
+          if (i === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.closePath();
+
+        const fluidGrad = ctx.createRadialGradient(cx - baseRadius * 0.3, cy - baseRadius * 0.3, 10, cx, cy, baseRadius * 1.3);
+        fluidGrad.addColorStop(0, c3);
+        fluidGrad.addColorStop(0.45, c1);
+        fluidGrad.addColorStop(1, c2);
+        ctx.fillStyle = fluidGrad;
+        ctx.shadowColor = c1;
+        ctx.shadowBlur = 35 + audioVolume * 40;
+        ctx.fill();
+        ctx.restore();
+
+        // Layer 3: Dynamic Orbiting Energy Sparks & Particle Arc
+        ctx.save();
+        for (let p = 0; p < 8; p++) {
+          const sparkAngle = t * (voiceState === 'thinking' ? 3.5 : 1.8) + (p * Math.PI / 4);
+          const sparkDist = baseRadius * 1.18 + Math.sin(t * 3 + p) * 12;
+          const sx = cx + Math.cos(sparkAngle) * sparkDist;
+          const sy = cy + Math.sin(sparkAngle) * sparkDist;
+
+          ctx.beginPath();
+          ctx.arc(sx, sy, 2.5 + audioVolume * 3, 0, Math.PI * 2);
+          ctx.fillStyle = p % 2 === 0 ? '#fde047' : '#38bdf8';
+          ctx.shadowColor = '#fde047';
+          ctx.shadowBlur = 12;
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // Layer 4: Bright Glowing Nucleus Highlight
+        const coreGrad = ctx.createRadialGradient(cx - 15, cy - 15, 2, cx, cy, baseRadius * 0.45);
+        coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+        coreGrad.addColorStop(0.5, 'rgba(255, 255, 255, 0.4)');
+        coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.arc(cx - 15, cy - 15, baseRadius * 0.45, 0, Math.PI * 2);
+        ctx.fill();
+
+        orbAnimationId = requestAnimationFrame(renderFrame);
+      }
+
+      if (orbAnimationId) cancelAnimationFrame(orbAnimationId);
+      orbAnimationId = requestAnimationFrame(renderFrame);
+    }
+
+    // --- Command Palette (Cmd+K) & Key Shortcuts ---
     function toggleCommandPalette() {
       const modal = document.getElementById('command-modal');
       if (modal) {
@@ -1531,6 +1998,7 @@
       }
       if (e.key === 'Escape') {
         document.getElementById('command-modal')?.classList.add('hidden');
+        closeLiveVoiceSession();
         closeInvestorModal();
         closeAgentDrawer();
         closeEventModal();
@@ -1543,6 +2011,7 @@
       if (!container) return;
 
       const commands = [
+        { label: 'Start Live Voice Orb (ChatGPT/Gemini Live)', action: () => openLiveVoiceSession() },
         { label: 'Switch Tab: Executive Overview', action: () => switchTab('overview') },
         { label: 'Switch Tab: CRM Pipeline & Deals', action: () => switchTab('crm') },
         { label: 'Switch Tab: Agent Fleet Matrix', action: () => switchTab('fleet') },

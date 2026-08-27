@@ -24,6 +24,18 @@ export default function MissionControlDashboard() {
   const [corridorFilter, setCorridorFilter] = useState('ALL');
   const [pulseFilter, setPulseFilter] = useState('ALL');
 
+  // Live Voice State (ChatGPT / Gemini Live style)
+  const [liveVoiceOpen, setLiveVoiceOpen] = useState(false);
+  const [voiceState, setVoiceState] = useState('listening'); // 'listening' | 'thinking' | 'speaking'
+  const [voiceTranscript, setVoiceTranscript] = useState('Fala naturalmente com o JARVIS... (ex: "Qual é a yield líquida do Como Residences?")');
+  const [isMicMuted, setIsMicMuted] = useState(false);
+  const canvasRef = React.useRef(null);
+  const audioContextRef = React.useRef(null);
+  const analyserRef = React.useRef(null);
+  const micStreamRef = React.useRef(null);
+  const animFrameRef = React.useRef(null);
+  const isBotSpeakingRef = React.useRef(false);
+
   // World Clocks State
   const [clocks, setClocks] = useState({ dxb: '--:--', lon: '--:--', lis: '--:--', nyc: '--:--' });
 
@@ -96,9 +108,173 @@ export default function MissionControlDashboard() {
     }
   };
 
+  // Live Voice Session Controls (ChatGPT / Gemini Live style)
+  const startLiveVoiceSession = async () => {
+    setLiveVoiceOpen(true);
+    setVoiceState('listening');
+    setVoiceTranscript('A iniciar ligação de áudio em tempo real com JARVIS...');
+
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        const ctx = new AudioCtx();
+        if (ctx.state === 'suspended') await ctx.resume();
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 128;
+        analyser.smoothingTimeConstant = 0.82;
+        audioContextRef.current = ctx;
+        analyserRef.current = analyser;
+
+        if (navigator.mediaDevices?.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          if (stream) {
+            micStreamRef.current = stream;
+            const source = ctx.createMediaStreamSource(stream);
+            source.connect(analyser);
+          }
+        }
+      }
+
+      setVoiceTranscript('JARVIS está a ouvir... Podes falar livremente (ex: "Qual é a yield do Como Residences?")');
+    } catch (err) {
+      console.warn('Voice init warning:', err);
+    }
+  };
+
+  const stopLiveVoiceSession = () => {
+    setLiveVoiceOpen(false);
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    isBotSpeakingRef.current = false;
+
+    if (micStreamRef.current) {
+      micStreamRef.current.getTracks().forEach(t => t.stop());
+      micStreamRef.current = null;
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close().catch(() => {});
+      audioContextRef.current = null;
+    }
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
+  };
+
+  const handleVoiceBargeIn = () => {
+    if (isBotSpeakingRef.current) {
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
+      isBotSpeakingRef.current = false;
+      setVoiceState('listening');
+      setVoiceTranscript('Interrupção detetada. A ouvir...');
+    }
+  };
+
+  // Canvas Fluid Orb Animation Loop
+  useEffect(() => {
+    if (!liveVoiceOpen || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    let t = 0;
+    const dataArray = new Uint8Array(analyserRef.current ? analyserRef.current.frequencyBinCount : 64);
+
+    const render = () => {
+      t += 0.035;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      let audioVolume = 0;
+      if (analyserRef.current && !isMicMuted) {
+        analyserRef.current.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
+        audioVolume = sum / (dataArray.length * 255);
+      } else {
+        audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
+        if (voiceState === 'speaking') {
+          audioVolume = (Math.sin(t * 8) + Math.cos(t * 12) + 2) * 0.22;
+        }
+      }
+
+      if (isBotSpeakingRef.current && audioVolume > 0.35) {
+        handleVoiceBargeIn();
+      }
+
+      const cx = canvas.width / 2;
+      const cy = canvas.height / 2;
+      const baseRadius = 65 + (audioVolume * 55);
+
+      let c1, c2, c3, auraColor;
+      if (voiceState === 'listening') {
+        c1 = `rgba(56, 189, 248, ${0.85 + audioVolume * 0.15})`;
+        c2 = `rgba(14, 165, 233, ${0.65 + audioVolume * 0.25})`;
+        c3 = `rgba(250, 204, 21, ${0.45 + audioVolume * 0.3})`;
+        auraColor = `rgba(56, 189, 248, ${0.15 + audioVolume * 0.35})`;
+      } else if (voiceState === 'thinking') {
+        c1 = `rgba(245, 158, 11, ${0.9 + Math.sin(t * 4) * 0.1})`;
+        c2 = `rgba(217, 119, 6, 0.75)`;
+        c3 = `rgba(192, 132, 252, 0.65)`;
+        auraColor = `rgba(245, 158, 11, ${0.25 + Math.sin(t * 3) * 0.15})`;
+      } else {
+        c1 = `rgba(16, 185, 129, ${0.9 + audioVolume * 0.1})`;
+        c2 = `rgba(52, 211, 153, ${0.75 + audioVolume * 0.2})`;
+        c3 = `rgba(253, 224, 71, ${0.85 + audioVolume * 0.15})`;
+        auraColor = `rgba(16, 185, 129, ${0.28 + audioVolume * 0.4})`;
+      }
+
+      // Outer Aura
+      const auraGrad = ctx.createRadialGradient(cx, cy, baseRadius * 0.4, cx, cy, baseRadius * 1.8);
+      auraGrad.addColorStop(0, auraColor);
+      auraGrad.addColorStop(1, 'rgba(3, 7, 18, 0)');
+      ctx.fillStyle = auraGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, baseRadius * 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Fluid Blobs
+      const points = 48;
+      ctx.save();
+      ctx.beginPath();
+      for (let i = 0; i <= points; i++) {
+        const angle = (i / points) * Math.PI * 2;
+        const harmonic1 = Math.sin(angle * 3 + t * 2) * (12 + audioVolume * 30);
+        const harmonic2 = Math.cos(angle * 5 - t * 2.5) * (8 + audioVolume * 20);
+        const r = baseRadius + harmonic1 + harmonic2;
+        const x = cx + Math.cos(angle) * r;
+        const y = cy + Math.sin(angle) * r;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      const fluidGrad = ctx.createRadialGradient(cx - baseRadius * 0.3, cy - baseRadius * 0.3, 10, cx, cy, baseRadius * 1.3);
+      fluidGrad.addColorStop(0, c3);
+      fluidGrad.addColorStop(0.45, c1);
+      fluidGrad.addColorStop(1, c2);
+      ctx.fillStyle = fluidGrad;
+      ctx.shadowColor = c1;
+      ctx.shadowBlur = 30 + audioVolume * 35;
+      ctx.fill();
+      ctx.restore();
+
+      // Core Highlight
+      const coreGrad = ctx.createRadialGradient(cx - 12, cy - 12, 2, cx, cy, baseRadius * 0.4);
+      coreGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+      coreGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(cx - 12, cy - 12, baseRadius * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      animFrameRef.current = requestAnimationFrame(render);
+    };
+
+    render();
+    return () => {
+      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    };
+  }, [liveVoiceOpen, voiceState, isMicMuted]);
+
   // Submit Copilot Prompt
   const handleCopilotSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     if (!copilotPrompt.trim()) return;
 
     setCopilotLoading(true);
@@ -194,6 +370,20 @@ export default function MissionControlDashboard() {
 
         {/* Global Action Bar */}
         <div className="flex items-center space-x-2.5 text-xs font-mono">
+          {/* Live Voice Button (ChatGPT / Gemini Live style) */}
+          <button
+            onClick={startLiveVoiceSession}
+            className="px-3 py-1.5 rounded-full bg-gradient-to-r from-sky-500/20 via-amber-500/20 to-sky-500/20 hover:from-sky-500/30 hover:to-amber-500/30 border border-sky-400/40 text-xs font-mono text-sky-200 hover:text-white transition-all flex items-center gap-2 shadow-lg shadow-sky-500/10 group cursor-pointer"
+            title="Start Live Voice Session (ChatGPT / Gemini Live style)"
+          >
+            <span className="flex items-center gap-0.5 h-3.5 px-0.5">
+              <span className="w-0.5 h-2 bg-sky-400 group-hover:h-3.5 transition-all rounded-full animate-pulse"></span>
+              <span className="w-0.5 h-3.5 bg-amber-400 rounded-full animate-pulse"></span>
+              <span className="w-0.5 h-2 bg-sky-400 group-hover:h-3 transition-all rounded-full animate-pulse"></span>
+            </span>
+            <span className="font-bold text-[11px] tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-sky-300 via-amber-200 to-sky-300">LIVE VOICE</span>
+          </button>
+
           <button
             onClick={() => setIsMasked(!isMasked)}
             className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 border border-white/10 text-amber-400 hover:text-white transition-all"
@@ -381,13 +571,28 @@ export default function MissionControlDashboard() {
                       placeholder="Issue autonomous multi-agent directive..."
                       className="w-full bg-black/50 border border-white/10 rounded-lg p-2.5 text-xs font-mono text-gray-200 placeholder-gray-600 focus:outline-none focus:border-amber-500"
                     />
-                    <button
-                      type="submit"
-                      disabled={copilotLoading}
-                      className="w-full py-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-xs font-bold font-mono rounded-lg transition-all shadow-lg shadow-amber-500/20"
-                    >
-                      {copilotLoading ? 'ORCHESTRATING...' : 'TRANSMIT DIRECTIVE'}
-                    </button>
+                    <div className="flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={startLiveVoiceSession}
+                        className="px-3 py-2 rounded-xl bg-gradient-to-r from-sky-500/20 via-amber-500/20 to-sky-500/20 hover:from-sky-500/30 hover:to-amber-500/30 border border-sky-400/40 text-xs font-mono text-sky-200 hover:text-white transition-all flex items-center gap-2 shadow-lg shadow-sky-500/10 group cursor-pointer"
+                        title="Start Live Voice Orb (ChatGPT / Gemini Live style)"
+                      >
+                        <span className="flex items-center gap-0.5 h-3 px-0.5">
+                          <span className="w-0.5 h-2 bg-sky-400 group-hover:h-3 transition-all rounded-full animate-pulse"></span>
+                          <span className="w-0.5 h-3 bg-amber-400 rounded-full animate-pulse"></span>
+                          <span className="w-0.5 h-1.5 bg-sky-400 rounded-full animate-pulse"></span>
+                        </span>
+                        <span className="font-bold text-[11px] text-sky-300">Live Voice</span>
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={copilotLoading}
+                        className="flex-1 py-2 bg-gradient-to-r from-amber-500 to-yellow-400 text-black text-xs font-bold font-mono rounded-xl transition-all shadow-lg shadow-amber-500/20"
+                      >
+                        {copilotLoading ? 'ORCHESTRATING...' : 'TRANSMIT DIRECTIVE'}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </div>
@@ -711,6 +916,64 @@ export default function MissionControlDashboard() {
             <pre className="p-4 bg-black/80 rounded-xl border border-white/10 text-[11px] text-gray-200 overflow-x-auto max-h-80">
               {JSON.stringify(selectedEvent, null, 2)}
             </pre>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Live Voice Conversation Orb (ChatGPT / Gemini Live style) */}
+      {liveVoiceOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-[#030712]/92 backdrop-blur-2xl transition-opacity" onClick={stopLiveVoiceSession}></div>
+          <div className="relative w-full max-w-lg bg-[#030712]/95 border border-sky-500/30 rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl z-10 flex flex-col items-center text-center overflow-hidden">
+            {/* Close button */}
+            <button
+              onClick={stopLiveVoiceSession}
+              className="absolute top-5 right-5 p-2 rounded-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
+              title="Close Live Voice (Esc)"
+            >
+              ✕
+            </button>
+
+            {/* Top Badge */}
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-sky-500/10 border border-sky-500/30 text-sky-300 text-xs font-mono">
+              <span className="w-2 h-2 rounded-full bg-sky-400 animate-pulse"></span>
+              <span className="font-bold">
+                {voiceState === 'listening' ? 'JARVIS LIVE VOICE (A OUVIR)' : voiceState === 'thinking' ? 'JARVIS LIVE VOICE (A PROCESSAR)' : 'JARVIS LIVE VOICE (TRANSMISSÃO)'}
+              </span>
+            </div>
+
+            {/* Canvas Orb */}
+            <div className="relative w-[300px] h-[300px] flex items-center justify-center my-2">
+              <canvas ref={canvasRef} width={300} height={300} className="w-full h-full" />
+            </div>
+
+            {/* State Label & Transcript */}
+            <div className="space-y-2 max-w-md w-full">
+              <div className="text-sm font-mono font-bold text-sky-300 tracking-wider uppercase flex items-center justify-center gap-2">
+                <span className={`w-2 h-2 rounded-full ${voiceState === 'listening' ? 'bg-sky-400' : voiceState === 'thinking' ? 'bg-amber-400' : 'bg-emerald-400'} animate-pulse`}></span>
+                <span>{voiceState === 'listening' ? 'A Ouvir...' : voiceState === 'thinking' ? 'A Pensar...' : 'JARVIS a Falar...'}</span>
+              </div>
+              <div className="min-h-[52px] max-h-[90px] overflow-y-auto text-xs font-mono text-gray-300 bg-black/50 p-3 rounded-2xl border border-white/10 leading-relaxed shadow-inner">
+                {voiceTranscript}
+              </div>
+            </div>
+
+            {/* Audio Controls */}
+            <div className="flex items-center gap-3 pt-2">
+              <button
+                onClick={() => setIsMicMuted(!isMicMuted)}
+                className="p-3.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-white/10 text-gray-200 hover:text-white transition-all shadow-md cursor-pointer text-xs font-mono"
+                title="Mute / Unmute Mic"
+              >
+                {isMicMuted ? '🔇 MIC OFF' : '🎙️ MIC ON'}
+              </button>
+              <button
+                onClick={stopLiveVoiceSession}
+                className="px-6 py-2.5 rounded-full bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/40 text-rose-300 font-mono text-xs font-bold transition-all shadow-lg shadow-rose-500/10 cursor-pointer"
+              >
+                Encerrar Sessão
+              </button>
+            </div>
           </div>
         </div>
       )}
