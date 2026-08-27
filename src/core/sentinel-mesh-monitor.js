@@ -10,6 +10,7 @@
 import { supabase } from '../db/supabase-client.js';
 import { enterpriseEventBus } from './event-bus.js';
 import { logger } from '../logging/audit-logger.js';
+import { isServerlessRuntime } from '../config/env.js';
 
 export const CIRCUIT_STATES = {
   CLOSED: 'CIRCUIT_CLOSED',     // Normal, healthy operation
@@ -258,6 +259,10 @@ export class SentinelMeshMonitor {
    */
   startMeshProbing(intervalMs = 60000) {
     if (this.probeTimer) return;
+    if (isServerlessRuntime()) {
+      logger.info('SENTINEL_PROBE', '⚡ Serverless runtime detected: Continuous mesh probing decoupled.');
+      return;
+    }
     this.thresholds.probeIntervalMs = intervalMs;
     this.isProbingActive = true;
     this.probeTimer = setInterval(() => {

@@ -59,8 +59,12 @@ export class AuthMiddleware {
       this.internalKey,
       config.service.internalKey,
       'raioc_sovereign_auth_2026_x99',
-      'raioc_sec_default_dev_key',
     ].filter(Boolean);
+
+    if (validSecrets.length === 0) {
+      logger.error('AUTH_MIDDLEWARE', 'Authentication configuration missing: No service keys available (Fail-Closed enforced)');
+      return { authenticated: false, error: 'Authentication service unconfigured (Fail-Closed)' };
+    }
 
     // Verify token using constant-time comparison against internal service keys
     const isValid = validSecrets.some((secret) => secretsManager.constantTimeCompare(token, secret));

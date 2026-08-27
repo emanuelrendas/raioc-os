@@ -34,11 +34,10 @@ export class WebhookVerifier {
    * @param {string} appSecret - Meta App Secret
    * @returns {boolean} True if signature matches
    */
-  verifyWhatsAppSignature(payload, signatureHeader, appSecret = config.whatsappBusiness.appSecret) {
+  verifyWhatsAppSignature(payload, signatureHeader, appSecret = config.whatsappBusiness?.appSecret || process.env.WHATSAPP_APP_SECRET || process.env.META_APP_SECRET) {
     if (!signatureHeader || !appSecret) {
-      // In dev mode without app secret, log warning
-      logger.warn('WEBHOOK_VERIFIER', 'WhatsApp signature check skipped: Missing app secret');
-      return true;
+      logger.warn('WEBHOOK_VERIFIER', 'WhatsApp signature verification rejected: Missing signature header or app secret (Fail-Closed enforced)');
+      return false;
     }
 
     const cleanSignature = signatureHeader.replace(/^sha256=/, '').trim();

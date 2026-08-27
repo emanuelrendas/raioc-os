@@ -7,7 +7,6 @@
 import { BaseSpecialistAgent } from './base-agent.js';
 import { telemetry } from '../../logging/telemetry.js';
 import { agentEventBus, AgentEvents } from '../../events/agent-event-bus.js';
-import { priorityTaskDispatcher } from '../../operational/priority-task-dispatcher.js';
 import { logger } from '../../logging/audit-logger.js';
 
 export class SentinelHealthAgent extends BaseSpecialistAgent {

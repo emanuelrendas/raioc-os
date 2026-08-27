@@ -4,12 +4,23 @@
 
 import { secretsManager } from './secrets-manager.js';
 
+export function isServerlessRuntime() {
+  return Boolean(
+    process.env.VERCEL === '1' ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME ||
+    process.env.NETLIFY === 'true' ||
+    process.env.SERVERLESS === 'true' ||
+    process.env.NEXT_RUNTIME === 'edge' ||
+    process.env.NEXT_RUNTIME === 'nodejs'
+  );
+}
+
 export const config = {
-  env: process.env.NODE_ENV || 'production',
+  env: process.env.NODE_ENV || 'development',
   service: {
     name: 'raioc-os',
     port: parseInt(process.env.PORT || '3000', 10),
-    internalKey: process.env.INTERNAL_SERVICE_KEY || 'raioc_sec_default_dev_key',
+    internalKey: process.env.INTERNAL_SERVICE_KEY || process.env.RAIOC_INTERNAL_SECRET || '',
   },
   supabase: {
     url: process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '',

@@ -12,6 +12,7 @@ import { agentEventBus, AgentEvents } from '../events/agent-event-bus.js';
 import { supabase } from '../db/supabase-client.js';
 import { telemetry } from '../logging/telemetry.js';
 import { logger } from '../logging/audit-logger.js';
+import { isServerlessRuntime } from '../config/env.js';
 
 export class ProductionSupervisor {
   constructor() {
@@ -37,32 +38,37 @@ export class ProductionSupervisor {
 
     try {
       // 1. Boot JOS v1.0 Operating Center & Continuous Loop
-      await operatingCenter.boot({ startContinuousLoop: true, loopIntervalMs: 30000 });
+      const isServerless = isServerlessRuntime();
+      await operatingCenter.boot({ startContinuousLoop: !isServerless, loopIntervalMs: 30000 });
 
       // 2. Initial Connector Health Probe
       await connectorHealthMatrix.probeAllConnectors();
 
-      // 3. Setup Periodic Connector Health Watchdog (every 60s)
-      this.probeInterval = setInterval(async () => {
-        if (this.isRunning) {
-          try {
-            await connectorHealthMatrix.probeAllConnectors();
-          } catch (err) {
-            logger.error('SUPERVISOR', `Connector probe failed: ${err.message}`);
+      // 3. Setup Periodic Connector Health Watchdog (every 60s in persistent runtime only)
+      if (!isServerless) {
+        this.probeInterval = setInterval(async () => {
+          if (this.isRunning) {
+            try {
+              await connectorHealthMatrix.probeAllConnectors();
+            } catch (err) {
+              logger.error('SUPERVISOR', `Connector probe failed: ${err.message}`);
+            }
           }
-        }
-      }, 60000);
+        }, 60000);
 
-      // 4. Setup Periodic Supabase Operational State Sync (every 30s)
-      this.syncInterval = setInterval(async () => {
-        if (this.isRunning) {
-          try {
-            await this._syncOperationalState();
-          } catch (err) {
-            logger.error('SUPERVISOR', `Operational sync failed: ${err.message}`);
+        // 4. Setup Periodic Supabase Operational State Sync (every 30s in persistent runtime only)
+        this.syncInterval = setInterval(async () => {
+          if (this.isRunning) {
+            try {
+              await this._syncOperationalState();
+            } catch (err) {
+              logger.error('SUPERVISOR', `Operational sync failed: ${err.message}`);
+            }
           }
-        }
-      }, 30000);
+        }, 30000);
+      } else {
+        logger.info('SUPERVISOR', '⚡ Serverless runtime detected: Background watchdog intervals decoupled.');
+      }
 
       // 5. Attach Global Process Crash Recovery Handlers
       this._attachCrashRecoveryHandlers();

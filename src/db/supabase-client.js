@@ -11,6 +11,18 @@ export class SupabaseClient {
   constructor(options = {}) {
     this.url = options.url || config.supabase.url;
     this.key = options.key || config.supabase.serviceKey || config.supabase.anonKey;
+    
+    // Strict production check: If running in production without explicit mock override, fail-closed
+    this.isStrictProduction = (process.env.NODE_ENV === 'production' || config.env === 'production') &&
+      options.useMock !== true &&
+      process.env.SUPABASE_MOCK_FALLBACK !== 'true';
+
+    if (this.isStrictProduction && (!this.url || !this.key)) {
+      const errMsg = 'FATAL: Supabase URL and serviceKey/anonKey are required in production environment (Fail-Closed enforced). Silent in-memory fallback is disabled.';
+      logger.error('SUPABASE', errMsg);
+      throw new Error(errMsg);
+    }
+
     this.isMock = !this.url || !this.key || options.useMock === true;
 
     // In-memory mock storage for hermetic tests and local fallback
@@ -49,6 +61,17 @@ export class SupabaseClient {
     };
 
     this.initEnterpriseCoreSeeds();
+  }
+
+  _handleError(operation, err, fallbackFn) {
+    logger.error('SUPABASE', `Database operation '${operation}' failed: ${err.message}`, { error: err.message });
+    if (this.isStrictProduction) {
+      throw new Error(`Supabase operation '${operation}' failed in production (Fail-Closed enforced): ${err.message}`);
+    }
+    if (typeof fallbackFn === 'function') {
+      return fallbackFn();
+    }
+    return null;
   }
 
   initEnterpriseCoreSeeds() {

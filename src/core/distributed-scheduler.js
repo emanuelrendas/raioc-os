@@ -3,7 +3,7 @@
  * Manages recurrent jobs with distributed lock simulation, idempotency keys, and health checks.
  */
 
-import { config } from '../config/env.js';
+import { config, isServerlessRuntime } from '../config/env.js';
 import { run_cycle } from './run-cycle.js';
 import { queueEngine } from '../engines/queue-engine.js';
 import { supabase } from '../db/supabase-client.js';
@@ -96,6 +96,10 @@ export class DistributedScheduler {
 
   async start() {
     if (this.isRunning) return;
+    if (isServerlessRuntime()) {
+      logger.info('DISTRIBUTED_SCHEDULER', '⚡ Serverless runtime detected: Distributed Scheduler interval jobs decoupled.');
+      return;
+    }
     this.isRunning = true;
     logger.info('DISTRIBUTED_SCHEDULER', 'Starting Distributed Autonomous Scheduler...');
 

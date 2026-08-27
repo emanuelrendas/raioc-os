@@ -14,6 +14,7 @@ import { autonomousDailyOperations } from './autonomous-daily-operations.js';
 import { opportunityEngine } from './opportunity-engine.js';
 import { executiveSelfHealingLayer } from './executive-self-healing.js';
 import { logger } from '../logging/audit-logger.js';
+import { isServerlessRuntime } from '../config/env.js';
 
 export class OperatingCenter {
   constructor() {
@@ -35,26 +36,35 @@ export class OperatingCenter {
     // 2. Enable Autonomous Reactive Mesh across all Specialist Agents
     agentDirectory.enableAutonomousMesh();
 
-    // 3. Start Continuous Executive Loop
-    if (options.startContinuousLoop) {
+    // 3. Start Continuous Executive Loop (Decoupled from Serverless)
+    const isServerless = isServerlessRuntime() || options.skipContinuousTimers === true;
+    if (options.startContinuousLoop && !isServerless) {
       jarvis.startContinuousExecutiveLoop(options.loopIntervalMs || 60000);
+    } else if (options.startContinuousLoop && isServerless) {
+      logger.info('OPERATING_CENTER', '⚡ Serverless runtime detected: Continuous JARVIS executive loop decoupled.');
     }
 
-    // 4. Start Distributed Autonomous Scheduler
-    await distributedScheduler.start();
+    // 4. Start Distributed Autonomous Scheduler (Decoupled from Serverless)
+    if (!isServerless) {
+      await distributedScheduler.start();
+    } else {
+      logger.info('OPERATING_CENTER', '⚡ Serverless runtime detected: Distributed Scheduler intervals decoupled.');
+    }
 
-    // 5. Start Agent Heartbeat Broadcasting (every 60s)
-    this.heartbeatTimer = setInterval(() => {
-      if (this.isOnline) {
-        agentDirectory.broadcastHeartbeats();
-      }
-    }, 60000);
+    // 5. Start Agent Heartbeat Broadcasting (every 60s in persistent runtime only)
+    if (!isServerless) {
+      this.heartbeatTimer = setInterval(() => {
+        if (this.isOnline) {
+          agentDirectory.broadcastHeartbeats();
+        }
+      }, 60000);
+    }
 
     // Broadcast initial heartbeats
     agentDirectory.broadcastHeartbeats();
 
     logger.info('OPERATING_CENTER', '✅ RAIOC JOS v1.0 is ONLINE, ALWAYS-ON, and OPERATING AUTONOMOUSLY');
-    return { status: 'ONLINE', agents: agentDirectory.listAgents().length, josVersion: '1.0' };
+    return { status: 'ONLINE', agents: agentDirectory.listAgents().length, josVersion: '1.0', runtime: isServerless ? 'SERVERLESS' : 'PERSISTENT' };
   }
 
   _setupEventSubscriptions() {

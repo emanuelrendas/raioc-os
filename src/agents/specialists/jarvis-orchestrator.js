@@ -19,6 +19,7 @@ import { agentEventBus, AgentEvents } from '../../events/agent-event-bus.js';
 import { sharedMemory } from '../../memory/shared-memory.js';
 import { agentDirectory } from '../agent-directory.js';
 import { logger } from '../../logging/audit-logger.js';
+import { isServerlessRuntime } from '../../config/env.js';
 
 export class JarvisOrchestrator extends BaseSpecialistAgent {
   constructor() {
@@ -79,6 +80,10 @@ export class JarvisOrchestrator extends BaseSpecialistAgent {
    */
   startContinuousExecutiveLoop(intervalMs = 30000) {
     if (this.isLoopRunning) return;
+    if (isServerlessRuntime()) {
+      logger.info('JARVIS', '⚡ Serverless runtime detected: Continuous JARVIS executive loop decoupled.');
+      return;
+    }
     this.isLoopRunning = true;
     logger.info('JARVIS', '♾️ Starting continuous JARVIS Executive Operating System (JOS) Loop...');
 

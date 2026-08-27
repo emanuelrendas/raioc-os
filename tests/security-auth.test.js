@@ -47,4 +47,22 @@ describe('Security & Authentication Tests', () => {
     const failRes = verifier.verifyWhatsAppChallenge('subscribe', 'wrong_token', '11559933', 'my_verify_token');
     assert.strictEqual(failRes.success, false);
   });
+
+  test('verifies WhatsApp inbound HMAC-SHA256 signature (Fail-Closed)', () => {
+    const payload = { entry: [{ id: 'wa_123', changes: [{ value: { messages: [{ from: '+971501234567', text: { body: 'Hello' } }] } }] }] };
+    const secret = 'wa_sec_secret_key_888';
+    const validSig = `sha256=${secretsManager.generateHmacSignature(payload, secret)}`;
+
+    // Valid signature
+    assert.strictEqual(verifier.verifyWhatsAppSignature(payload, validSig, secret), true);
+
+    // Tampered payload / invalid signature
+    assert.strictEqual(verifier.verifyWhatsAppSignature(payload, 'sha256=invalid_hash', secret), false);
+
+    // Missing signature header (Fail-Closed)
+    assert.strictEqual(verifier.verifyWhatsAppSignature(payload, null, secret), false);
+
+    // Missing app secret (Fail-Closed)
+    assert.strictEqual(verifier.verifyWhatsAppSignature(payload, validSig, null), false);
+  });
 });
