@@ -1764,6 +1764,9 @@ export class SupabaseClient {
           status: cleanStatus,
           resolvedAt: new Date().toISOString(),
           actor,
+          decided_by: actor,
+          decidedBy: actor,
+          approvedBy: actor,
           metadata,
         };
         this.mockStore.executive_approvals.push(item);
@@ -1771,6 +1774,9 @@ export class SupabaseClient {
         item.status = cleanStatus;
         item.resolvedAt = new Date().toISOString();
         item.actor = actor;
+        item.decided_by = actor;
+        item.decidedBy = actor;
+        item.approvedBy = actor;
         item.metadata = { ...(item.metadata || {}), ...metadata };
       }
       return item;

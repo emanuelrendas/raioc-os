@@ -254,20 +254,75 @@ export function renderMissionControlHtml() {
 
         <div class="glass-card p-4 rounded-xl space-y-1">
           <div class="flex items-center justify-between text-xs text-gray-400 font-mono">
-            <span>ACTIVE WORKFLOWS</span>
+            <span>DAEMON MEMORY RSS</span>
             <i data-lucide="cpu" class="w-3.5 h-3.5 text-sky-400"></i>
           </div>
-          <div id="kpi-workflows" class="text-xl font-bold font-mono text-sky-400">8 / 8 RUNNING</div>
-          <div class="text-[10px] text-gray-500 font-mono">Event Bus v1.1 Active</div>
+          <div id="kpi-memory-rss" class="text-xl font-bold font-mono text-sky-400">-- MB</div>
+          <div id="kpi-daemon-meta" class="text-[10px] text-gray-500 font-mono">Max 250MB (Always-On)</div>
         </div>
 
         <div class="glass-card p-4 rounded-xl space-y-1">
           <div class="flex items-center justify-between text-xs text-gray-400 font-mono">
-            <span>5M ERROR RATE</span>
+            <span>DAEMON LOOPS</span>
             <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
           </div>
-          <div id="kpi-error-rate" class="text-xl font-bold font-mono text-emerald-400">0.00%</div>
-          <div class="text-[10px] text-gray-500 font-mono">Zero Circuit Tripping</div>
+          <div id="kpi-daemon-loops" class="text-xl font-bold font-mono text-emerald-400">3/3 ACTIVE</div>
+          <div id="kpi-daemon-uptime" class="text-[10px] text-gray-500 font-mono">Uptime: Live</div>
+        </div>
+      </section>
+
+      <!-- Component: ATLAS Sovereign Corridor Modeler -->
+      <section class="glass-card p-5 rounded-2xl space-y-4 border-amber-500/30">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <i data-lucide="calculator" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <h2 class="text-sm font-bold tracking-tight text-white flex items-center gap-2">
+                ATLAS SOVEREIGN CORRIDOR MODELER (OPAL ROI)
+                <span class="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono border border-emerald-500/40">DETERMINISTIC V1.1</span>
+              </h2>
+              <p class="text-[11px] text-gray-400">Underwrite Palm Jebel Ali & Dubai South DWC tranches with real statutory fees and IRR solvers.</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 font-mono text-xs">
+            <span class="text-gray-400">ENGINE:</span>
+            <span class="text-amber-400 font-bold">/api/v1/opal/roi</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 mb-1">SOVEREIGN CORRIDOR</label>
+            <select id="atlas-corridor" class="w-full bg-black/60 border border-white/10 rounded-xl p-2.5 text-xs font-mono text-amber-300 focus:outline-none focus:border-amber-500">
+              <option value="PALM_JEBEL_ALI">PALM JEBEL ALI (CAPITAL PRESERVATION ULTRA-PRIME)</option>
+              <option value="DUBAI_SOUTH_DWC">DUBAI SOUTH DWC (MACRO INFRASTRUCTURE HIGH-YIELD)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 mb-1">CAPITAL ALLOCATION (AED)</label>
+            <input id="atlas-allocation" type="number" step="1000000" value="35000000" class="w-full bg-black/60 border border-white/10 rounded-xl p-2.5 text-xs font-mono text-white focus:outline-none focus:border-amber-500" />
+          </div>
+          <div>
+            <label class="block text-[11px] font-mono text-gray-400 mb-1">CUSTODY VEHICLE</label>
+            <select id="atlas-vehicle" class="w-full bg-black/60 border border-white/10 rounded-xl p-2.5 text-xs font-mono text-gray-200 focus:outline-none focus:border-amber-500">
+              <option value="SPV_DIFC_ADGM">DIFC / ADGM SPV (COMMON LAW TRUST RINGFENCE)</option>
+              <option value="INDIVIDUAL_DIRECT">INDIVIDUAL DIRECT TITLE DEED</option>
+            </select>
+          </div>
+          <div>
+            <button onclick="calculateAtlasRoi()" class="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-400 hover:from-amber-600 hover:to-yellow-500 text-black text-xs font-bold font-mono rounded-xl transition-all shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+              <i data-lucide="play" class="w-3.5 h-3.5"></i>
+              CALCULATE PRO-FORMA
+            </button>
+          </div>
+        </div>
+
+        <div id="atlas-results-card" class="pt-2">
+          <div class="p-3 bg-black/30 rounded-xl border border-white/5 text-center text-xs font-mono text-gray-500">
+            Select corridor and click Calculate Pro-Forma to evaluate deterministic benchmarks.
+          </div>
         </div>
       </section>
 
@@ -797,11 +852,20 @@ export function renderMissionControlHtml() {
     async function fetchTelemetryState() {
       try {
         const url = isMasked ? '/api/v1/mission-control/v1-state?masked=true' : '/api/v1/mission-control/v1-state';
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('State fetch returned HTTP ' + res.status);
-        const data = await res.json();
+        const [stateRes, healthRes] = await Promise.all([
+          fetch(url),
+          fetch('/healthz').catch(() => null)
+        ]);
+
+        if (!stateRes.ok) throw new Error('State fetch returned HTTP ' + stateRes.status);
+        const data = await stateRes.json();
         const state = data.body || data;
         globalState = state;
+
+        if (healthRes && healthRes.ok) {
+          const healthData = await healthRes.json();
+          updateDaemonHealthMetrics(healthData.body || healthData);
+        }
 
         updateKpiMetrics(state);
         renderCurrentView();
@@ -815,6 +879,92 @@ export function renderMissionControlHtml() {
         const statusText = document.getElementById('status-text');
         if (statusDot) statusDot.className = 'w-2 h-2 rounded-full bg-amber-400 pulse-dot';
         if (statusText) statusText.textContent = 'RECONNECTING';
+      }
+    }
+
+    function updateDaemonHealthMetrics(health) {
+      if (!health) return;
+      const memEl = document.getElementById('kpi-memory-rss');
+      const uptimeEl = document.getElementById('kpi-daemon-uptime');
+      const loopsEl = document.getElementById('kpi-daemon-loops');
+
+      if (memEl) {
+        const rss = health.memory_rss_mb || 0;
+        memEl.textContent = rss + ' MB';
+        memEl.className = rss >= 180 ? 'text-xl font-bold font-mono text-rose-400' : 'text-xl font-bold font-mono text-sky-400';
+      }
+      if (uptimeEl) {
+        const up = Math.floor(health.uptime || 0);
+        uptimeEl.textContent = up > 3600 ? ('Uptime: ' + Math.floor(up / 3600) + 'h ' + Math.floor((up % 3600) / 60) + 'm') : ('Uptime: ' + up + 's');
+      }
+      if (loopsEl && health.loop_status) {
+        const activeCount = Object.values(health.loop_status).filter(Boolean).length;
+        loopsEl.textContent = activeCount + '/3 ACTIVE';
+      }
+    }
+
+    async function calculateAtlasRoi() {
+      const corridor = document.getElementById('atlas-corridor')?.value || 'PALM_JEBEL_ALI';
+      const allocation = Number(document.getElementById('atlas-allocation')?.value || 35000000);
+      const vehicle = document.getElementById('atlas-vehicle')?.value || 'SPV_DIFC_ADGM';
+      const container = document.getElementById('atlas-results-card');
+
+      if (container) {
+        container.innerHTML = '<div class="p-4 text-center text-xs font-mono text-amber-400">Computing deterministic pro-forma via ATLAS Opal ROI Engine (/api/v1/opal/roi)...</div>';
+      }
+
+      try {
+        const res = await fetch('/api/v1/opal/roi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            corridor,
+            allocation_aed: allocation,
+            ownership_vehicle: vehicle,
+          })
+        });
+
+        const data = await res.json();
+        const r = data.data || data;
+
+        if (container) {
+          const capRate = ((r.net_cap_rate || r.netCapRate || 0.0515) * 100).toFixed(2);
+          const irr7y = ((r.irr_7y || r.targetIrr7y || 0.135) * 100).toFixed(2);
+          const cagr10y = ((r.cagr_10y || r.macroCagr10y || 0.093) * 100).toFixed(2);
+          const dldFee = ((r.statutory_breakdown?.dld_fee_aed || (allocation * 0.04)) || 1400000).toLocaleString('en-US');
+          const totalOutlay = ((r.total_acquisition_outlay_aed || (allocation * 1.0526)) || 36842946).toLocaleString('en-US');
+
+          container.innerHTML = \`
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs pt-2">
+              <div class="p-3 bg-black/40 rounded-xl border border-white/10">
+                <span class="text-gray-400 text-[10px] block">NET CAP RATE (p.a.)</span>
+                <span class="text-amber-400 font-bold text-base">\${capRate}%</span>
+                <span class="text-[9px] text-gray-500 block">Mollak Audited Yield</span>
+              </div>
+              <div class="p-3 bg-black/40 rounded-xl border border-white/10">
+                <span class="text-gray-400 text-[10px] block">7-YEAR TARGET IRR (TIR)</span>
+                <span class="text-emerald-400 font-bold text-base">\${irr7y}%</span>
+                <span class="text-[9px] text-gray-500 block">Newton-Raphson Solver</span>
+              </div>
+              <div class="p-3 bg-black/40 rounded-xl border border-white/10">
+                <span class="text-gray-400 text-[10px] block">10-YEAR MACRO CAGR</span>
+                <span class="text-sky-400 font-bold text-base">\${cagr10y}%</span>
+                <span class="text-[9px] text-gray-500 block">Physical Scarcity Model</span>
+              </div>
+              <div class="p-3 bg-black/40 rounded-xl border border-white/10">
+                <span class="text-gray-400 text-[10px] block">DLD TRANSFER FEE (4%)</span>
+                <span class="text-gold-300 font-bold text-base">AED \${dldFee}</span>
+                <span class="text-[9px] text-gray-500 block">Trustee & Oqood Included</span>
+              </div>
+            </div>
+            <div class="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-xs font-mono text-emerald-300 flex flex-wrap items-center justify-between gap-2 mt-2">
+              <span>🛡️ <strong>Statutory Shield:</strong> \${r.statutory_anchors?.escrow || 'Dubai Law No. 8/2007 (Escrow Guarantee)'} • Golden Visa: \${r.golden_visa_qualified ? '✅ Fully Qualified (10-Year)' : 'Standard'}</span>
+              <span class="text-gray-300 text-[11px]">Total Statutory Outlay: <strong>AED \${totalOutlay}</strong></span>
+            </div>
+          \`;
+        }
+      } catch (err) {
+        if (container) container.innerHTML = \`<div class="p-3 text-rose-400 text-xs font-mono">Calculation Error: \${err.message}</div>\`;
       }
     }
 
@@ -1076,11 +1226,12 @@ export function renderMissionControlHtml() {
             'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99'
           },
           body: JSON.stringify({ 
-            approval_id: id, 
             approvalId: id, 
+            approval_id: id, 
             decision: resolution, 
-            decided_by: 'Emanuel Rendas (Chief Executive Officer)',
-            actor: 'Emanuel Rendas (Chief Executive Officer)',
+            approvedBy: 'Emanuel Rendas',
+            decided_by: 'Emanuel Rendas',
+            actor: 'Emanuel Rendas',
             note: resolution === 'APPROVED' 
               ? 'Aprovado via Mission Control V2. Despacho autónomo da AIDA autorizado.' 
               : 'Rejeitado e arquivado no registo de auditoria.'

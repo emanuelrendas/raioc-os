@@ -14,6 +14,7 @@ import { voiceAi, VOICE_INTENTS } from '../../core/voice-ai.js';
 import { authMiddleware, Roles } from '../../security/auth-middleware.js';
 import { logger } from '../../logging/audit-logger.js';
 import { agentEventBus } from '../../events/agent-event-bus.js';
+import { formatVipPostApprovalDispatch } from '../../services/vip-dispatch-service.js';
 
 export async function handleApprovalsRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
   const cleanPath = url.split('?')[0].replace(/\/+$/, '');
@@ -53,7 +54,7 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
     }
 
     const cleanAction = rawAction.startsWith('APP') ? 'APPROVED' : 'REJECTED';
-    const actor = body.actor || body.decided_by || body.decidedBy || 'Emanuel Rendas (Chief Executive Officer)';
+    const actor = body.actor || body.approvedBy || body.approved_by || body.decided_by || body.decidedBy || 'Emanuel Rendas';
     const resolutionNote = body.note || body.comments || `Action ${cleanAction} via Mission Control`;
     const correlationId = headers['x-correlation-id'] || body.correlation_id || `corr_appr_${Date.now()}`;
     const traceparent = headers['traceparent'] || body.traceparent;
@@ -70,8 +71,9 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
     });
 
     let dispatchedVoiceEvent = null;
+    let dispatchedVipEvent = null;
 
-    // Trigger AIDA Voice Outreach on APPROVED decision
+    // Trigger AIDA Voice Outreach and VIP Dispatch on APPROVED decision
     if (cleanAction === 'APPROVED') {
       const allApprovals = await supabase.fetchApprovals('ALL');
       const approvalItem = allApprovals.find((a) => a.id === approvalId) || resolvedRecord;
@@ -128,12 +130,56 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
         script: voiceOutput.script,
       };
 
+      // Format and emit VIP post-approval dispatch CloudEvent
+      const vipFormatted = formatVipPostApprovalDispatch({
+        mandateId: payload.mandateId || payload.mandate_id || approvalItem.mandate_id || `MND-${approvalId.substring(0, 8)}`,
+        investorName: recipient,
+        corridorKey: payload.corridorKey || payload.corridor || 'PALM_JEBEL_ALI',
+        corridorName: payload.corridorName || 'Palm Jebel Ali Sovereign Corridor',
+        allocationAed: budgetAed,
+        ownershipVehicle: payload.ownershipVehicle || 'SPV_DIFC_ADGM',
+        briefId: payload.briefId || `PIB-${Date.now()}`,
+        documentSha256: payload.documentSha256 || payload.sha256 || voiceOutput.audioSha256,
+        locale: payload.locale || 'en',
+      });
+
+      const vipEvent = await enterpriseEventBus.publishEvent(
+        'raioc.communication.vip.dispatched.v1',
+        'raioc://communication/vip/dispatcher',
+        {
+          approvalId,
+          mandateId: vipFormatted.mandateId,
+          investorName: recipient,
+          allocationAed: budgetAed,
+          messageSha256: vipFormatted.messageSha256,
+          messageText: vipFormatted.messageText,
+          subject: vipFormatted.subject,
+          timezones: vipFormatted.timezones,
+          locale: vipFormatted.locale,
+          approvedBy: actor,
+          dispatchedAt: new Date().toISOString(),
+        },
+        {
+          correlationId,
+          traceparent,
+          subject: `vip_dispatch_${recipient.replace(/\s+/g, '_')}`,
+        }
+      );
+
+      dispatchedVipEvent = {
+        eventId: vipEvent.id,
+        type: vipEvent.type,
+        messageSha256: vipFormatted.messageSha256,
+        timezones: vipFormatted.timezones,
+        locale: vipFormatted.locale,
+      };
+
       await supabase.recordInteractionLog({
         channel: 'VOICE_DISPATCH',
         event_type: 'VOICE_OUTREACH_DISPATCHED',
         source_agent: 'AIDA',
         direction: 'OUTBOUND',
-        summary: `Executive voice outreach autonomously dispatched for ${recipient} following CEO approval [${approvalId}]`,
+        summary: `Executive voice & VIP outreach autonomously dispatched for ${recipient} following CEO approval [${approvalId}]`,
         payload: {
           approvalId,
           actor,
@@ -142,6 +188,7 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
           budgetAed,
           targetAsset,
           audioSha256: voiceOutput.audioSha256,
+          vipMessageSha256: vipFormatted.messageSha256,
         },
         correlation_id: correlationId,
         traceparent,
@@ -160,6 +207,7 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
         approvalId,
         approval: resolvedRecord,
         dispatchedEvent: dispatchedVoiceEvent,
+        vipDispatch: dispatchedVipEvent,
         actor,
         resolvedAt: new Date().toISOString(),
       },

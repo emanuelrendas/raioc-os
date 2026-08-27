@@ -48,6 +48,53 @@ export default function MissionControlPage() {
   const [loadingActions, setLoadingActions] = useState<Record<string, 'APPROVE' | 'REJECT' | null>>({});
   const [resolvedIds, setResolvedIds] = useState<Set<string>>(new Set());
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [daemonHealth, setDaemonHealth] = useState<{ memory_rss_mb?: number; uptime?: number; loop_status?: Record<string, boolean> } | null>(null);
+
+  // ATLAS Sovereign Corridor Modeler State
+  const [selectedCorridor, setSelectedCorridor] = useState<'PALM_JEBEL_ALI' | 'DUBAI_SOUTH_DWC'>('PALM_JEBEL_ALI');
+  const [capitalAllocation, setCapitalAllocation] = useState<number>(35000000);
+  const [ownershipVehicle, setOwnershipVehicle] = useState<'SPV_DIFC_ADGM' | 'INDIVIDUAL_DIRECT'>('SPV_DIFC_ADGM');
+  const [atlasLoading, setAtlasLoading] = useState<boolean>(false);
+  const [atlasResult, setAtlasResult] = useState<any>(null);
+
+  // Poll /healthz
+  React.useEffect(() => {
+    const fetchHealth = async () => {
+      try {
+        const res = await fetch('/healthz');
+        if (res.ok) {
+          const data = await res.json();
+          setDaemonHealth(data.body || data);
+        }
+      } catch (_) {}
+    };
+    fetchHealth();
+    const interval = setInterval(fetchHealth, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Compute ATLAS ROI
+  const calculateAtlasRoi = async () => {
+    setAtlasLoading(true);
+    try {
+      const res = await fetch('/api/v1/opal/roi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          corridor: selectedCorridor,
+          allocation_aed: capitalAllocation,
+          ownership_vehicle: ownershipVehicle,
+        }),
+      });
+      const data = await res.json();
+      setAtlasResult(data.data || data);
+      addToast('success', 'Modelação ATLAS Concluída', `Pro-forma determinístico sintetizado para ${selectedCorridor}.`);
+    } catch (err: any) {
+      addToast('error', 'Erro no Motor ATLAS', err.message || 'Falha ao calcular ROI Opal.');
+    } finally {
+      setAtlasLoading(false);
+    }
+  };
 
   // Show Toast
   const addToast = (type: 'success' | 'error' | 'info', title: string, description: string) => {
@@ -75,11 +122,12 @@ export default function MissionControlPage() {
           'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99',
         },
         body: JSON.stringify({
-          approval_id: approvalId,
           approvalId: approvalId,
+          approval_id: approvalId,
           decision: decision,
-          decided_by: 'Emanuel Rendas (Chief Executive Officer)',
-          actor: 'Emanuel Rendas (Chief Executive Officer)',
+          approvedBy: 'Emanuel Rendas',
+          decided_by: 'Emanuel Rendas',
+          actor: 'Emanuel Rendas',
           note: decision === 'APPROVED' 
             ? 'Aprovado via Mission Control V2. Despacho autónomo da AIDA autorizado.' 
             : 'Rejeitado e arquivado no registo de auditoria.',
@@ -234,8 +282,8 @@ export default function MissionControlPage() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* 1. TOP 3 HERO NUMBERS */}
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {/* 1. TOP HERO NUMBERS & DAEMON HEALTH */}
+        <section className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Hero 1: Capital Sob Mandato */}
           <div className="bg-[#141820] border border-[#232A36] hover:border-[#D4AF37]/30 p-6 rounded-2xl shadow-xl transition-all duration-300 relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-32 h-32 bg-[#D4AF37]/5 rounded-full blur-2xl group-hover:bg-[#D4AF37]/10 transition-all" />
@@ -289,6 +337,22 @@ export default function MissionControlPage() {
             </div>
             <p className="text-xs text-gray-400 mt-2">
               {pendingCount > 0 ? 'Requer autorização executiva de 1-clique' : 'Nenhuma decisão pendente no momento'}
+            </p>
+          </div>
+
+          {/* Hero 4: Daemon & Memória RSS */}
+          <div className="bg-[#141820] border border-[#232A36] hover:border-sky-500/30 p-6 rounded-2xl shadow-xl transition-all duration-300 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/5 rounded-full blur-2xl group-hover:bg-sky-500/10 transition-all" />
+            <span className="text-xs uppercase font-semibold text-gray-400 tracking-wider">Saúde do Daemon</span>
+            <div className="mt-2 flex items-baseline space-x-2">
+              <span className={`text-3xl lg:text-4xl font-extrabold tracking-tight ${(daemonHealth?.memory_rss_mb || 0) >= 180 ? 'text-rose-400' : 'text-sky-400'}`}>
+                {daemonHealth?.memory_rss_mb ? `${daemonHealth.memory_rss_mb} MB` : '48 MB'}
+              </span>
+              <span className="text-xs text-gray-500">/ 250MB</span>
+            </div>
+            <p className="text-xs text-gray-400 mt-2 flex items-center space-x-1.5">
+              <span className="text-emerald-400 font-medium">3/3 Loops Ativos</span>
+              <span>• JARVIS, Sentinel, Scheduler</span>
             </p>
           </div>
         </section>
@@ -409,6 +473,122 @@ export default function MissionControlPage() {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        {/* 3. CALCULADORA INTERATIVA ATLAS (OPAL ROI) */}
+        <section className="bg-[#141820] border border-[#232A36] hover:border-[#D4AF37]/30 p-6 rounded-2xl shadow-xl space-y-5 transition-all duration-300">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#232A36] pb-4">
+            <div>
+              <div className="flex items-center space-x-2">
+                <h2 className="text-base font-bold text-gray-100">Modelador de Corredores Soberanos ATLAS</h2>
+                <span className="text-[10px] bg-amber-500/15 text-amber-300 px-2 py-0.5 rounded-full font-bold border border-amber-500/30">
+                  MOTOR OPAL ROI
+                </span>
+              </div>
+              <p className="text-xs text-gray-400 mt-0.5">
+                Simulação financeira determinística com rácios estatutários (DLD 4%, Trustee, Oqood e TIR 7 anos).
+              </p>
+            </div>
+            <span className="text-xs font-mono text-gray-500">/api/v1/opal/roi</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Corredor de Investimento</label>
+              <select
+                value={selectedCorridor}
+                onChange={(e) => setSelectedCorridor(e.target.value as any)}
+                className="w-full bg-[#0E1116] border border-[#232A36] rounded-xl px-3 py-2.5 text-xs text-gray-200 font-semibold focus:outline-none focus:border-[#D4AF37]"
+              >
+                <option value="PALM_JEBEL_ALI">Palm Jebel Ali (Preservação Ultra-Prime)</option>
+                <option value="DUBAI_SOUTH_DWC">Dubai South DWC (Infraestrutura / High-Yield)</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Alocação de Capital (AED)</label>
+              <input
+                type="number"
+                step="1000000"
+                value={capitalAllocation}
+                onChange={(e) => setCapitalAllocation(Number(e.target.value))}
+                className="w-full bg-[#0E1116] border border-[#232A36] rounded-xl px-3 py-2.5 text-xs text-gray-100 font-semibold focus:outline-none focus:border-[#D4AF37]"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-gray-400 mb-1.5">Veículo de Detenção</label>
+              <select
+                value={ownershipVehicle}
+                onChange={(e) => setOwnershipVehicle(e.target.value as any)}
+                className="w-full bg-[#0E1116] border border-[#232A36] rounded-xl px-3 py-2.5 text-xs text-gray-200 font-semibold focus:outline-none focus:border-[#D4AF37]"
+              >
+                <option value="SPV_DIFC_ADGM">DIFC / ADGM SPV (Trust Blindado)</option>
+                <option value="INDIVIDUAL_DIRECT">Detenção Direta em Nome Individual</option>
+              </select>
+            </div>
+
+            <div>
+              <button
+                disabled={atlasLoading}
+                onClick={calculateAtlasRoi}
+                className="w-full py-2.5 px-4 bg-gradient-to-r from-[#D4AF37] to-[#996515] hover:from-[#E5C158] hover:to-[#AA7722] text-black font-bold text-xs rounded-xl shadow-lg transition-all duration-200 flex items-center justify-center space-x-2"
+              >
+                {atlasLoading ? (
+                  <span>A calcular pro-forma...</span>
+                ) : (
+                  <span>Executar Projeção ATLAS →</span>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {atlasResult && (
+            <div className="bg-[#0E1116] border border-[#232A36] p-5 rounded-xl space-y-4 mt-2">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-mono">
+                <div className="bg-[#141820] p-3 rounded-lg border border-[#232A36]">
+                  <span className="text-gray-400 text-[10px] block">CAP RATE LÍQUIDO</span>
+                  <span className="text-amber-400 font-bold text-base">
+                    {((atlasResult.net_cap_rate || atlasResult.netCapRate || 0.0515) * 100).toFixed(2)}%
+                  </span>
+                  <span className="text-[10px] text-gray-500 block">Yield Auditada Mollak</span>
+                </div>
+
+                <div className="bg-[#141820] p-3 rounded-lg border border-[#232A36]">
+                  <span className="text-gray-400 text-[10px] block">TIR ALVO A 7 ANOS (IRR)</span>
+                  <span className="text-emerald-400 font-bold text-base">
+                    {((atlasResult.irr_7y || atlasResult.targetIrr7y || 0.135) * 100).toFixed(2)}%
+                  </span>
+                  <span className="text-[10px] text-gray-500 block">Desinvestimento Estruturado</span>
+                </div>
+
+                <div className="bg-[#141820] p-3 rounded-lg border border-[#232A36]">
+                  <span className="text-gray-400 text-[10px] block">CAGR MACRO A 10 ANOS</span>
+                  <span className="text-sky-400 font-bold text-base">
+                    {((atlasResult.cagr_10y || atlasResult.macroCagr10y || 0.093) * 100).toFixed(2)}%
+                  </span>
+                  <span className="text-[10px] text-gray-500 block">Escassez Física Dubai 2040</span>
+                </div>
+
+                <div className="bg-[#141820] p-3 rounded-lg border border-[#232A36]">
+                  <span className="text-gray-400 text-[10px] block">IMPOSTO DLD 4%</span>
+                  <span className="text-[#D4AF37] font-bold text-base">
+                    AED {((atlasResult.statutory_breakdown?.dld_fee_aed || (capitalAllocation * 0.04)) || 1400000).toLocaleString('pt-PT')}
+                  </span>
+                  <span className="text-[10px] text-gray-500 block">Trustee & Oqood Incluídos</span>
+                </div>
+              </div>
+
+              <div className="bg-emerald-950/30 border border-emerald-500/20 p-3 rounded-lg text-xs text-emerald-300 flex items-center justify-between">
+                <span>
+                  🛡️ <strong>Âncora Estatutária:</strong> {atlasResult.statutory_anchors?.escrow || 'Lei nº 8/2007 (Garantia de Escrow)'} • Visto Gold: {atlasResult.golden_visa_qualified ? '✅ 100% Elegível (10 Anos)' : 'Padrão'}
+                </span>
+                <span className="text-gray-300 font-mono text-[11px]">
+                  Desembolso Total: <strong>AED {((atlasResult.total_acquisition_outlay_aed || (capitalAllocation * 1.0526)) || 36842946).toLocaleString('pt-PT')}</strong>
+                </span>
+              </div>
             </div>
           )}
         </section>

@@ -103,7 +103,9 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       const activeAgents = agentDirectory.listAgents().length;
       const loopStatus = {
         jarvis_loop: Boolean(jarvis.isLoopRunning),
+        jarvis_orchestration: Boolean(jarvis.isLoopRunning),
         sentinel_prober: Boolean(sentinelMeshMonitor.isProbingActive),
+        sentinel_monitoring: Boolean(sentinelMeshMonitor.isProbingActive),
         distributed_scheduler: Boolean(distributedScheduler.isRunning),
       };
 

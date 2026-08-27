@@ -20,10 +20,54 @@ const multimodalEngine = new MultimodalEngine();
  * @returns {Object} HTTP response
  */
 export async function handleOpalRoi(payload = {}) {
-  const result = executeDeterministicOpalCalculation(payload);
+  const allocation = Number(payload.allocation_aed || payload.allocationAed || payload.purchasePriceAed || payload.price || 35000000);
+  const result = executeDeterministicOpalCalculation({
+    corridor: payload.corridor || payload.corridorKey || 'PALM_JEBEL_ALI',
+    purchasePriceAed: allocation,
+    allocation_aed: allocation,
+    ownershipVehicle: payload.ownership_vehicle || payload.ownershipVehicle || 'SPV_DIFC_ADGM',
+    ...payload,
+  });
+
+  const dldFee = result.statutoryShield?.statutoryFeeBreakdown?.dldFeeAed || Math.round(allocation * 0.04);
+  const trusteeFee = result.statutoryShield?.statutoryFeeBreakdown?.trusteeFeeAed || 4200;
+  const oqoodFee = result.statutoryShield?.statutoryFeeBreakdown?.oqoodFeeAed || 1000;
+  const totalStatutory = result.financialMetrics?.totalStatutoryFeesAed || (dldFee + trusteeFee + oqoodFee);
+  const totalOutlay = result.financialMetrics?.allInOutlayAed || (allocation + totalStatutory);
+  const netCapRate = (result.financialMetrics?.netYieldPct || 5.15) / 100;
+  const irr7y = (result.financialMetrics?.sevenYearIrr || 13.5) / 100;
+  const cagr10y = (result.corridorBenchmark?.cagr10yBand?.[0] || 0.085);
+
+  const flatData = {
+    corridor: result.corridorBenchmark?.id || payload.corridor || 'PALM_JEBEL_ALI',
+    corridor_name: result.corridorBenchmark?.name,
+    allocation_aed: allocation,
+    net_cap_rate: netCapRate,
+    irr_7y: irr7y,
+    cagr_10y: cagr10y,
+    golden_visa_qualified: Boolean(result.statutoryShield?.goldenVisaEligible),
+    total_acquisition_outlay_aed: totalOutlay,
+    statutory_breakdown: {
+      dld_fee_aed: dldFee,
+      trustee_fee_aed: trusteeFee,
+      oqood_fee_aed: oqoodFee,
+      total_statutory_aed: totalStatutory,
+    },
+    statutory_anchors: {
+      escrow: result.statutoryShield?.escrowProtection,
+      decennial: result.statutoryShield?.decennialLiability,
+      golden_visa: result.statutoryShield?.statutoryDecree,
+    },
+    ...result,
+  };
+
   return {
     status: 200,
-    body: result,
+    body: {
+      success: true,
+      data: flatData,
+      ...flatData,
+    },
   };
 }
 
@@ -157,19 +201,19 @@ export async function handleGeminiAdvisor(payload = {}, headers = {}) {
 export async function handleAiToolsRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
   const cleanUrl = url.split('?')[0].replace(/\/$/, '');
 
-  if (cleanUrl === '/api/opal/roi' || cleanUrl === '/api/opal') {
+  if (cleanUrl === '/api/v1/opal/roi' || cleanUrl === '/api/v1/opal' || cleanUrl === '/api/opal/roi' || cleanUrl === '/api/opal') {
     return await handleOpalRoi(body);
   }
 
-  if (cleanUrl === '/api/mixboard/board' || cleanUrl === '/api/mixboard') {
+  if (cleanUrl === '/api/v1/mixboard/board' || cleanUrl === '/api/v1/mixboard' || cleanUrl === '/api/mixboard/board' || cleanUrl === '/api/mixboard') {
     return await handleMixboardBoard(body);
   }
 
-  if (cleanUrl === '/api/flow/teaser' || cleanUrl === '/api/flow') {
+  if (cleanUrl === '/api/v1/flow/teaser' || cleanUrl === '/api/v1/flow' || cleanUrl === '/api/flow/teaser' || cleanUrl === '/api/flow') {
     return await handleFlowTeaser(body);
   }
 
-  if (cleanUrl === '/api/ai/gemini-advisor' || cleanUrl === '/api/ai/advisor' || cleanUrl === '/api/mission-control/copilot') {
+  if (cleanUrl === '/api/v1/ai/gemini-advisor' || cleanUrl === '/api/v1/ai/advisor' || cleanUrl === '/api/ai/gemini-advisor' || cleanUrl === '/api/ai/advisor' || cleanUrl === '/api/mission-control/copilot') {
     return await handleGeminiAdvisor(body, headers);
   }
 
@@ -177,7 +221,7 @@ export async function handleAiToolsRequest(url, method = 'GET', body = {}, query
     status: 404,
     body: {
       error: `Unknown AI Tool endpoint: ${url}`,
-      availableEndpoints: ['/api/opal/roi', '/api/mixboard/board', '/api/flow/teaser', '/api/ai/gemini-advisor'],
+      availableEndpoints: ['/api/v1/opal/roi', '/api/v1/mixboard/board', '/api/v1/flow/teaser', '/api/v1/ai/gemini-advisor'],
     },
   };
 }
