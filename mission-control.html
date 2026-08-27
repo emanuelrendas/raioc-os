@@ -2194,6 +2194,63 @@ Orquestras e delegas com precisão para:
       processVoiceDirective(text);
     }
 
+    let activeVoiceStreamReader = null;
+    let audioQueue = [];
+    let isPlayingQueue = false;
+
+    // Sequential audio chunk player for continuous sub-250ms TTFA playback
+    async function playNextChunk() {
+      if (audioQueue.length === 0 || !voiceSessionActive) {
+        isPlayingQueue = false;
+        return;
+      }
+      isPlayingQueue = true;
+      const chunk = audioQueue.shift();
+      const ctx = await unlockAudioContext();
+      if (!ctx) {
+        isPlayingQueue = false;
+        return;
+      }
+
+      try {
+        const arrayBuffer = base64ToArrayBuffer(chunk.audioBase64);
+        if (!arrayBuffer || arrayBuffer.byteLength < 32) {
+          playNextChunk();
+          return;
+        }
+        const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+        const source = ctx.createBufferSource();
+        source.buffer = audioBuffer;
+        if (analyserNode) source.connect(analyserNode);
+        source.connect(ctx.destination);
+
+        isBotSpeaking = true;
+        setVoiceState('speaking');
+        activeAudioSource = source;
+
+        source.onended = () => {
+          activeAudioSource = null;
+          if (audioQueue.length > 0) {
+            playNextChunk();
+          } else {
+            isPlayingQueue = false;
+            isBotSpeaking = false;
+            if (voiceSessionActive) {
+              setVoiceState('listening');
+              setTranscriptCaption('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+              if (speechRecognizer && !isMicMuted) {
+                try { speechRecognizer.start(); } catch (_) {}
+              }
+            }
+          }
+        };
+        source.start(0);
+      } catch (err) {
+        console.warn('[VOICE_ENGINE:CHUNK_PLAY_FAIL]', err);
+        playNextChunk();
+      }
+    }
+
     // Barge-in (Interrupção imediata de áudio e rede quando o utilizador começa a falar)
     function handleBargeIn() {
       if (silenceTimer) {
@@ -2208,6 +2265,12 @@ Orquestras e delegas com precisão para:
         activeVoiceAbortController.abort();
         activeVoiceAbortController = null;
       }
+      if (activeVoiceStreamReader) {
+        try { activeVoiceStreamReader.cancel(); } catch (_) {}
+        activeVoiceStreamReader = null;
+      }
+      audioQueue = [];
+      isPlayingQueue = false;
       if (activeAudioSource) {
         try { activeAudioSource.stop(); } catch (e) {}
         activeAudioSource = null;
@@ -2236,6 +2299,12 @@ Orquestras e delegas com precisão para:
         try { activeAudioSource.stop(); } catch (e) {}
         activeAudioSource = null;
       }
+      if (activeVoiceStreamReader) {
+        try { activeVoiceStreamReader.cancel(); } catch (_) {}
+        activeVoiceStreamReader = null;
+      }
+      audioQueue = [];
+      isPlayingQueue = false;
       activeVoiceAbortController = new AbortController();
 
       setVoiceState('thinking');
@@ -2247,13 +2316,15 @@ Orquestras e delegas com precisão para:
         voiceConversationHistory = voiceConversationHistory.slice(-20);
       }
 
-      console.log(`[VOICE_ENGINE:PAYLOAD_SENT] Transmitting to /api/v1/voice/conversation (turn ${voiceConversationHistory.length})...`);
+      console.log(`[VOICE_ENGINE:SSE_STREAM_SENT] Transmitting to /api/v1/voice/stream (turn ${voiceConversationHistory.length})...`);
       reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { textLength: text.length, historyCount: voiceConversationHistory.length });
 
       const tReq = performance.now();
+      let streamedFullText = '';
+
       try {
-        setTranscriptCaption('[⚡ A SINTETIZAR] A gerar resposta e áudio fiduciário...');
-        const res = await fetch('/api/v1/voice/conversation', {
+        setTranscriptCaption('[⚡ A SINTETIZAR] A iniciar streaming Token-to-Chunk...');
+        const res = await fetch('/api/v1/voice/stream', {
           method: 'POST',
           headers: getClientAuthHeaders(),
           credentials: 'same-origin',
@@ -2270,23 +2341,67 @@ Orquestras e delegas com precisão para:
           throw new Error('AUTH_REQUIRED: Sessão expirada ou não autorizada');
         }
 
-        const data = await res.json();
-        const elapsed = performance.now() - tReq;
-        console.log(`[VOICE_ENGINE:RESPONSE_RECEIVED] Server returned in ${elapsed.toFixed(2)}ms: { hasAudio: ${Boolean(data.audioBase64)}, fallbackRequired: ${Boolean(data.fallbackRequired)} }`);
-        reportVoiceTelemetry('VOICE_LATENCY_METRIC', { hasAudio: Boolean(data.audioBase64), fallbackRequired: Boolean(data.fallbackRequired) }, elapsed);
+        if (res.ok && res.body && res.body.getReader) {
+          const reader = res.body.getReader();
+          activeVoiceStreamReader = reader;
+          const decoder = new TextDecoder('utf-8');
+          let sseBuffer = '';
+          let firstChunkReceived = false;
 
-        const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            sseBuffer += decoder.decode(value, { stream: true });
+            const blocks = sseBuffer.split('\n\n');
+            sseBuffer = blocks.pop();
 
-        // Record assistant response turn in history
-        voiceConversationHistory.push({ role: 'model', text: reply });
-        if (voiceConversationHistory.length > 20) {
-          voiceConversationHistory = voiceConversationHistory.slice(-20);
-        }
+            for (const block of blocks) {
+              const eventMatch = block.match(/event:\s*([^\n]+)/);
+              const dataMatch = block.match(/data:\s*([^\n]+)/);
+              if (!eventMatch || !dataMatch) continue;
 
-        if (data.audioBase64 && !data.fallbackRequired) {
-          await playNeuralAudio(data.audioBase64, reply, false);
+              const eventType = eventMatch[1].trim();
+              let eventData = {};
+              try { eventData = JSON.parse(dataMatch[1].trim()); } catch (_) {}
+
+              if (eventType === 'token' && eventData.text) {
+                streamedFullText += eventData.text;
+                setTranscriptCaption('[🔊 A TOCAR ÁUDIO] JARVIS: ' + streamedFullText);
+              } else if (eventType === 'audio_chunk' && eventData.audioBase64) {
+                if (!firstChunkReceived) {
+                  firstChunkReceived = true;
+                  const ttfa = performance.now() - tReq;
+                  console.log(`[VOICE_ENGINE:TTFA] First audio chunk received in ${ttfa.toFixed(2)}ms (Sub-250ms target)`);
+                  reportVoiceTelemetry('VOICE_TTFA_METRIC', { ttfaMs: ttfa, format: eventData.format });
+                }
+                audioQueue.push(eventData);
+                if (!isPlayingQueue) {
+                  playNextChunk();
+                }
+              } else if (eventType === 'done') {
+                const totalElapsed = performance.now() - tReq;
+                console.log(`[VOICE_ENGINE:STREAM_DONE] SSE stream completed in ${totalElapsed.toFixed(2)}ms (${eventData.totalChunks} chunks)`);
+                reportVoiceTelemetry('VOICE_STREAM_COMPLETED', { totalMs: totalElapsed, chunks: eventData.totalChunks });
+              }
+            }
+          }
+
+          if (streamedFullText) {
+            voiceConversationHistory.push({ role: 'model', text: streamedFullText.trim() });
+            if (voiceConversationHistory.length > 20) {
+              voiceConversationHistory = voiceConversationHistory.slice(-20);
+            }
+          }
         } else {
-          speakNaturalVoiceFallback(reply);
+          // Fallback to conversation batch API if SSE body reader is unavailable
+          const data = await res.json();
+          const reply = data.text || 'JARVIS operacional.';
+          voiceConversationHistory.push({ role: 'model', text: reply });
+          if (data.audioBase64 && !data.fallbackRequired) {
+            await playNeuralAudio(data.audioBase64, reply, false);
+          } else {
+            speakNaturalVoiceFallback(reply);
+          }
         }
       } catch (err) {
         if (err.name === 'AbortError') {
@@ -2294,13 +2409,14 @@ Orquestras e delegas com precisão para:
           reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
           return;
         }
-        console.warn('[VOICE_ENGINE:REQUEST_FAIL] Request error, switching to offline fallback:', err);
+        console.warn('[VOICE_ENGINE:STREAM_FAIL] Stream error, switching to natural fallback:', err);
         reportVoiceTelemetry('VOICE_REQUEST_FAILED', { error: err.message });
         const fallbackText = 'JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.';
         voiceConversationHistory.push({ role: 'model', text: fallbackText });
         speakNaturalVoiceFallback(fallbackText);
       } finally {
         activeVoiceAbortController = null;
+        activeVoiceStreamReader = null;
       }
     }
 

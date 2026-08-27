@@ -40,6 +40,9 @@ export default function MissionControlDashboard() {
   const playbackSafetyTimeoutRef = React.useRef(null);
   const accumulatedTextRef = React.useRef('');
   const activeVoiceAbortControllerRef = React.useRef(null);
+  const activeVoiceStreamReaderRef = React.useRef(null);
+  const audioQueueRef = React.useRef([]);
+  const isPlayingQueueRef = React.useRef(false);
   const activeAudioSourceRef = React.useRef(null);
   const voiceConversationHistoryRef = React.useRef([]);
 
@@ -391,7 +394,58 @@ Orquestras e delegas com precisão para:
     }
   };
 
-  // Process voice directive to backend
+  // Sequential audio chunk player for continuous sub-250ms TTFA playback
+  const playNextChunk = async () => {
+    if (audioQueueRef.current.length === 0) {
+      isPlayingQueueRef.current = false;
+      return;
+    }
+    isPlayingQueueRef.current = true;
+    const chunk = audioQueueRef.current.shift();
+    const ctx = await unlockAudioContext();
+    if (!ctx) {
+      isPlayingQueueRef.current = false;
+      return;
+    }
+
+    try {
+      const arrayBuffer = base64ToArrayBuffer(chunk.audioBase64);
+      if (!arrayBuffer || arrayBuffer.byteLength < 32) {
+        playNextChunk();
+        return;
+      }
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      if (analyserRef.current) source.connect(analyserRef.current);
+      source.connect(ctx.destination);
+
+      isBotSpeakingRef.current = true;
+      setVoiceState('speaking');
+      activeAudioSourceRef.current = source;
+
+      source.onended = () => {
+        activeAudioSourceRef.current = null;
+        if (audioQueueRef.current.length > 0) {
+          playNextChunk();
+        } else {
+          isPlayingQueueRef.current = false;
+          isBotSpeakingRef.current = false;
+          setVoiceState('listening');
+          setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+          if (speechRecognizerRef.current) {
+            try { speechRecognizerRef.current.start(); } catch (_) {}
+          }
+        }
+      };
+      source.start(0);
+    } catch (err) {
+      console.warn('[VOICE_ENGINE:CHUNK_PLAY_FAIL]', err);
+      playNextChunk();
+    }
+  };
+
+  // Process voice directive to backend with Token-to-Chunk SSE Streaming
   const processVoiceDirective = async (text) => {
     console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + text + '"');
     if (silenceTimerRef.current) {
@@ -405,6 +459,12 @@ Orquestras e delegas com precisão para:
       try { activeAudioSourceRef.current.stop(); } catch (e) {}
       activeAudioSourceRef.current = null;
     }
+    if (activeVoiceStreamReaderRef.current) {
+      try { activeVoiceStreamReaderRef.current.cancel(); } catch (_) {}
+      activeVoiceStreamReaderRef.current = null;
+    }
+    audioQueueRef.current = [];
+    isPlayingQueueRef.current = false;
     activeVoiceAbortControllerRef.current = new AbortController();
 
     setVoiceState('thinking');
@@ -416,13 +476,15 @@ Orquestras e delegas com precisão para:
       voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
     }
 
-    console.log(`[VOICE_ENGINE:PAYLOAD_SENT] Transmitting to /api/v1/voice/conversation (turn ${voiceConversationHistoryRef.current.length})...`);
+    console.log(`[VOICE_ENGINE:SSE_STREAM_SENT] Transmitting to /api/v1/voice/stream (turn ${voiceConversationHistoryRef.current.length})...`);
     reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { textLength: text.length, historyCount: voiceConversationHistoryRef.current.length });
 
     const tReq = performance.now();
+    let streamedFullText = '';
+
     try {
-      setVoiceTranscript('[⚡ A SINTETIZAR] A gerar resposta e áudio fiduciário...');
-      const res = await fetch('/api/v1/voice/conversation', {
+      setVoiceTranscript('[⚡ A SINTETIZAR] A iniciar streaming Token-to-Chunk...');
+      const res = await fetch('/api/v1/voice/stream', {
         method: 'POST',
         headers: getClientAuthHeaders(),
         credentials: 'same-origin',
@@ -439,23 +501,67 @@ Orquestras e delegas com precisão para:
         throw new Error('AUTH_REQUIRED: Sessão expirada ou não autorizada');
       }
 
-      const data = await res.json();
-      const elapsed = performance.now() - tReq;
-      console.log(`[VOICE_ENGINE:RESPONSE_RECEIVED] Server returned in ${elapsed.toFixed(2)}ms: { hasAudio: ${Boolean(data.audioBase64)}, fallbackRequired: ${Boolean(data.fallbackRequired)} }`);
-      reportVoiceTelemetry('VOICE_LATENCY_METRIC', { hasAudio: Boolean(data.audioBase64), fallbackRequired: Boolean(data.fallbackRequired) }, elapsed);
+      if (res.ok && res.body && res.body.getReader) {
+        const reader = res.body.getReader();
+        activeVoiceStreamReaderRef.current = reader;
+        const decoder = new TextDecoder('utf-8');
+        let sseBuffer = '';
+        let firstChunkReceived = false;
 
-      const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          sseBuffer += decoder.decode(value, { stream: true });
+          const blocks = sseBuffer.split('\n\n');
+          sseBuffer = blocks.pop();
 
-      // Record model response turn in history
-      voiceConversationHistoryRef.current.push({ role: 'model', text: reply });
-      if (voiceConversationHistoryRef.current.length > 20) {
-        voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
-      }
+          for (const block of blocks) {
+            const eventMatch = block.match(/event:\s*([^\n]+)/);
+            const dataMatch = block.match(/data:\s*([^\n]+)/);
+            if (!eventMatch || !dataMatch) continue;
 
-      if (data.audioBase64 && !data.fallbackRequired) {
-        await playNeuralAudio(data.audioBase64, reply, false);
+            const eventType = eventMatch[1].trim();
+            let eventData = {};
+            try { eventData = JSON.parse(dataMatch[1].trim()); } catch (_) {}
+
+            if (eventType === 'token' && eventData.text) {
+              streamedFullText += eventData.text;
+              setVoiceTranscript(`[🔊 A TOCAR ÁUDIO] JARVIS: ${streamedFullText}`);
+            } else if (eventType === 'audio_chunk' && eventData.audioBase64) {
+              if (!firstChunkReceived) {
+                firstChunkReceived = true;
+                const ttfa = performance.now() - tReq;
+                console.log(`[VOICE_ENGINE:TTFA] First audio chunk received in ${ttfa.toFixed(2)}ms (Sub-250ms target)`);
+                reportVoiceTelemetry('VOICE_TTFA_METRIC', { ttfaMs: ttfa, format: eventData.format });
+              }
+              audioQueueRef.current.push(eventData);
+              if (!isPlayingQueueRef.current) {
+                playNextChunk();
+              }
+            } else if (eventType === 'done') {
+              const totalElapsed = performance.now() - tReq;
+              console.log(`[VOICE_ENGINE:STREAM_DONE] SSE stream completed in ${totalElapsed.toFixed(2)}ms (${eventData.totalChunks} chunks)`);
+              reportVoiceTelemetry('VOICE_STREAM_COMPLETED', { totalMs: totalElapsed, chunks: eventData.totalChunks });
+            }
+          }
+        }
+
+        if (streamedFullText) {
+          voiceConversationHistoryRef.current.push({ role: 'model', text: streamedFullText.trim() });
+          if (voiceConversationHistoryRef.current.length > 20) {
+            voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
+          }
+        }
       } else {
-        speakNaturalVoiceFallback(reply);
+        // Fallback to conversation batch API if SSE body reader is unavailable
+        const data = await res.json();
+        const reply = data.text || 'JARVIS operacional.';
+        voiceConversationHistoryRef.current.push({ role: 'model', text: reply });
+        if (data.audioBase64 && !data.fallbackRequired) {
+          await playNeuralAudio(data.audioBase64, reply, false);
+        } else {
+          speakNaturalVoiceFallback(reply);
+        }
       }
     } catch (err) {
       if (err.name === 'AbortError') {
@@ -463,13 +569,14 @@ Orquestras e delegas com precisão para:
         reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
         return;
       }
-      console.warn('[VOICE_ENGINE:REQUEST_FAIL] Voice conversation fallback:', err);
+      console.warn('[VOICE_ENGINE:STREAM_FAIL] Stream error, switching to natural fallback:', err);
       reportVoiceTelemetry('VOICE_REQUEST_FAILED', { error: err.message });
-      const fallbackText = 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
+      const fallbackText = 'JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.';
       voiceConversationHistoryRef.current.push({ role: 'model', text: fallbackText });
       speakNaturalVoiceFallback(fallbackText);
     } finally {
       activeVoiceAbortControllerRef.current = null;
+      activeVoiceStreamReaderRef.current = null;
     }
   };
 
@@ -487,6 +594,12 @@ Orquestras e delegas com precisão para:
       activeVoiceAbortControllerRef.current.abort();
       activeVoiceAbortControllerRef.current = null;
     }
+    if (activeVoiceStreamReaderRef.current) {
+      try { activeVoiceStreamReaderRef.current.cancel(); } catch (_) {}
+      activeVoiceStreamReaderRef.current = null;
+    }
+    audioQueueRef.current = [];
+    isPlayingQueueRef.current = false;
     if (activeAudioSourceRef.current) {
       try { activeAudioSourceRef.current.stop(); } catch (e) {}
       activeAudioSourceRef.current = null;

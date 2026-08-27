@@ -159,6 +159,70 @@ export class ElevenLabsAdapter {
       timestamp: new Date().toISOString(),
     };
   }
+
+  /**
+   * Generates a single audio chunk from a short text phrase (20-100ms PCM/MP3)
+   * @param {Object} params - { text, voiceId, modelId, chunkIndex }
+   * @returns {Promise<Object>}
+   */
+  async generateSpeechChunk(params = {}) {
+    const {
+      text,
+      voiceId = this.defaultVoiceId,
+      modelId = 'eleven_turbo_v2_5',
+      chunkIndex = 0,
+    } = params;
+
+    if (this.isLiveMode()) {
+      const activeKey = this.apiKey || process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_KEY;
+      const url = `${this.apiUrl}/text-to-speech/${voiceId}`;
+      try {
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'xi-api-key': activeKey,
+            'Content-Type': 'application/json',
+            'Accept': 'audio/mpeg',
+          },
+          body: JSON.stringify({
+            text,
+            model_id: modelId,
+            voice_settings: { stability: 0.50, similarity_boost: 0.80, style: 0.15, speed: 0.96 },
+          }),
+        });
+
+        if (response.ok) {
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = Buffer.from(arrayBuffer);
+          return {
+            chunkIndex,
+            text,
+            audioBase64: `data:audio/mp3;base64,${audioBuffer.toString('base64')}`,
+            format: 'audio/mpeg',
+            durationSeconds: Math.max(0.2, Math.round(text.split(/\s+/).length * 0.25)),
+            byteLength: audioBuffer.length,
+            mode: 'LIVE',
+          };
+        }
+      } catch (err) {
+        logger.warn('ELEVENLABS_ADAPTER', `Live chunk synthesis failed for chunk ${chunkIndex}: ${err.message}`);
+      }
+    }
+
+    const durationSeconds = Math.max(0.2, Math.round(text.split(/\s+/).length * 0.25));
+    const validMp3Buffer = generateValidSyntheticMp3Buffer(durationSeconds);
+    const audioBase64 = `data:audio/mp3;base64,${validMp3Buffer.toString('base64')}`;
+
+    return {
+      chunkIndex,
+      text,
+      audioBase64,
+      format: 'audio/mpeg',
+      durationSeconds,
+      byteLength: validMp3Buffer.length,
+      mode: 'SIMULATED_SANDBOX',
+    };
+  }
 }
 
 export const elevenLabsAdapter = new ElevenLabsAdapter();

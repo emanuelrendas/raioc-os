@@ -294,4 +294,82 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
     assert.ok(res.body.diagnostic, 'Must return clear diagnostic details');
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 8. Token-to-Chunk SSE Voice Streaming Pipeline (RAIOC-VOICE-STREAM-2026)
+  // ──────────────────────────────────────────────────────────────────────────
+  it('19. Token-to-Chunk SSE Streaming: POST /api/v1/voice/stream returns text/event-stream with token, audio_chunk and done events', async () => {
+    const res = await handleVoiceConversationRequest('/api/v1/voice/stream', 'POST', {
+      message: 'Explica a proteção Escrow sob a Lei 8 de 2007',
+      locale: 'pt',
+    }, {}, authHeaders);
+
+    assert.strictEqual(res.status, 200, 'Should return HTTP 200 OK');
+    assert.strictEqual(res.headers['Content-Type'], 'text/event-stream', 'Must return text/event-stream Content-Type');
+    assert.strictEqual(res.headers['Cache-Control'], 'no-cache', 'Must disable caching');
+    assert.strictEqual(res.headers['Connection'], 'keep-alive', 'Must keep connection alive');
+    assert.strictEqual(typeof res.body, 'string', 'Body must be formatted SSE string');
+
+    // Validate SSE events structure
+    assert.ok(res.body.includes('event: token\n'), 'Must contain token events');
+    assert.ok(res.body.includes('event: audio_chunk\n'), 'Must contain audio_chunk events');
+    assert.ok(res.body.includes('event: done\n'), 'Must contain done event');
+
+    // Parse blocks
+    const blocks = res.body.split('\n\n').filter(Boolean);
+    let tokenCount = 0;
+    let chunkCount = 0;
+    let doneEvent = null;
+
+    for (const block of blocks) {
+      const eventMatch = block.match(/event:\s*([^\n]+)/);
+      const dataMatch = block.match(/data:\s*([^\n]+)/);
+      if (!eventMatch || !dataMatch) continue;
+
+      const eventType = eventMatch[1].trim();
+      const eventData = JSON.parse(dataMatch[1].trim());
+
+      if (eventType === 'token') {
+        tokenCount++;
+        assert.ok(typeof eventData.text === 'string', 'Token event must have text');
+      } else if (eventType === 'audio_chunk') {
+        chunkCount++;
+        assert.ok(eventData.audioBase64.startsWith('data:audio/mp3;base64,'), 'audio_chunk must contain base64 MP3');
+        assert.strictEqual(eventData.format, 'audio/mpeg', 'audio_chunk format must be audio/mpeg');
+        assert.ok(eventData.durationSeconds > 0, 'audio_chunk must have positive duration');
+      } else if (eventType === 'done') {
+        doneEvent = eventData;
+      }
+    }
+
+    assert.ok(tokenCount > 0, 'Must emit at least 1 token event');
+    assert.ok(chunkCount > 0, 'Must emit at least 1 audio_chunk event');
+    assert.ok(doneEvent, 'Must emit done event');
+    assert.strictEqual(doneEvent.status, 'COMPLETED', 'Done event status must be COMPLETED');
+    assert.ok(doneEvent.durationMs >= 0, 'Done event must have durationMs metric');
+  });
+
+  it('20. Token-to-Chunk SSE Streaming: Rejects unauthorized requests with 401', async () => {
+    const res = await handleVoiceConversationRequest('/api/v1/voice/stream', 'POST', {
+      message: 'Status não autorizado no stream',
+    }, {}, {
+      'x-external-untrusted': 'true',
+    });
+
+    assert.strictEqual(res.status, 401, 'Should reject unauthorized stream request with 401');
+    assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
+  });
+
+  it('21. Client SSE Integration: mission-control.html contains ReadableStreamDefaultReader and audio queue', async () => {
+    const fs = await import('node:fs');
+    const html = fs.readFileSync('mission-control.html', 'utf8');
+
+    assert.ok(html.includes("fetch('/api/v1/voice/stream'"), 'Must call /api/v1/voice/stream');
+    assert.ok(html.includes('res.body.getReader()'), 'Must utilize ReadableStreamDefaultReader');
+    assert.ok(html.includes('playNextChunk()'), 'Must implement sequential chunk player');
+    assert.ok(html.includes('audioQueue'), 'Must maintain audio chunk queue');
+    assert.ok(html.includes('activeVoiceStreamReader.cancel()'), 'Must cancel active SSE reader on barge-in');
+    assert.ok(html.includes('VOICE_TTFA_METRIC'), 'Must report TTFA metric');
+  });
 });
+

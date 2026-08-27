@@ -48,6 +48,73 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
     };
   }
 
+  // 2. Token-to-Chunk SSE Voice Streaming (/api/v1/voice/stream)
+  if (url.includes('/voice/stream')) {
+    if (method !== 'POST') {
+      return {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+        body: { success: false, error: `Method ${method} not allowed on voice stream endpoint` },
+      };
+    }
+
+    const auth = authMiddleware.authenticateRequest(headers);
+    if (!auth.authenticated) {
+      logger.warn('VOICE_STREAM', 'Rejected unauthorized voice stream request', { correlationId });
+      return {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+        body: { 
+          success: false, 
+          error: 'UNAUTHORIZED: Valid session or authorization token required.',
+          code: 'AUTH_REQUIRED',
+          diagnostic: auth.error || 'Missing or invalid session credentials.'
+        },
+      };
+    }
+
+    const message = (body.message || body.prompt || query.message || query.prompt || '').trim();
+    const history = Array.isArray(body.history) ? body.history : [];
+    const locale = body.locale || query.locale || 'pt';
+    const voiceId = body.voiceId || query.voiceId;
+
+    try {
+      const streamResult = await voiceAi.streamLiveConversation({
+        message,
+        history,
+        locale,
+        voiceId,
+        correlationId,
+      });
+
+      logger.info('VOICE_STREAM', `Streamed live voice response in ${streamResult.durationMs}ms (${streamResult.totalChunks} chunks): "${streamResult.fullText.substring(0, 40)}..."`, {
+        correlationId,
+        chunks: streamResult.totalChunks,
+      });
+
+      return {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+          'X-Accel-Buffering': 'no',
+        },
+        body: streamResult.sseEvents,
+      };
+    } catch (err) {
+      logger.error('VOICE_STREAM', `Failed to stream voice conversation: ${err.message}`, { correlationId });
+      return {
+        status: 500,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          success: false,
+          error: err.message,
+        },
+      };
+    }
+  }
+
   if (method !== 'POST') {
     return {
       status: 405,

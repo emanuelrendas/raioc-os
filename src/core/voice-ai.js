@@ -275,6 +275,91 @@ Spoken Script:`;
       durationSeconds: speechResult.durationSeconds,
     };
   }
+
+  /**
+   * Generates token-to-chunk SSE streaming payload with partial tokens and audio chunks
+   * @param {Object} params - { message, history, locale, voiceId, correlationId }
+   * @returns {Promise<Object>} Formatted SSE response with events
+   */
+  async streamLiveConversation(params = {}) {
+    const startTime = Date.now();
+    const correlationId = params.correlationId || `corr_live_stream_${Date.now()}`;
+    const userMessage = params.message || params.prompt || '';
+    const locale = params.locale || 'pt';
+    const voiceId = params.voiceId || process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+
+    // 1. Generate spoken response via Cognitive Router
+    const cogResult = await cognitiveRouter.dispatch(userMessage, {
+      conversationMode: 'voice',
+      systemInstruction: JARVIS_OMNISCIENT_SYSTEM_PROMPT,
+      maxOutputTokens: 350,
+      max_tokens: 350,
+      temperature: 0.3,
+      correlationId,
+      history: Array.isArray(params.history) ? params.history.slice(-10) : [],
+    });
+
+    const rawText = cogResult.text || 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
+    const fullText = cleanSpokenText(rawText);
+
+    // 2. Tokenize text into phrases/chunks (token-to-chunk streaming)
+    const phraseChunks = fullText
+      .split(/(?<=[.,!?:;])\s+/)
+      .map(p => p.trim())
+      .filter(Boolean);
+
+    if (phraseChunks.length === 0) {
+      phraseChunks.push(fullText);
+    }
+
+    let sseEvents = '';
+    let totalTokens = 0;
+
+    // Emitting token events and audio_chunk events
+    for (let i = 0; i < phraseChunks.length; i++) {
+      const phrase = phraseChunks[i];
+      totalTokens += phrase.split(/\s+/).length;
+
+      // Event: token
+      sseEvents += `event: token\ndata: ${JSON.stringify({ text: phrase + ' ', chunkIndex: i })}\n\n`;
+
+      // Event: audio_chunk
+      const chunkResult = await elevenLabsAdapter.generateSpeechChunk({
+        text: phrase,
+        voiceId,
+        chunkIndex: i,
+      });
+
+      sseEvents += `event: audio_chunk\ndata: ${JSON.stringify({
+        chunkIndex: i,
+        text: phrase,
+        audioBase64: chunkResult.audioBase64,
+        format: 'audio/mpeg',
+        durationSeconds: chunkResult.durationSeconds,
+      })}\n\n`;
+    }
+
+    const elapsedMs = Date.now() - startTime;
+
+    // Event: done
+    sseEvents += `event: done\ndata: ${JSON.stringify({
+      status: 'COMPLETED',
+      durationMs: elapsedMs,
+      totalChunks: phraseChunks.length,
+      totalTokens,
+      fullText,
+      correlationId,
+    })}\n\n`;
+
+    return {
+      success: true,
+      sseEvents,
+      fullText,
+      totalChunks: phraseChunks.length,
+      durationMs: elapsedMs,
+    };
+  }
 }
 
 export const voiceAi = new VoiceAiEngine();
+
