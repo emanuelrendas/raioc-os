@@ -45,6 +45,7 @@ import { BaseSpecialistAgent } from './agents/specialists/base-agent.js';
 import { jarvis } from './agents/specialists/jarvis-orchestrator.js';
 import { markTriageAgent } from './agents/specialists/mark-triage-agent.js';
 import { aidaCommsAgent } from './agents/specialists/aida-comms-agent.js';
+import { aidaVoiceService, synthesizeFiduciaryVoiceNote, FIDUCIARY_TEMPLATES } from './services/aida-voice-service.js';
 import { atlasMarketAgent } from './agents/specialists/atlas-market-agent.js';
 import { lexComplianceAgent } from './agents/specialists/lex-compliance-agent.js';
 import { heliosCalendarAgent } from './agents/specialists/helios-calendar-agent.js';
@@ -124,6 +125,9 @@ export {
   jarvis,
   markTriageAgent,
   aidaCommsAgent,
+  aidaVoiceService,
+  synthesizeFiduciaryVoiceNote,
+  FIDUCIARY_TEMPLATES,
   atlasMarketAgent,
   lexComplianceAgent,
   heliosCalendarAgent,

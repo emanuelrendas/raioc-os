@@ -1,0 +1,35 @@
+{
+  "OBJ_OFFPLAN_ESCROW_LAW8": {
+    "template_id": "OBJ_OFFPLAN_ESCROW_LAW8",
+    "anchor": "UAE_LAW_8_2007_ESCROW",
+    "title": "Off-Plan Escrow Ringfencing Protection (UAE Law No. 8 of 2007)",
+    "statutory_reference": "UAE Law No. 8 of 2007 (Escrow Guarantee)",
+    "estimated_duration_seconds": 50,
+    "language": "pt",
+    "category": "OFF_PLAN_RISK",
+    "tone": "fiduciary_executive",
+    "text": "Compreendo perfeitamente a sua reserva quanto ao risco de execução em ativos em planta... No entanto, no quadro regulatório do Dubai, a alocação de capital opera sob um princípio de custódia estrita. Ao abrigo da Lei número oito de dois mil e sete, cada dirham investido é obrigatoriamente depositado numa conta Escrow segregada, monitorizada diretamente pelo Dubai Land Department e pela RERA. O promotor não tem acesso discricionário aos seus fundos. As tranches financeiras só são libertadas após engenheiros independentes do governo auditarem fisicamente o local e certificarem a conclusão de cada marco de obra. Adicionalmente, cinco por cento do valor total permanece retido em garantia durante doze meses após a entrega. O risco de capital não depende da promessa do promotor... assenta num mecanismo fiduciário regulado pelo Estado."
+  },
+  "OBJ_STRUCTURAL_CIVIL_880": {
+    "template_id": "OBJ_STRUCTURAL_CIVIL_880",
+    "anchor": "UAE_CIVIL_CODE_ART_880",
+    "title": "Decennial Liability & Structural Warranty (UAE Civil Code Article 880)",
+    "statutory_reference": "UAE Civil Code Article 880 (Decennial Liability)",
+    "estimated_duration_seconds": 50,
+    "language": "pt",
+    "category": "STRUCTURAL_INTEGRITY",
+    "tone": "fiduciary_executive",
+    "text": "A integridade física e o padrão construtivo do ativo são considerações não negociáveis, sobretudo em mandatos de preservação patrimonial... Neste ponto, o enquadramento estatutário dos Emirados oferece uma das proteções jurídicas mais rigorosas a nível internacional. O Artigo oitocentos e oitenta do Código Civil dos Emirados Árabes Unidos estabelece a Responsabilidade Decenal obrigatória. Isto determina que o promotor, o arquiteto e o empreiteiro principal respondem solidariamente por qualquer vício estrutural grave durante dez anos a partir da data de entrega. Esta garantia é matéria de ordem pública — não pode ser reduzida nem anulada por qualquer cláusula contratual privada. A solidez da sua alocação fica assim juridicamente blindada durante uma década."
+  },
+  "OBJ_GOLDEN_VISA_RES65": {
+    "template_id": "OBJ_GOLDEN_VISA_RES65",
+    "anchor": "CABINET_RES_65_2022_GOLDEN_VISA",
+    "title": "Golden Visa 10-Year Residency Threshold (Cabinet Resolution No. 65 of 2022)",
+    "statutory_reference": "UAE Cabinet Resolution No. 65 of 2022 (Golden Visa)",
+    "estimated_duration_seconds": 55,
+    "language": "pt",
+    "category": "GOLDEN_VISA",
+    "tone": "fiduciary_executive",
+    "text": "A relação entre preservação de liquidez e obtenção de residência estatutária é um dos eixos mais eficientes da estruturação de património no Dubai... Ao abrigo da Resolução de Gabinete número sessenta e cinco de dois mil e vinte e dois, o limiar de dois milhões de dirhams para o Golden Visa de dez anos aplica-se ao valor contratual do ativo, incluindo aquisições em planta. Isto significa que não necessita de imobilizar dois milhões de dirhams a pronto pagamento de imediato. Ao estruturar a compra através de um plano de pagamento faseado do promotor, o registo do contrato inicial no DLD permite iniciar o processo do visto de longa duração para si e para o seu agregado familiar. A sua liquidez excedentária permanece a render nos seus próprios instrumentos financeiros, enquanto assegura uma âncora soberana no Dubai."
+  }
+}
