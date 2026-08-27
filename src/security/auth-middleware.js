@@ -74,10 +74,19 @@ export class AuthMiddleware {
           authenticatedAt: new Date().toISOString(),
         };
       }
+      // If explicit token was provided and is invalid, fail-closed immediately (do not fallback to origin check)
+      return {
+        authenticated: false,
+        role: Roles.ANONYMOUS,
+        error: 'Invalid authentication credentials provided',
+      };
     }
 
-    // Check same-origin browser session or secure session cookie
-    const isSameOrigin = (secFetchSite === 'same-origin' || referer.includes('/admin/mission-control') || referer.includes('mission-control')) && !headers['x-external-untrusted'];
+    // Check same-origin browser request from verified host or authenticated session cookie
+    const hostHeader = (headers['host'] || headers['x-forwarded-host'] || '').toLowerCase();
+    const isVerifiedOrigin = Boolean(secFetchSite === 'same-origin' || (referer && hostHeader && referer.toLowerCase().includes(hostHeader)));
+    const isMissionControlContext = referer.includes('/admin/mission-control') || referer.includes('/mission-control');
+    const isSameOrigin = isVerifiedOrigin && isMissionControlContext && !headers['x-external-untrusted'];
     const hasSessionCookie = cookieHeader.includes('raioc_session') || cookieHeader.includes('session=') || cookieHeader.includes('raioc_sovereign_auth');
 
     if (isSameOrigin || hasSessionCookie) {

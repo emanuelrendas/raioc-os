@@ -1978,11 +1978,13 @@ Orquestras e delegas com precisão para:
           };
 
           speechRecognizer.onspeechstart = () => {
-            handleBargeIn();
+            // Only trigger barge-in if bot is not speaking or user intentionally interrupts
+            if (isBotSpeaking) {
+              // Wait for onresult to confirm genuine user speech rather than acoustic echo
+            }
           };
 
           speechRecognizer.onresult = (event) => {
-            handleBargeIn();
             let interimTranscript = '';
             let finalTranscript = '';
 
@@ -1996,6 +1998,11 @@ Orquestras e delegas com precisão para:
 
             const currentText = (finalTranscript || interimTranscript || '').trim();
             if (currentText) {
+              // If bot was speaking and distinct user speech is registered, trigger clean barge-in
+              if (isBotSpeaking && currentText.length >= 2) {
+                handleBargeIn();
+              }
+
               accumulatedTranscript = currentText;
               setTranscriptCaption('🗣️ ' + currentText);
 
@@ -2031,7 +2038,7 @@ Orquestras e delegas com precisão para:
             speechRecognizer.start();
           } catch (err) {}
         } else {
-          setTranscriptCaption('[🎙️ MIC: ATIVO] Pode falar agora... (A escutar ou digite abaixo)');
+          setTranscriptCaption('[⚠️ NAVEGADOR SEM WEBSPEECH] Digite a sua mensagem abaixo (ou utilize Google Chrome/Edge para voz direta).');
         }
 
         // Start Canvas Render Loop
@@ -2171,6 +2178,9 @@ Orquestras e delegas com precisão para:
       if (activeAudioSource) {
         try { activeAudioSource.stop(); } catch (e) {}
         activeAudioSource = null;
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        try { window.speechSynthesis.cancel(); } catch (_) {}
       }
       if (isBotSpeaking) {
         isBotSpeaking = false;

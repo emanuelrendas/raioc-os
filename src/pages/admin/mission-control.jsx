@@ -473,6 +473,35 @@ Orquestras e delegas com precisão para:
     }
   };
 
+  // Barge-in (Interrupção imediata de áudio e rede quando o utilizador começa a falar)
+  const handleVoiceBargeIn = () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    if (playbackSafetyTimeoutRef.current) {
+      clearTimeout(playbackSafetyTimeoutRef.current);
+      playbackSafetyTimeoutRef.current = null;
+    }
+    if (activeVoiceAbortControllerRef.current) {
+      activeVoiceAbortControllerRef.current.abort();
+      activeVoiceAbortControllerRef.current = null;
+    }
+    if (activeAudioSourceRef.current) {
+      try { activeAudioSourceRef.current.stop(); } catch (e) {}
+      activeAudioSourceRef.current = null;
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch (_) {}
+    }
+    if (isBotSpeakingRef.current) {
+      isBotSpeakingRef.current = false;
+      reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
+      setVoiceState('listening');
+      setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+    }
+  };
+
   // Live Voice Session Controls (ChatGPT / Gemini Live style)
   const startLiveVoiceSession = async () => {
     console.log('[VOICE_ENGINE:INIT] Live Voice Session Initiated');
@@ -520,11 +549,12 @@ Orquestras e delegas com precisão para:
         };
 
         recognizer.onspeechstart = () => {
-          handleVoiceBargeIn();
+          if (isBotSpeakingRef.current) {
+            // Wait for onresult to confirm genuine user speech
+          }
         };
 
         recognizer.onresult = (event) => {
-          handleVoiceBargeIn();
           let interim = '';
           let final = '';
 
@@ -535,6 +565,10 @@ Orquestras e delegas com precisão para:
 
           const currentText = (final || interim || '').trim();
           if (currentText) {
+            if (isBotSpeakingRef.current && currentText.length >= 2) {
+              handleVoiceBargeIn();
+            }
+
             accumulatedTextRef.current = currentText;
             setVoiceTranscript(`🗣️ ${currentText}`);
 
@@ -567,6 +601,8 @@ Orquestras e delegas com precisão para:
         };
 
         try { recognizer.start(); } catch (err) {}
+      } else {
+        setVoiceTranscript('[⚠️ NAVEGADOR SEM WEBSPEECH] Digite a sua mensagem abaixo (ou utilize Google Chrome/Edge para voz direta).');
       }
     } catch (err) {
       console.warn('[VOICE_ENGINE:INIT_ERROR] Voice init warning:', err);
