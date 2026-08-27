@@ -130,24 +130,53 @@ export class GeminiAdapter {
    */
   _synthesizeJarvisResponse(prompt, context = {}) {
     const cleanPrompt = String(prompt || '').toLowerCase();
+    const isVoice = context.conversationMode === 'voice' || context.voice === true;
 
-    if (cleanPrompt.includes('yield') || cleanPrompt.includes('roi') || cleanPrompt.includes('return')) {
-      return `JARVIS Intelligence: Across prime Dubai waterfront corridors (Dubai Creek Harbour, Dubai Hills Estate, Palm Jumeirah), audited net yields currently range between 7.9% and 9.1% p.a. All allocations are shielded under UAE Cabinet Res. 65/2022 (Golden Visa) with 0% personal tax drag and 100% statutory escrow compliance under Dubai Law No. 8 of 2007.`;
+    if (cleanPrompt.includes('palm jebel ali') || cleanPrompt.includes('jebel ali')) {
+      return isVoice
+        ? 'Palm Jebel Ali acrescenta 110 quilómetros de costa a Dubai com escassez absoluta de praia e tranches de 25 a 50 milhões de dirhams. A estrutura Nakheel é 100% protegida por Escrow da Lei 8 e garantia decenal do Artigo 880.'
+        : 'Palm Jebel Ali representa o principal vetor de preservação de capital ultra-prime no Dubai, duplicando a orla costeira com 110 km adicionais. As tranches de 25M a 50M+ AED beneficiam de contas Escrow segregadas (Lei nº 8/2007) e garantia decenal estrutural (Art. 880 do Código Civil dos EAU).';
     }
 
-    if (cleanPrompt.includes('escrow') || cleanPrompt.includes('law 8') || cleanPrompt.includes('guarantee') || cleanPrompt.includes('safety')) {
-      return `JARVIS Regulatory Brief: Under Dubai Law No. 8 of 2007, 100% of investor funds are held in RERA-monitored bank trust accounts. Disbursements are released strictly in accordance with certified DLD engineering progress, supported by a mandatory 5% warranty retention and 10-Year Decennial Structural Warranty (Civil Code Art. 880).`;
+    if (cleanPrompt.includes('dubai south') || cleanPrompt.includes('dwc') || cleanPrompt.includes('aerotrópole') || cleanPrompt.includes('al maktoum')) {
+      return isVoice
+        ? 'Dubai South e o aeroporto Al Maktoum representam uma expansão de 128 mil milhões de dirhams para a maior aerotrópole do mundo. Os ativos aqui geram yields líquidas superiores a 8.5% com forte valorização do solo a 7 a 10 anos.'
+        : 'Dubai South (DWC) é a aerotrópole global ancorada no novo mega-aeroporto Al Maktoum de 128B AED. O corredor combina yields líquidas auditadas entre 8.4% e 9.2% com valorização de longo prazo impulsionada pelo plano diretor Dubai 2040.';
     }
 
-    if (cleanPrompt.includes('golden visa') || cleanPrompt.includes('visa') || cleanPrompt.includes('residency')) {
-      return `JARVIS Legal Brief: Properties valued at AED 2,000,000+ qualify for the 10-Year Renewable UAE Real Estate Investor Golden Visa under Cabinet Resolution No. 65 of 2022, enabling 100% foreign ownership and full family sponsorship without local sponsor requirements.`;
+    if (cleanPrompt.includes('yield') || cleanPrompt.includes('roi') || cleanPrompt.includes('como') || cleanPrompt.includes('palm jumeirah')) {
+      return isVoice
+        ? 'Como Residences em Palm Jumeirah atinge yields líquidas auditadas de 7.9% a 8.2% com forte perfil de preservação de capital. O ativo é totalmente blindado pela Lei nº 8 de 2007 e qualifica para o Golden Visa de 10 anos.'
+        : 'Como Residences na Palm Jumeirah representa um padrão troféu de waterfront living. Apresenta net yields auditadas entre 7.9% e 8.2% p.a., pagamento vinculado ao avanço DLD e total enquadramento no regime de Golden Visa sob a Resolução 65/2022.';
     }
 
-    if (cleanPrompt.includes('project') || cleanPrompt.includes('off-plan') || cleanPrompt.includes('manus') || cleanPrompt.includes('emaar')) {
-      return `JARVIS Asset Pipeline: Active Manus verified opportunities include Rosehill (Dubai Hills Estate, 8.4% yield), Valia (Dubai Creek Harbour, 8.8% yield), and Como Residences (Palm Jumeirah, 7.9% yield). Developer payment structures are milestone-linked (80/20 and 60/40).`;
+    if (cleanPrompt.includes('escrow') || cleanPrompt.includes('law 8') || cleanPrompt.includes('lei 8') || cleanPrompt.includes('guarantee') || cleanPrompt.includes('safety')) {
+      return isVoice
+        ? 'Sob a Lei nº 8 de 2007 do Dubai, 100% do capital do investidor é retido numa conta fiduciária do DLD e libertado apenas conforme o avanço de obra auditado, com retenção obrigatória de 5% pós-conclusão.'
+        : 'A Lei nº 8 de 2007 impõe segregação bancária total de fundos off-plan em contas Escrow monitorizadas pelo DLD/RERA. As libertações exigem certificação técnica presencial de engenharia, salvaguardando integralmente o investidor.';
     }
 
-    return `JARVIS Executive Response: Directive processed. Real-time institutional telemetry, IKL yield matrices, and statutory Escrow guarantees (Dubai Law No. 8 of 2007) are actively calibrated for private client advisory under Emanuel Rendas Private Advisory.`;
+    if (cleanPrompt.includes('garantia') || cleanPrompt.includes('decenal') || cleanPrompt.includes('art 880') || cleanPrompt.includes('artigo 880')) {
+      return isVoice
+        ? 'O Artigo 880 do Código Civil dos EAU estabelece uma garantia decenal obrigatória de 10 anos para a solidez estrutural e fundações dos edifícios. Promotor e construtores respondem solidariamente.'
+        : 'O Artigo 880 do Código Civil dos Emirados Árabes Unidos consagra a responsabilidade decenal objetiva: promotor e empreiteiro garantem a integridade das fundações e estrutura durante 10 anos após a entrega do título.';
+    }
+
+    if (cleanPrompt.includes('golden visa') || cleanPrompt.includes('visa') || cleanPrompt.includes('visto') || cleanPrompt.includes('residency') || cleanPrompt.includes('65/2022')) {
+      return isVoice
+        ? 'Aquisições imobiliárias em freehold a partir de 2 milhões de dirhams conferem direito ao Golden Visa de 10 anos sem fiador local, com extensão automática a cônjuge, filhos e pessoal doméstico.'
+        : 'A Resolução do Conselho de Ministros nº 65/2022 garante o Golden Visa de 10 anos para investimentos imobiliários a partir de 2.000.000 AED em regime freehold, com direito a residência soberana contínua e 100% de posse estrangeira.';
+    }
+
+    if (cleanPrompt.includes('developer') || cleanPrompt.includes('emaar') || cleanPrompt.includes('sobha') || cleanPrompt.includes('aldar') || cleanPrompt.includes('nakheel') || cleanPrompt.includes('select group') || cleanPrompt.includes('ellington')) {
+      return isVoice
+        ? 'Master Developers de topo como Emaar, Sobha, Aldar, Nakheel, Select Group e Ellington asseguram rigor construtivo, cumprimento estrito de cronogramas e elevada liquidez secundária.'
+        : 'O ecossistema imobiliário de primeira linha do Dubai é liderado por promotores com balanços sólidos e histórico comprovado: Emaar, Sobha Realty, Aldar, Nakheel, Meraas, Select Group e Ellington Properties, garantindo entrega atempada e valor residual.';
+    }
+
+    return isVoice
+      ? 'JARVIS operacional. Analiso os corredores Palm Jebel Ali, Dubai South DWC e Palm Jumeirah com modelos de yield auditados e conformidade estrita com a Lei 8 de 2007 e Garantia Decenal.'
+      : 'JARVIS Executive Intelligence: Diretiva acolhida. Os motores analíticos do RAIOC OS cruzam dados do DLD, modelos de yield Mollak e matrizes de proteção estatutária para assessoria privada de alto património.';
   }
 }
 

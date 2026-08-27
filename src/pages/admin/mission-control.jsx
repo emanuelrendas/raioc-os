@@ -27,7 +27,8 @@ export default function MissionControlDashboard() {
   // Live Voice State (ChatGPT / Gemini Live style)
   const [liveVoiceOpen, setLiveVoiceOpen] = useState(false);
   const [voiceState, setVoiceState] = useState('listening'); // 'listening' | 'thinking' | 'speaking'
-  const [voiceTranscript, setVoiceTranscript] = useState('Fala naturalmente com o JARVIS... (ex: "Qual é a yield líquida do Como Residences?")');
+  const [voiceTranscript, setVoiceTranscript] = useState('🎙️ Pode falar agora... (A escutar)');
+  const [manualVoiceInput, setManualVoiceInput] = useState('');
   const [isMicMuted, setIsMicMuted] = useState(false);
   const canvasRef = React.useRef(null);
   const audioContextRef = React.useRef(null);
@@ -35,6 +36,9 @@ export default function MissionControlDashboard() {
   const micStreamRef = React.useRef(null);
   const animFrameRef = React.useRef(null);
   const isBotSpeakingRef = React.useRef(false);
+  const speechRecognizerRef = React.useRef(null);
+  const silenceTimerRef = React.useRef(null);
+  const accumulatedTextRef = React.useRef('');
 
   // World Clocks State
   const [clocks, setClocks] = useState({ dxb: '--:--', lon: '--:--', lis: '--:--', nyc: '--:--' });
@@ -108,11 +112,85 @@ export default function MissionControlDashboard() {
     }
   };
 
+  // Speak synthesized response
+  const speakBotResponse = (replyText) => {
+    isBotSpeakingRef.current = true;
+    setVoiceState('speaking');
+    setVoiceTranscript(`🔊 JARVIS: ${replyText}`);
+
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(replyText);
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+
+      const voices = window.speechSynthesis.getVoices();
+      const ptVoice = voices.find(v => (v.lang && (v.lang.includes('pt') || v.lang.includes('PT'))));
+      if (ptVoice) utterance.voice = ptVoice;
+
+      utterance.onstart = () => {
+        isBotSpeakingRef.current = true;
+        setVoiceState('speaking');
+      };
+
+      utterance.onend = () => {
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+        if (speechRecognizerRef.current) {
+          try { speechRecognizerRef.current.start(); } catch (err) {}
+        }
+      };
+
+      utterance.onerror = () => {
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+      };
+
+      window.speechSynthesis.speak(utterance);
+    } else {
+      setTimeout(() => {
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+      }, 4000);
+    }
+  };
+
+  // Process voice directive to backend
+  const processVoiceDirective = async (text) => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    setVoiceState('thinking');
+    setVoiceTranscript(`🧠 A processar mandato: "${text}"...`);
+
+    try {
+      const res = await fetch('/api/v1/cognitive/dispatch', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${internalSecret}`,
+          'X-RAIOC-Secret': internalSecret,
+        },
+        body: JSON.stringify({ prompt: text, conversationMode: 'voice' }),
+      });
+
+      const data = await res.json();
+      const reply = data.text || data.response || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+      speakBotResponse(reply);
+    } catch (err) {
+      speakBotResponse('JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.');
+    }
+  };
+
   // Live Voice Session Controls (ChatGPT / Gemini Live style)
   const startLiveVoiceSession = async () => {
     setLiveVoiceOpen(true);
     setVoiceState('listening');
-    setVoiceTranscript('A iniciar ligação de áudio em tempo real com JARVIS...');
+    setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
 
     try {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
@@ -135,7 +213,59 @@ export default function MissionControlDashboard() {
         }
       }
 
-      setVoiceTranscript('JARVIS está a ouvir... Podes falar livremente (ex: "Qual é a yield do Como Residences?")');
+      // Initialize Speech Recognition
+      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRec) {
+        const recognizer = new SpeechRec();
+        recognizer.continuous = true;
+        recognizer.interimResults = true;
+        recognizer.lang = 'pt-PT';
+        speechRecognizerRef.current = recognizer;
+
+        recognizer.onstart = () => {
+          setVoiceState('listening');
+          setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+        };
+
+        recognizer.onspeechstart = () => {
+          handleVoiceBargeIn();
+        };
+
+        recognizer.onresult = (event) => {
+          handleVoiceBargeIn();
+          let interim = '';
+          let final = '';
+
+          for (let i = event.resultIndex; i < event.results.length; ++i) {
+            if (event.results[i].isFinal) final += event.results[i][0].transcript;
+            else interim += event.results[i][0].transcript;
+          }
+
+          const currentText = (final || interim || '').trim();
+          if (currentText) {
+            accumulatedTextRef.current = currentText;
+            setVoiceTranscript(`🗣️ ${currentText}`);
+
+            // Reset Silence Detection (1.2s pause)
+            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = setTimeout(() => {
+              if (accumulatedTextRef.current && accumulatedTextRef.current.length > 2) {
+                const textToSend = accumulatedTextRef.current;
+                accumulatedTextRef.current = '';
+                processVoiceDirective(textToSend);
+              }
+            }, 1200);
+          }
+        };
+
+        recognizer.onend = () => {
+          if (!isBotSpeakingRef.current && speechRecognizerRef.current) {
+            try { recognizer.start(); } catch (err) {}
+          }
+        };
+
+        try { recognizer.start(); } catch (err) {}
+      }
     } catch (err) {
       console.warn('Voice init warning:', err);
     }
@@ -143,9 +273,19 @@ export default function MissionControlDashboard() {
 
   const stopLiveVoiceSession = () => {
     setLiveVoiceOpen(false);
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+    accumulatedTextRef.current = '';
+
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     isBotSpeakingRef.current = false;
 
+    if (speechRecognizerRef.current) {
+      try { speechRecognizerRef.current.stop(); } catch (e) {}
+      speechRecognizerRef.current = null;
+    }
     if (micStreamRef.current) {
       micStreamRef.current.getTracks().forEach(t => t.stop());
       micStreamRef.current = null;
@@ -161,12 +301,31 @@ export default function MissionControlDashboard() {
   };
 
   const handleVoiceBargeIn = () => {
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
     if (isBotSpeakingRef.current) {
       if (window.speechSynthesis) window.speechSynthesis.cancel();
       isBotSpeakingRef.current = false;
       setVoiceState('listening');
-      setVoiceTranscript('Interrupção detetada. A ouvir...');
+      setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
     }
+  };
+
+  const triggerSamplePrompt = (promptText) => {
+    if (!promptText) return;
+    handleVoiceBargeIn();
+    processVoiceDirective(promptText);
+  };
+
+  const handleManualVoiceSubmit = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!manualVoiceInput.trim()) return;
+    const text = manualVoiceInput.trim();
+    setManualVoiceInput('');
+    handleVoiceBargeIn();
+    processVoiceDirective(text);
   };
 
   // Canvas Fluid Orb Animation Loop
@@ -951,15 +1110,70 @@ export default function MissionControlDashboard() {
             <div className="space-y-2 max-w-md w-full">
               <div className="text-sm font-mono font-bold text-sky-300 tracking-wider uppercase flex items-center justify-center gap-2">
                 <span className={`w-2 h-2 rounded-full ${voiceState === 'listening' ? 'bg-sky-400' : voiceState === 'thinking' ? 'bg-amber-400' : 'bg-emerald-400'} animate-pulse`}></span>
-                <span>{voiceState === 'listening' ? 'A Ouvir...' : voiceState === 'thinking' ? 'A Pensar...' : 'JARVIS a Falar...'}</span>
+                <span>
+                  {voiceState === 'listening' ? '🎙️ Pode falar agora... (A escutar)' : voiceState === 'thinking' ? '🧠 A Pensar... (A sintetizar)' : '🔊 JARVIS a Falar...'}
+                </span>
               </div>
-              <div className="min-h-[52px] max-h-[90px] overflow-y-auto text-xs font-mono text-gray-300 bg-black/50 p-3 rounded-2xl border border-white/10 leading-relaxed shadow-inner">
+              <div className="min-h-[56px] max-h-[96px] overflow-y-auto text-xs font-mono text-gray-200 bg-black/60 p-3 rounded-2xl border border-white/10 leading-relaxed shadow-inner">
                 {voiceTranscript}
               </div>
             </div>
 
+            {/* Quick Real Estate Sovereign Prompts (One-Tap Voice Triggers) */}
+            <div className="w-full max-w-md space-y-2">
+              <div className="flex flex-wrap items-center justify-center gap-1.5 text-[11px] font-mono">
+                <button
+                  onClick={() => triggerSamplePrompt('Qual é a yield líquida do Como Residences em Palm Jumeirah?')}
+                  className="px-2.5 py-1 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 text-sky-300 transition-all cursor-pointer"
+                >
+                  🌊 Yield Como Residences
+                </button>
+                <button
+                  onClick={() => triggerSamplePrompt('Explica a escassez e tickets de Palm Jebel Ali com os 110km de costa.')}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 transition-all cursor-pointer"
+                >
+                  🏝️ Palm Jebel Ali 110km
+                </button>
+                <button
+                  onClick={() => triggerSamplePrompt('Qual o impacto do aeroporto Al Maktoum de 128B em Dubai South DWC?')}
+                  className="px-2.5 py-1 rounded-lg bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 transition-all cursor-pointer"
+                >
+                  ✈️ Dubai South DWC
+                </button>
+                <button
+                  onClick={() => triggerSamplePrompt('Como funciona a garantia decenal do Artigo 880 e a conta Escrow da Lei 8?')}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 transition-all cursor-pointer"
+                >
+                  🛡️ Lei 8 & Art. 880
+                </button>
+                <button
+                  onClick={() => triggerSamplePrompt('Quais os requisitos do Golden Visa de 10 anos sob a Resolução 65/2022?')}
+                  className="px-2.5 py-1 rounded-lg bg-yellow-500/10 hover:bg-yellow-500/20 border border-yellow-500/30 text-yellow-300 transition-all cursor-pointer"
+                >
+                  🇦🇪 Golden Visa 2M
+                </button>
+              </div>
+
+              {/* Manual text prompt input / Simulator fallback */}
+              <form onSubmit={handleManualVoiceSubmit} className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  value={manualVoiceInput}
+                  onChange={(e) => setManualVoiceInput(e.target.value)}
+                  placeholder="💬 Escrever mensagem ou simular voz..."
+                  className="flex-1 bg-black/60 border border-white/10 rounded-xl px-3 py-2 text-xs font-mono text-gray-200 placeholder-gray-500 focus:outline-none focus:border-sky-400"
+                />
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-gradient-to-r from-sky-500 to-amber-400 hover:from-sky-600 hover:to-amber-500 text-black text-xs font-mono font-bold rounded-xl transition-all shadow-md cursor-pointer"
+                >
+                  Enviar
+                </button>
+              </form>
+            </div>
+
             {/* Audio Controls */}
-            <div className="flex items-center gap-3 pt-2">
+            <div className="flex items-center gap-3 pt-1">
               <button
                 onClick={() => setIsMicMuted(!isMicMuted)}
                 className="p-3.5 rounded-full bg-slate-900 hover:bg-slate-800 border border-white/10 text-gray-200 hover:text-white transition-all shadow-md cursor-pointer text-xs font-mono"

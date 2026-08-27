@@ -83,7 +83,7 @@ Keep scripts under 75 words (~30 seconds spoken).`,
     // Clean any markdown formatting or quotes
     scriptText = scriptText.replace(/^["']|["']$/g, '').replace(/```[\s\S]*?```/g, '').trim();
 
-    if (!scriptText || scriptText.length < 15 || scriptText.startsWith('JARVIS Regulatory Brief:') || scriptText.startsWith('[VERTEX_AI_ENTERPRISE]')) {
+    if (!scriptText || scriptText.length < 15 || scriptText.startsWith('JARVIS') || scriptText.startsWith('[VERTEX_AI') || !params.recipient || !scriptText.includes(params.recipient.split(' ')[0])) {
       return this.deterministicVoiceSynthesis(intent, params, startTime);
     }
 
