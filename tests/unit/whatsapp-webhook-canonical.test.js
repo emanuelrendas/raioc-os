@@ -40,6 +40,20 @@ describe('📲 Canonical Meta WhatsApp Cloud API Webhook Gateway Suite (RAIOC-SP
     assert.strictEqual(res.body, 'challenge_meta_987654321');
   });
 
+  test('1b. GET Handshake: Accepts raioc_sovereign_auth_2026_x99 as canonical verify token', async () => {
+    const query = {
+      'hub.mode': 'subscribe',
+      'hub.verify_token': 'raioc_sovereign_auth_2026_x99',
+      'hub.challenge': 'challenge_sov_2026',
+    };
+
+    const res = await handleWhatsAppWebhookRequest('/api/v1/channels/whatsapp/webhook', 'GET', {}, query);
+
+    assert.strictEqual(res.status, 200);
+    assert.strictEqual(res.headers['Content-Type'], 'text/plain');
+    assert.strictEqual(res.body, 'challenge_sov_2026');
+  });
+
   test('2. GET Handshake: Rejects with 403 Forbidden on invalid verify_token', async () => {
     const query = {
       'hub.mode': 'subscribe',

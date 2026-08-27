@@ -56,8 +56,9 @@ export const config = {
     from: process.env.RESEND_FROM || process.env.EMAIL_FROM || 'Emanuel Rendas Private Advisory <privateadvisory@emanuelrendas.com>',
   },
   whatsappBusiness: {
-    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
-    accessToken: process.env.WHATSAPP_SYSTEM_USER_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_KEY || '',
+    phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_PHONE_NUMBER_ID || '',
+    accessToken: process.env.WHATSAPP_SYSTEM_USER_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_KEY || process.env.META_WHATSAPP_TOKEN || '',
+    verifyToken: process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'raioc_sovereign_auth_2026_x99',
     apiUrl: process.env.WHATSAPP_API_URL || '',
     enabled: process.env.WHATSAPP_ENABLED !== 'false',
   },
