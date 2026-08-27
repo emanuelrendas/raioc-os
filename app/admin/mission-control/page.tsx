@@ -191,15 +191,20 @@ export default function MissionControlPage() {
 
   const pendingCount = pendingApprovals.length;
 
-  // Agent Radar Human Status Mapping
+  // Agent Radar Human Status Mapping (12 Specialist Agents)
   const humanAgents = [
-    { name: 'MARK', role: 'Triagem & Risco', status: 'ONLINE', msg: 'A triar investidores da web e documentos DLD', dot: '#10B981' },
-    { name: 'AIDA', role: 'Relações & Voz AI', status: pendingCount > 0 ? 'WAITING' : 'READY', msg: pendingCount > 0 ? 'Aguardando a tua aprovação para disparo de voz' : 'Pronta para síntese executiva', dot: pendingCount > 0 ? '#F59E0B' : '#10B981' },
-    { name: 'ATLAS', role: 'Real Estate & ROI', status: 'ONLINE', msg: 'A calcular projeções DLD e modelos de yield Opal', dot: '#10B981' },
-    { name: 'LEX', role: 'Conformidade & Fiscal', status: 'ONLINE', msg: 'A verificar conformidade e Lei nº 8 de 2007', dot: '#10B981' },
-    { name: 'ARGOS', role: 'Inteligência DLD', status: 'ONLINE', msg: 'Monitorização DLD e Whale Alerts ativa (>=20M AED)', dot: '#10B981' },
-    { name: 'SENTINEL', role: 'Guardião do Sistema', status: 'HEALTHY', msg: 'Sistema 100% operacional e malha ativa', dot: '#10B981' },
     { name: 'JARVIS', role: 'Cérebro Executivo', status: 'ACTIVE', msg: 'Orquestração contínua e síntese estratégica', dot: '#3B82F6' },
+    { name: 'MARK', role: 'Triagem & OCR', status: 'ONLINE', msg: 'A triar investidores da web e documentos DLD', dot: '#10B981' },
+    { name: 'ATLAS', role: 'Motor Opal ROI', status: 'ONLINE', msg: 'A calcular projeções DLD e modelos de yield Opal', dot: '#10B981' },
+    { name: 'LEX', role: 'Conformidade Lei 8', status: 'ONLINE', msg: 'A verificar conformidade e Lei nº 8 de 2007', dot: '#10B981' },
+    { name: 'HERMES', role: 'CRM & Pipeline', status: 'ONLINE', msg: 'A sincronizar mandatos e estágios do pipeline', dot: '#10B981' },
+    { name: 'HELIOS', role: 'Agenda & Calendário', status: 'ONLINE', msg: 'Gestão de sessões consultivas privadas', dot: '#10B981' },
+    { name: 'SENTINEL', role: 'Guardião do Sistema', status: 'HEALTHY', msg: 'Sistema 100% operacional e malha ativa', dot: '#10B981' },
+    { name: 'BRAND', role: 'Estratégia & Teses', status: 'ONLINE', msg: 'Publicação de teses macroeconómicas e relatórios', dot: '#10B981' },
+    { name: 'ENGAGE', role: 'Conformidade Social', status: 'ONLINE', msg: 'Moderação de sentimento e conformidade legal', dot: '#10B981' },
+    { name: 'DM_CONVERSION', role: 'Conversão de DMs', status: 'ONLINE', msg: 'Qualificação de mensagens de alto valor WhatsApp/Telegram', dot: '#10B981' },
+    { name: 'SOCIAL_ANALYTICS', role: 'Malha de Telemetria', status: 'ONLINE', msg: 'Auditoria de gráficos de audiência e tráfego', dot: '#10B981' },
+    { name: 'AIDA', role: 'Relações & Voz AI', status: pendingCount > 0 ? 'WAITING' : 'READY', msg: pendingCount > 0 ? 'Aguardando a tua aprovação para disparo de voz' : 'Pronta para síntese executiva', dot: pendingCount > 0 ? '#F59E0B' : '#10B981' },
   ];
 
   // Helper Flag Formatter
