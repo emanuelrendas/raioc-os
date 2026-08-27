@@ -1377,19 +1377,13 @@
 
         const res = await fetch(approvalsEndpoint, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-            'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99'
-          },
+          headers: getClientAuthHeaders(),
+          credentials: 'same-origin',
           body: JSON.stringify(payload)
         }).catch(() => fetch(decideEndpoint, {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-            'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99'
-          },
+          headers: getClientAuthHeaders(),
+          credentials: 'same-origin',
           body: JSON.stringify(payload)
         }));
 
@@ -1547,18 +1541,42 @@
     }
 
     // --- Quick Action Handlers ---
+    function getClientAuthHeaders() {
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-requested-with': 'RAIOC_MISSION_CONTROL_V2'
+      };
+      const token = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('raioc_session_token')) || '';
+      if (token) {
+        headers['Authorization'] = 'Bearer ' + token;
+      }
+      return headers;
+    }
+
+    function reportVoiceTelemetry(eventType, details = {}, latencyMs = 0) {
+      console.log(`[VOICE_TELEMETRY:${eventType}]`, details, latencyMs ? `${latencyMs.toFixed(1)}ms` : '');
+      try {
+        fetch('/api/v1/voice/telemetry', {
+          method: 'POST',
+          headers: getClientAuthHeaders(),
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            event: eventType,
+            details,
+            latencyMs,
+            timestamp: new Date().toISOString()
+          })
+        }).catch(() => {});
+      } catch (_) {}
+    }
+
     async function triggerVoiceNoteForLead() {
       if (!selectedLeadId) return;
-      const authToken = localStorage.getItem('raioc_auth_token') || 'raioc_sovereign_auth_2026_x99';
       try {
         const res = await fetch('/api/v1/communication/voice', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + authToken,
-            'x-raioc-secret': authToken,
-            'x-requested-with': 'RAIOC_MISSION_CONTROL_V2'
-          },
+          headers: getClientAuthHeaders(),
+          credentials: 'same-origin',
           body: JSON.stringify({
             intent: 'INVESTOR_FOLLOWUP',
             investorId: selectedLeadId,
@@ -1597,17 +1615,12 @@
       const input = document.getElementById('copilot-input');
       const text = input ? input.value.trim() : '';
       if (!text) return;
-      const authToken = localStorage.getItem('raioc_auth_token') || 'raioc_sovereign_auth_2026_x99';
 
       try {
         const res = await fetch('/api/v1/cognitive/dispatch', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + authToken,
-            'x-raioc-secret': authToken,
-            'x-requested-with': 'RAIOC_MISSION_CONTROL_V2'
-          },
+          headers: getClientAuthHeaders(),
+          credentials: 'same-origin',
           body: JSON.stringify({ prompt: text })
         });
         const data = await res.json();
@@ -1724,10 +1737,13 @@ Orquestras e delegas com precisão para:
           } catch (_) {}
         }
         audioContext = window.voiceAudioCtx;
-        console.log(`[VOICE_ENGINE:AUDIO_UNLOCK] AudioContext unlocked in ${(performance.now() - t0).toFixed(2)}ms (state: ${window.voiceAudioCtx?.state})`);
+        const latency = performance.now() - t0;
+        console.log(`[VOICE_ENGINE:AUDIO_UNLOCK] AudioContext unlocked in ${latency.toFixed(2)}ms (state: ${window.voiceAudioCtx?.state})`);
+        reportVoiceTelemetry('VOICE_AUDIOCONTEXT_UNLOCKED', { state: window.voiceAudioCtx?.state }, latency);
         return window.voiceAudioCtx;
       } catch (e) {
         console.warn('[VOICE_ENGINE:AUDIO_UNLOCK_WARN]', e);
+        reportVoiceTelemetry('VOICE_AUDIOCONTEXT_SUSPENDED', { error: e.message });
         return null;
       }
     }
@@ -1752,6 +1768,7 @@ Orquestras e delegas com precisão para:
       }
       const t0 = performance.now();
       console.log(`[VOICE_ENGINE:FALLBACK_TTS] Invoking SpeechSynthesis natural voice fallback: "${textToSpeak}"`);
+      reportVoiceTelemetry('VOICE_FALLBACK_TRIGGERED', { text: textToSpeak });
       if (typeof window === 'undefined') return;
 
       if (window.speechSynthesis) {
@@ -1770,12 +1787,15 @@ Orquestras e delegas com precisão para:
           setTranscriptCaption('[🔊 A TOCAR ÁUDIO] JARVIS: ' + textToSpeak);
 
           utterance.onstart = () => {
-            console.log(`[VOICE_ENGINE:PLAYING] SpeechSynthesis audio started in ${(performance.now() - t0).toFixed(2)}ms`);
+            const lat = performance.now() - t0;
+            console.log(`[VOICE_ENGINE:PLAYING] SpeechSynthesis audio started in ${lat.toFixed(2)}ms`);
+            reportVoiceTelemetry('VOICE_PLAYBACK_STARTED', { mode: 'speech_synthesis' }, lat);
           };
 
           utterance.onend = () => {
             console.log('[VOICE_ENGINE:PLAYBACK_COMPLETE] SpeechSynthesis playback finished');
             isBotSpeaking = false;
+            reportVoiceTelemetry('VOICE_PLAYBACK_FINISHED', { mode: 'speech_synthesis' });
             if (voiceSessionActive) {
               setVoiceState('listening');
               setTranscriptCaption('[🎙️ PRONTO] Pode falar agora... (A escutar)');
@@ -1787,6 +1807,7 @@ Orquestras e delegas com precisão para:
 
           utterance.onerror = (e) => {
             console.warn('[VOICE_ENGINE:PLAYBACK_ERROR] SpeechSynthesis error:', e);
+            reportVoiceTelemetry('VOICE_PLAYBACK_FAILED', { error: e.error || 'speech_synthesis_error' });
             isBotSpeaking = false;
             if (voiceSessionActive) {
               setVoiceState('listening');
@@ -1829,10 +1850,11 @@ Orquestras e delegas com precisão para:
       if (playbackSafetyTimeout) clearTimeout(playbackSafetyTimeout);
       playbackSafetyTimeout = setTimeout(() => {
         if (!neuralStarted) {
-          console.warn('[VOICE_ENGINE:NEURAL_TIMEOUT] Neural audio playback exceeded 1.5s threshold, executing immediate SpeechSynthesis fallback.');
+          console.warn('[VOICE_ENGINE:NEURAL_TIMEOUT] Neural audio playback exceeded 1.2s threshold, executing immediate SpeechSynthesis fallback.');
+          reportVoiceTelemetry('VOICE_FALLBACK_TRIGGERED', { reason: 'neural_timeout_1200ms' });
           speakNaturalVoiceFallback(text);
         }
-      }, 1500);
+      }, 1200);
 
       const tStart = performance.now();
       try {
@@ -1844,12 +1866,14 @@ Orquestras e delegas com precisão para:
 
         const arrayBuffer = base64ToArrayBuffer(audioBase64);
         if (!arrayBuffer || arrayBuffer.byteLength < 32) {
+          reportVoiceTelemetry('VOICE_DECODE_FAILED', { reason: 'invalid_buffer_length' });
           speakNaturalVoiceFallback(text);
           return;
         }
 
         const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
         if (!audioBuffer || audioBuffer.duration < 0.1) {
+          reportVoiceTelemetry('VOICE_DECODE_FAILED', { reason: 'empty_audio_duration' });
           speakNaturalVoiceFallback(text);
           return;
         }
@@ -1871,12 +1895,15 @@ Orquestras e delegas com precisão para:
         isBotSpeaking = true;
         setVoiceState('speaking');
         setTranscriptCaption('[🔊 A TOCAR ÁUDIO] JARVIS: ' + text);
-        console.log(`[VOICE_ENGINE:NEURAL_PLAYING] Neural Web Audio active in ${(performance.now() - tStart).toFixed(2)}ms (${audioBuffer.duration.toFixed(2)}s duration)`);
+        const startLat = performance.now() - tStart;
+        console.log(`[VOICE_ENGINE:NEURAL_PLAYING] Neural Web Audio active in ${startLat.toFixed(2)}ms (${audioBuffer.duration.toFixed(2)}s duration)`);
+        reportVoiceTelemetry('VOICE_PLAYBACK_STARTED', { mode: 'neural_web_audio', duration: audioBuffer.duration }, startLat);
 
         source.onended = () => {
           console.log('[VOICE_ENGINE:PLAYBACK_COMPLETE] Neural Web Audio playback finished');
           isBotSpeaking = false;
           activeAudioSource = null;
+          reportVoiceTelemetry('VOICE_PLAYBACK_FINISHED', { mode: 'neural_web_audio' });
           if (voiceSessionActive) {
             setVoiceState('listening');
             setTranscriptCaption('[🎙️ PRONTO] Pode falar agora... (A escutar)');
@@ -1890,12 +1917,14 @@ Orquestras e delegas com precisão para:
         activeAudioSource = source;
       } catch (err) {
         console.warn('[VOICE_ENGINE:NEURAL_DECODE_FAIL] Neural decode failed, falling back:', err);
+        reportVoiceTelemetry('VOICE_DECODE_FAILED', { error: err.message });
         speakNaturalVoiceFallback(text);
       }
     }
 
     async function openLiveVoiceSession() {
       console.log('[VOICE_ENGINE:INIT] Live Voice Session Initiated');
+      reportVoiceTelemetry('VOICE_SESSION_OPENED');
       await unlockAudioContext();
       voiceSessionActive = true;
       const modal = document.getElementById('live-voice-modal');
@@ -1923,17 +1952,19 @@ Orquestras e delegas com precisão para:
           if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
             micStream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
               console.warn('[VOICE_ENGINE:MIC_WARN] Microphone permission not granted, utilizing synthetic audio simulator:', err);
+              reportVoiceTelemetry('VOICE_MIC_DENIED', { error: err.message });
               return null;
             });
 
             if (micStream) {
               const source = audioContext.createMediaStreamSource(micStream);
               source.connect(analyserNode);
+              reportVoiceTelemetry('VOICE_MIC_CONNECTED');
             }
           }
         }
 
-        // Initialize Speech Recognition with 800ms VAD
+        // Initialize Speech Recognition with adaptive low-latency VAD (500ms - 650ms)
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRec) {
           speechRecognizer = new SpeechRec();
@@ -1968,21 +1999,26 @@ Orquestras e delegas com precisão para:
               accumulatedTranscript = currentText;
               setTranscriptCaption('🗣️ ' + currentText);
 
-              // Reset Silence Detection timer (800ms pause fires ultra-low latency dispatch)
+              // Adaptive silence window (500ms for >=3 words, 650ms for short phrases)
+              const wordCount = currentText.split(/\s+/).filter(Boolean).length;
+              const silenceDelay = wordCount >= 3 ? 500 : 650;
+
               if (silenceTimer) clearTimeout(silenceTimer);
               silenceTimer = setTimeout(() => {
                 if (accumulatedTranscript && accumulatedTranscript.length > 2 && voiceState === 'listening') {
                   const toProcess = accumulatedTranscript;
                   accumulatedTranscript = '';
                   console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + toProcess + '"');
+                  reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: toProcess.length, wordCount });
                   processVoiceDirective(toProcess);
                 }
-              }, 800);
+              }, silenceDelay);
             }
           };
 
           speechRecognizer.onerror = (e) => {
             console.warn('[VOICE_ENGINE:SPEECH_REC_WARN] Speech recognition error:', e.error);
+            reportVoiceTelemetry('VOICE_SPEECH_REC_ERROR', { error: e.error });
           };
 
           speechRecognizer.onend = () => {
@@ -2003,6 +2039,7 @@ Orquestras e delegas com precisão para:
         if (window.lucide) lucide.createIcons();
       } catch (err) {
         console.error('[VOICE_ENGINE:INIT_ERROR] Failed to initialize live voice:', err);
+        reportVoiceTelemetry('VOICE_INIT_FAILED', { error: err.message });
         setTranscriptCaption('[🎙️ MIC: ATIVO] Pode falar agora... (A escutar ou digite abaixo)');
         startOrbCanvasLoop();
       }
@@ -2010,6 +2047,7 @@ Orquestras e delegas com precisão para:
 
     function closeLiveVoiceSession() {
       voiceSessionActive = false;
+      reportVoiceTelemetry('VOICE_SESSION_CLOSED');
       if (silenceTimer) {
         clearTimeout(silenceTimer);
         silenceTimer = null;
@@ -2059,6 +2097,7 @@ Orquestras e delegas com precisão para:
       if (icon) {
         icon.className = isMicMuted ? 'w-5 h-5 text-rose-400' : 'w-5 h-5 text-emerald-400';
       }
+      reportVoiceTelemetry('VOICE_MIC_TOGGLED', { muted: isMicMuted });
       if (isMicMuted) {
         setTranscriptCaption('🔇 Microfone silenciado.');
       } else {
@@ -2135,6 +2174,7 @@ Orquestras e delegas com precisão para:
       }
       if (isBotSpeaking) {
         isBotSpeaking = false;
+        reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
         setVoiceState('listening');
         setTranscriptCaption('[🎙️ PRONTO] Pode falar agora... (A escutar)');
       }
@@ -2165,19 +2205,15 @@ Orquestras e delegas com precisão para:
       }
 
       console.log(`[VOICE_ENGINE:PAYLOAD_SENT] Transmitting to /api/v1/voice/conversation (turn ${voiceConversationHistory.length})...`);
-      const authToken = localStorage.getItem('raioc_auth_token') || 'raioc_sovereign_auth_2026_x99';
+      reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { textLength: text.length, historyCount: voiceConversationHistory.length });
 
       const tReq = performance.now();
       try {
         setTranscriptCaption('[⚡ A SINTETIZAR] A gerar resposta e áudio fiduciário...');
         const res = await fetch('/api/v1/voice/conversation', {
           method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer ' + authToken,
-            'x-raioc-secret': authToken,
-            'x-requested-with': 'RAIOC_MISSION_CONTROL_V2'
-          },
+          headers: getClientAuthHeaders(),
+          credentials: 'same-origin',
           body: JSON.stringify({ 
             message: text,
             history: voiceConversationHistory.slice(-10),
@@ -2186,9 +2222,16 @@ Orquestras e delegas com precisão para:
           signal: activeVoiceAbortController.signal
         });
 
+        if (res.status === 401) {
+          reportVoiceTelemetry('VOICE_AUTH_FAILED', { status: 401 });
+          throw new Error('AUTH_REQUIRED: Sessão expirada ou não autorizada');
+        }
+
         const data = await res.json();
-        const elapsed = (performance.now() - tReq).toFixed(2);
-        console.log(`[VOICE_ENGINE:RESPONSE_RECEIVED] Server returned in ${elapsed}ms: { hasAudio: ${Boolean(data.audioBase64)}, fallbackRequired: ${Boolean(data.fallbackRequired)} }`);
+        const elapsed = performance.now() - tReq;
+        console.log(`[VOICE_ENGINE:RESPONSE_RECEIVED] Server returned in ${elapsed.toFixed(2)}ms: { hasAudio: ${Boolean(data.audioBase64)}, fallbackRequired: ${Boolean(data.fallbackRequired)} }`);
+        reportVoiceTelemetry('VOICE_LATENCY_METRIC', { hasAudio: Boolean(data.audioBase64), fallbackRequired: Boolean(data.fallbackRequired) }, elapsed);
+
         const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
 
         // Record assistant response turn in history
@@ -2205,9 +2248,11 @@ Orquestras e delegas com precisão para:
       } catch (err) {
         if (err.name === 'AbortError') {
           console.log('[VOICE_ENGINE:BARGE_IN_ABORT] Request aborted via barge-in.');
+          reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
           return;
         }
         console.warn('[VOICE_ENGINE:REQUEST_FAIL] Request error, switching to offline fallback:', err);
+        reportVoiceTelemetry('VOICE_REQUEST_FAILED', { error: err.message });
         const fallbackText = 'JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.';
         voiceConversationHistory.push({ role: 'model', text: fallbackText });
         speakNaturalVoiceFallback(fallbackText);

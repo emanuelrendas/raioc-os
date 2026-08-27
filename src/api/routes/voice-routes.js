@@ -24,6 +24,30 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
   const startTime = Date.now();
   const correlationId = headers['x-correlation-id'] || body.correlationId || body.correlation_id || `corr_voice_conv_${Date.now()}`;
 
+  // 1. Client Telemetry Ingestion (/api/v1/voice/telemetry)
+  if (url.includes('/voice/telemetry')) {
+    if (method !== 'POST') {
+      return {
+        status: 405,
+        headers: { 'Content-Type': 'application/json' },
+        body: { success: false, error: `Method ${method} not allowed on voice telemetry endpoint` },
+      };
+    }
+    const eventType = body.event || body.type || 'UNKNOWN_VOICE_EVENT';
+    logger.info('SENTINEL_VOICE_WATCHDOG', `Client voice telemetry received: [${eventType}]`, {
+      event: eventType,
+      details: body.details || {},
+      latencyMs: body.latencyMs || 0,
+      timestamp: body.timestamp || new Date().toISOString(),
+      correlationId,
+    });
+    return {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+      body: { success: true, recorded: true, event: eventType },
+    };
+  }
+
   if (method !== 'POST') {
     return {
       status: 405,
@@ -33,27 +57,19 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
   }
 
   // Authenticate request: support bearer/secret, session cookies, and local Mission Control origins
-  let auth = authMiddleware.authenticateRequest(headers);
-  if (!auth.authenticated) {
-    const cookieHeader = headers['cookie'] || headers['Cookie'] || '';
-    const referer = headers['referer'] || headers['Referer'] || '';
-    const origin = headers['origin'] || headers['Origin'] || '';
-    const secFetchSite = headers['sec-fetch-site'] || headers['Sec-Fetch-Site'] || '';
-
-    const hasSessionCookie = cookieHeader.includes('raioc_session') || cookieHeader.includes('session=') || cookieHeader.includes('raioc_sovereign_auth');
-    const isSameOriginOrLocal = (secFetchSite === 'same-origin' || referer.includes('/admin/mission-control') || referer.includes('mission-control') || origin.includes('localhost') || origin.includes('127.0.0.1')) && !headers['x-external-untrusted'];
-
-    if (hasSessionCookie || isSameOriginOrLocal) {
-      auth = { authenticated: true, role: 'ADMIN' };
-    }
-  }
+  const auth = authMiddleware.authenticateRequest(headers);
 
   if (!auth.authenticated) {
     logger.warn('VOICE_CONVERSATION', 'Rejected unauthorized voice conversation request', { correlationId });
     return {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
-      body: { success: false, error: 'UNAUTHORIZED: Valid API Secret or Bearer token required.' },
+      body: { 
+        success: false, 
+        error: 'UNAUTHORIZED: Valid session or authorization token required.',
+        code: 'AUTH_REQUIRED',
+        diagnostic: auth.error || 'Missing or invalid session credentials.'
+      },
     };
   }
 

@@ -14,7 +14,6 @@ export default function MissionControlDashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [copilotPrompt, setCopilotPrompt] = useState('');
   const [copilotLoading, setCopilotLoading] = useState(false);
-  const [internalSecret] = useState('raioc_sovereign_auth_2026_x99');
   const [lastUpdated, setLastUpdated] = useState(new Date().toLocaleTimeString());
   const [resolvingId, setResolvingId] = useState(null);
   const [isMasked, setIsMasked] = useState(false);
@@ -43,6 +42,35 @@ export default function MissionControlDashboard() {
   const activeVoiceAbortControllerRef = React.useRef(null);
   const activeAudioSourceRef = React.useRef(null);
   const voiceConversationHistoryRef = React.useRef([]);
+
+  const getClientAuthHeaders = useCallback(() => {
+    const headers = {
+      'Content-Type': 'application/json',
+      'x-requested-with': 'RAIOC_MISSION_CONTROL_V2',
+    };
+    const token = (typeof sessionStorage !== 'undefined' && sessionStorage.getItem('raioc_session_token')) || '';
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+  }, []);
+
+  const reportVoiceTelemetry = useCallback((eventType, details = {}, latencyMs = 0) => {
+    console.log(`[VOICE_TELEMETRY:${eventType}]`, details, latencyMs ? `${latencyMs.toFixed(1)}ms` : '');
+    try {
+      fetch('/api/v1/voice/telemetry', {
+        method: 'POST',
+        headers: getClientAuthHeaders(),
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          event: eventType,
+          details,
+          latencyMs,
+          timestamp: new Date().toISOString(),
+        }),
+      }).catch(() => {});
+    } catch (_) {}
+  }, [getClientAuthHeaders]);
 
   const JARVIS_OMNISCIENT_SYSTEM_PROMPT = `Tu és o JARVIS, o Mission Control Chief of Staff, Cérebro de Inteligência Executiva, Orquestração Autónoma e Copiloto Omnisciente do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
 
@@ -123,15 +151,11 @@ Orquestras e delegas com precisão para:
   // Fetch live consolidated V1/V2 telemetry
   const refreshTelemetry = useCallback(async () => {
     try {
-      const headers = {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${internalSecret}`,
-        'x-raioc-secret': internalSecret,
-        'x-requested-with': 'RAIOC_MISSION_CONTROL_V2',
-      };
-
       const url = isMasked ? '/api/v1/mission-control/v1-state?masked=true' : '/api/v1/mission-control/v1-state';
-      const res = await fetch(url, { headers });
+      const res = await fetch(url, {
+        headers: getClientAuthHeaders(),
+        credentials: 'same-origin',
+      });
       if (res.ok) {
         const data = await res.json();
         setState(data.body || data);
@@ -140,7 +164,7 @@ Orquestras e delegas com precisão para:
     } catch (err) {
       console.error('Failed to refresh Mission Control V2 telemetry:', err);
     }
-  }, [internalSecret, isMasked]);
+  }, [getClientAuthHeaders, isMasked]);
 
   useEffect(() => {
     refreshTelemetry();
@@ -154,12 +178,8 @@ Orquestras e delegas com precisão para:
     try {
       const res = await fetch('/api/v1/mission-control/approvals', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${internalSecret}`,
-          'x-raioc-secret': internalSecret,
-          'x-requested-with': 'RAIOC_MISSION_CONTROL_V2',
-        },
+        headers: getClientAuthHeaders(),
+        credentials: 'same-origin',
         body: JSON.stringify({ id, resolution, actor: 'Emanuel Rendas (Executive)' }),
       });
       if (res.ok) {
@@ -207,10 +227,13 @@ Orquestras e delegas com precisão para:
         } catch (_) {}
       }
       audioContextRef.current = window.voiceAudioCtx;
-      console.log(`[VOICE_ENGINE:AUDIO_UNLOCK] AudioContext unlocked in ${(performance.now() - t0).toFixed(2)}ms (state: ${window.voiceAudioCtx?.state})`);
+      const latency = performance.now() - t0;
+      console.log(`[VOICE_ENGINE:AUDIO_UNLOCK] AudioContext unlocked in ${latency.toFixed(2)}ms (state: ${window.voiceAudioCtx?.state})`);
+      reportVoiceTelemetry('VOICE_AUDIOCONTEXT_UNLOCKED', { state: window.voiceAudioCtx?.state }, latency);
       return window.voiceAudioCtx;
     } catch (e) {
       console.warn('[VOICE_ENGINE:AUDIO_UNLOCK_WARN]', e);
+      reportVoiceTelemetry('VOICE_AUDIOCONTEXT_SUSPENDED', { error: e.message });
       return null;
     }
   };
@@ -223,6 +246,7 @@ Orquestras e delegas com precisão para:
     }
     const t0 = performance.now();
     console.log(`[VOICE_ENGINE:FALLBACK_TTS] Invoking SpeechSynthesis natural voice fallback: "${textToSpeak}"`);
+    reportVoiceTelemetry('VOICE_FALLBACK_TRIGGERED', { text: textToSpeak });
     if (typeof window === 'undefined') return;
 
     if (window.speechSynthesis) {
@@ -241,12 +265,15 @@ Orquestras e delegas com precisão para:
         setVoiceTranscript(`[🔊 A TOCAR ÁUDIO] JARVIS: ${textToSpeak}`);
 
         utterance.onstart = () => {
-          console.log(`[VOICE_ENGINE:PLAYING] SpeechSynthesis audio started in ${(performance.now() - t0).toFixed(2)}ms`);
+          const lat = performance.now() - t0;
+          console.log(`[VOICE_ENGINE:PLAYING] SpeechSynthesis audio started in ${lat.toFixed(2)}ms`);
+          reportVoiceTelemetry('VOICE_PLAYBACK_STARTED', { mode: 'speech_synthesis' }, lat);
         };
 
         utterance.onend = () => {
           console.log('[VOICE_ENGINE:PLAYBACK_COMPLETE] SpeechSynthesis playback finished');
           isBotSpeakingRef.current = false;
+          reportVoiceTelemetry('VOICE_PLAYBACK_FINISHED', { mode: 'speech_synthesis' });
           setVoiceState('listening');
           setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
           if (speechRecognizerRef.current) {
@@ -256,6 +283,7 @@ Orquestras e delegas com precisão para:
 
         utterance.onerror = (e) => {
           console.warn('[VOICE_ENGINE:PLAYBACK_ERROR] SpeechSynthesis error:', e);
+          reportVoiceTelemetry('VOICE_PLAYBACK_FAILED', { error: e.error || 'speech_synthesis_error' });
           isBotSpeakingRef.current = false;
           setVoiceState('listening');
           setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
@@ -277,7 +305,7 @@ Orquestras e delegas com precisão para:
     }
   };
 
-  // Dual-layer Neural Web Audio Player with 1.5s Safety Timer
+  // Dual-layer Neural Web Audio Player with 1.2s Safety Timer
   const playNeuralAudio = async (audioBase64, text, fallbackRequired = false) => {
     if (fallbackRequired || !audioBase64) {
       speakNaturalVoiceFallback(text);
@@ -293,10 +321,11 @@ Orquestras e delegas com precisão para:
     if (playbackSafetyTimeoutRef.current) clearTimeout(playbackSafetyTimeoutRef.current);
     playbackSafetyTimeoutRef.current = setTimeout(() => {
       if (!neuralStarted) {
-        console.warn('[VOICE_ENGINE:NEURAL_TIMEOUT] Neural audio playback exceeded 1.5s threshold, executing immediate SpeechSynthesis fallback.');
+        console.warn('[VOICE_ENGINE:NEURAL_TIMEOUT] Neural audio playback exceeded 1.2s threshold, executing immediate SpeechSynthesis fallback.');
+        reportVoiceTelemetry('VOICE_FALLBACK_TRIGGERED', { reason: 'neural_timeout_1200ms' });
         speakNaturalVoiceFallback(text);
       }
-    }, 1500);
+    }, 1200);
 
     const tStart = performance.now();
     try {
@@ -308,12 +337,14 @@ Orquestras e delegas com precisão para:
 
       const arrayBuffer = base64ToArrayBuffer(audioBase64);
       if (!arrayBuffer || arrayBuffer.byteLength < 32) {
+        reportVoiceTelemetry('VOICE_DECODE_FAILED', { reason: 'invalid_buffer_length' });
         speakNaturalVoiceFallback(text);
         return;
       }
 
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
       if (!audioBuffer || audioBuffer.duration < 0.1) {
+        reportVoiceTelemetry('VOICE_DECODE_FAILED', { reason: 'empty_audio_duration' });
         speakNaturalVoiceFallback(text);
         return;
       }
@@ -335,12 +366,15 @@ Orquestras e delegas com precisão para:
       isBotSpeakingRef.current = true;
       setVoiceState('speaking');
       setVoiceTranscript(`[🔊 A TOCAR ÁUDIO] JARVIS: ${text}`);
-      console.log(`[VOICE_ENGINE:NEURAL_PLAYING] Neural Web Audio active in ${(performance.now() - tStart).toFixed(2)}ms (${audioBuffer.duration.toFixed(2)}s duration)`);
+      const startLat = performance.now() - tStart;
+      console.log(`[VOICE_ENGINE:NEURAL_PLAYING] Neural Web Audio active in ${startLat.toFixed(2)}ms (${audioBuffer.duration.toFixed(2)}s duration)`);
+      reportVoiceTelemetry('VOICE_PLAYBACK_STARTED', { mode: 'neural_web_audio', duration: audioBuffer.duration }, startLat);
 
       source.onended = () => {
         console.log('[VOICE_ENGINE:PLAYBACK_COMPLETE] Neural Web Audio playback finished');
         isBotSpeakingRef.current = false;
         activeAudioSourceRef.current = null;
+        reportVoiceTelemetry('VOICE_PLAYBACK_FINISHED', { mode: 'neural_web_audio' });
         setVoiceState('listening');
         setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
         if (speechRecognizerRef.current) {
@@ -352,6 +386,7 @@ Orquestras e delegas com precisão para:
       activeAudioSourceRef.current = source;
     } catch (err) {
       console.warn('[VOICE_ENGINE:NEURAL_DECODE_FAIL] Neural decode failed, falling back:', err);
+      reportVoiceTelemetry('VOICE_DECODE_FAILED', { error: err.message });
       speakNaturalVoiceFallback(text);
     }
   };
@@ -382,18 +417,15 @@ Orquestras e delegas com precisão para:
     }
 
     console.log(`[VOICE_ENGINE:PAYLOAD_SENT] Transmitting to /api/v1/voice/conversation (turn ${voiceConversationHistoryRef.current.length})...`);
+    reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { textLength: text.length, historyCount: voiceConversationHistoryRef.current.length });
 
     const tReq = performance.now();
     try {
       setVoiceTranscript('[⚡ A SINTETIZAR] A gerar resposta e áudio fiduciário...');
       const res = await fetch('/api/v1/voice/conversation', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${internalSecret}`,
-          'x-raioc-secret': internalSecret,
-          'x-requested-with': 'RAIOC_MISSION_CONTROL_V2',
-        },
+        headers: getClientAuthHeaders(),
+        credentials: 'same-origin',
         body: JSON.stringify({ 
           message: text,
           history: voiceConversationHistoryRef.current.slice(-10),
@@ -402,9 +434,16 @@ Orquestras e delegas com precisão para:
         signal: activeVoiceAbortControllerRef.current.signal,
       });
 
+      if (res.status === 401) {
+        reportVoiceTelemetry('VOICE_AUTH_FAILED', { status: 401 });
+        throw new Error('AUTH_REQUIRED: Sessão expirada ou não autorizada');
+      }
+
       const data = await res.json();
-      const elapsed = (performance.now() - tReq).toFixed(2);
-      console.log(`[VOICE_ENGINE:RESPONSE_RECEIVED] Server returned in ${elapsed}ms: { hasAudio: ${Boolean(data.audioBase64)}, fallbackRequired: ${Boolean(data.fallbackRequired)} }`);
+      const elapsed = performance.now() - tReq;
+      console.log(`[VOICE_ENGINE:RESPONSE_RECEIVED] Server returned in ${elapsed.toFixed(2)}ms: { hasAudio: ${Boolean(data.audioBase64)}, fallbackRequired: ${Boolean(data.fallbackRequired)} }`);
+      reportVoiceTelemetry('VOICE_LATENCY_METRIC', { hasAudio: Boolean(data.audioBase64), fallbackRequired: Boolean(data.fallbackRequired) }, elapsed);
+
       const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
 
       // Record model response turn in history
@@ -421,9 +460,11 @@ Orquestras e delegas com precisão para:
     } catch (err) {
       if (err.name === 'AbortError') {
         console.log('[VOICE_ENGINE:BARGE_IN_ABORT] Voice dispatch aborted via barge-in.');
+        reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
         return;
       }
       console.warn('[VOICE_ENGINE:REQUEST_FAIL] Voice conversation fallback:', err);
+      reportVoiceTelemetry('VOICE_REQUEST_FAILED', { error: err.message });
       const fallbackText = 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
       voiceConversationHistoryRef.current.push({ role: 'model', text: fallbackText });
       speakNaturalVoiceFallback(fallbackText);
@@ -435,6 +476,7 @@ Orquestras e delegas com precisão para:
   // Live Voice Session Controls (ChatGPT / Gemini Live style)
   const startLiveVoiceSession = async () => {
     console.log('[VOICE_ENGINE:INIT] Live Voice Session Initiated');
+    reportVoiceTelemetry('VOICE_SESSION_OPENED');
     setLiveVoiceOpen(true);
     setVoiceState('listening');
     setVoiceTranscript('[🎙️ MIC: ATIVO] Pode falar agora... (A escutar)');
@@ -451,17 +493,19 @@ Orquestras e delegas com precisão para:
         if (navigator.mediaDevices?.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
             console.warn('[VOICE_ENGINE:MIC_WARN] Microphone permission not granted:', err);
+            reportVoiceTelemetry('VOICE_MIC_DENIED', { error: err.message });
             return null;
           });
           if (stream) {
             micStreamRef.current = stream;
             const source = ctx.createMediaStreamSource(stream);
             source.connect(analyser);
+            reportVoiceTelemetry('VOICE_MIC_CONNECTED');
           }
         }
       }
 
-      // Initialize Speech Recognition
+      // Initialize Speech Recognition with adaptive low-latency VAD (500ms - 650ms)
       const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
       if (SpeechRec) {
         const recognizer = new SpeechRec();
@@ -494,17 +538,26 @@ Orquestras e delegas com precisão para:
             accumulatedTextRef.current = currentText;
             setVoiceTranscript(`🗣️ ${currentText}`);
 
-            // Reset Silence Detection (800ms pause)
+            // Adaptive silence window (500ms for >=3 words, 650ms for short phrases)
+            const wordCount = currentText.split(/\s+/).filter(Boolean).length;
+            const silenceDelay = wordCount >= 3 ? 500 : 650;
+
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = setTimeout(() => {
               if (accumulatedTextRef.current && accumulatedTextRef.current.length > 2) {
                 const textToSend = accumulatedTextRef.current;
                 accumulatedTextRef.current = '';
                 console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + textToSend + '"');
+                reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: textToSend.length, wordCount });
                 processVoiceDirective(textToSend);
               }
-            }, 800);
+            }, silenceDelay);
           }
+        };
+
+        recognizer.onerror = (e) => {
+          console.warn('[VOICE_ENGINE:SPEECH_REC_WARN] Speech recognition error:', e.error);
+          reportVoiceTelemetry('VOICE_SPEECH_REC_ERROR', { error: e.error });
         };
 
         recognizer.onend = () => {
@@ -517,11 +570,13 @@ Orquestras e delegas com precisão para:
       }
     } catch (err) {
       console.warn('[VOICE_ENGINE:INIT_ERROR] Voice init warning:', err);
+      reportVoiceTelemetry('VOICE_INIT_FAILED', { error: err.message });
     }
   };
 
   const stopLiveVoiceSession = () => {
     setLiveVoiceOpen(false);
+    reportVoiceTelemetry('VOICE_SESSION_CLOSED');
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
@@ -579,6 +634,7 @@ Orquestras e delegas com precisão para:
     }
     if (isBotSpeakingRef.current) {
       isBotSpeakingRef.current = false;
+      reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
       setVoiceState('listening');
       setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
     }
@@ -713,11 +769,8 @@ Orquestras e delegas com precisão para:
     try {
       const res = await fetch('/api/v1/cognitive/dispatch', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${internalSecret}`,
-          'X-RAIOC-Secret': internalSecret,
-        },
+        headers: getClientAuthHeaders(),
+        credentials: 'same-origin',
         body: JSON.stringify({ prompt: copilotPrompt }),
       });
       const data = await res.json();

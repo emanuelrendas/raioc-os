@@ -21,24 +21,15 @@ export async function POST(req: Request) {
       rawHeaders[k.toLowerCase()] = v;
     });
 
-    let auth = authMiddleware.authenticateRequest(rawHeaders);
-    if (!auth.authenticated) {
-      const cookieHeader = rawHeaders['cookie'] || '';
-      const referer = rawHeaders['referer'] || '';
-      const origin = rawHeaders['origin'] || '';
-      const secFetchSite = rawHeaders['sec-fetch-site'] || '';
-
-      const hasSessionCookie = cookieHeader.includes('raioc_session') || cookieHeader.includes('session=') || cookieHeader.includes('raioc_sovereign_auth');
-      const isSameOriginOrLocal = (secFetchSite === 'same-origin' || referer.includes('/admin/mission-control') || referer.includes('mission-control') || origin.includes('localhost') || origin.includes('127.0.0.1')) && !rawHeaders['x-external-untrusted'];
-
-      if (hasSessionCookie || isSameOriginOrLocal) {
-        auth = { authenticated: true, role: 'ADMIN' };
-      }
-    }
-
+    const auth = authMiddleware.authenticateRequest(rawHeaders);
     if (!auth.authenticated) {
       return NextResponse.json(
-        { success: false, error: 'UNAUTHORIZED: Valid API Secret or Bearer token required.' },
+        { 
+          success: false, 
+          error: 'UNAUTHORIZED: Valid session or authorization token required.',
+          code: 'AUTH_REQUIRED',
+          diagnostic: auth.error || 'Missing or invalid session credentials.'
+        },
         { status: 401 }
       );
     }

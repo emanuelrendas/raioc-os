@@ -170,8 +170,8 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/v1/communication/voice') || url.startsWith('/api/communication/voice')) {
       response = await handleVoiceCommunicationRequest(url, method, body, effectiveQuery, headers);
     }
-    // 5b. JARVIS Live Voice Realtime Conversation (/api/v1/voice/conversation, /api/voice/conversation)
-    else if (url.startsWith('/api/v1/voice/conversation') || url.startsWith('/api/voice/conversation') || url === '/api/v1/voice' || url === '/api/voice') {
+    // 5b. JARVIS Live Voice Realtime Conversation & Telemetry (/api/v1/voice/*, /api/voice/*)
+    else if (url.startsWith('/api/v1/voice') || url.startsWith('/api/voice')) {
       response = await handleVoiceConversationRequest(url, method, body, effectiveQuery, headers);
     }
     else if (url === '/api/intake' || url.startsWith('/api/intake/')) {
