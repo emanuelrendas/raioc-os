@@ -92,11 +92,15 @@ export const JARVIS_LIVE_STREAMING_VOICE_PROMPT = JARVIS_OMNISCIENT_SYSTEM_PROMP
 export function cleanSpokenText(text) {
   if (!text || typeof text !== 'string') return '';
   return text
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/`([^`]+)`/g, '$1')
     .replace(/[*_~`#\[\]{}<>|]/g, '')
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{E0020}-\u{E007F}]/gu, '')
     .replace(/^[ \t]*[-•+>][ \t]+/gm, '')
     .replace(/[ \t]+[-•+>][ \t]+/g, ', ')
-    .replace(/\s+/g, ' ')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\s*\n\s*/g, ' ')
     .trim();
 }
 
@@ -108,8 +112,13 @@ export class FallbackAdapter {
   }
 
   async generate(prompt, context = {}) {
-    const sanitized = (prompt || '').toLowerCase();
-    const isLiveVoice = context.conversationMode === 'voice_live' || context.liveVoice === true || context.maxOutputTokens <= 60 || context.max_tokens <= 60;
+    const rawPrompt = (prompt || '').toLowerCase();
+    let sanitized = rawPrompt;
+    if (Array.isArray(context.history) && context.history.length > 0) {
+      const historyText = context.history.map(h => (h.text || h.message || h.content || '')).join(' ').toLowerCase();
+      sanitized = `${historyText} ${rawPrompt}`;
+    }
+    const isLiveVoice = context.conversationMode === 'voice_live' || context.liveVoice === true;
     const isVoiceMode = isLiveVoice || context.conversationMode === 'voice' || context.voice === true;
 
     let responseText = '';

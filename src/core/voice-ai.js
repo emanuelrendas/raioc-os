@@ -230,15 +230,15 @@ Spoken Script:`;
     const locale = params.locale || 'pt';
     const voiceId = params.voiceId || process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 
-    // 1. Generate ultra-short spoken text (1-2 sentences) via Cognitive Router with max_tokens: 50
+    // 1. Generate spoken response via Cognitive Router with maxOutputTokens: 350
     const cogResult = await cognitiveRouter.dispatch(userMessage, {
-      conversationMode: 'voice_live',
-      systemInstruction: JARVIS_LIVE_STREAMING_VOICE_PROMPT,
-      maxOutputTokens: 50,
-      max_tokens: 50,
-      temperature: 0.2,
+      conversationMode: 'voice',
+      systemInstruction: JARVIS_OMNISCIENT_SYSTEM_PROMPT,
+      maxOutputTokens: 350,
+      max_tokens: 350,
+      temperature: 0.3,
       correlationId,
-      history: params.history || [],
+      history: Array.isArray(params.history) ? params.history.slice(-10) : [],
     });
 
     const rawText = cogResult.text || 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';

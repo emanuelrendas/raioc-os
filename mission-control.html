@@ -1633,6 +1633,7 @@
     let simFrequencyData = new Uint8Array(64);
     let activeVoiceAbortController = null;
     let activeAudioSource = null;
+    let voiceConversationHistory = [];
 
     const JARVIS_OMNISCIENT_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva, Orquestração Autónoma e Copiloto Omnisciente do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
 
@@ -1985,6 +1986,12 @@ Arquitetura Cognitiva & Domínio Omnisciente:
       setVoiceState('thinking');
       setTranscriptCaption('🧠 A processar mandato: "' + text + '"...');
 
+      // Record user speech turn in history
+      voiceConversationHistory.push({ role: 'user', text: text });
+      if (voiceConversationHistory.length > 20) {
+        voiceConversationHistory = voiceConversationHistory.slice(-20);
+      }
+
       try {
         const res = await fetch('/api/v1/voice/conversation', {
           method: 'POST',
@@ -1995,6 +2002,7 @@ Arquitetura Cognitiva & Domínio Omnisciente:
           },
           body: JSON.stringify({ 
             message: text,
+            history: voiceConversationHistory.slice(-10),
             locale: 'pt'
           }),
           signal: activeVoiceAbortController.signal
@@ -2002,6 +2010,12 @@ Arquitetura Cognitiva & Domínio Omnisciente:
 
         const data = await res.json();
         const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+
+        // Record assistant response turn in history
+        voiceConversationHistory.push({ role: 'model', text: reply });
+        if (voiceConversationHistory.length > 20) {
+          voiceConversationHistory = voiceConversationHistory.slice(-20);
+        }
 
         if (data.audioBase64) {
           await playNeuralAudio(data.audioBase64, reply);
@@ -2024,6 +2038,7 @@ Arquitetura Cognitiva & Domínio Omnisciente:
         }
         console.warn('Voice conversation fallback:', err);
         const fallbackText = 'JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.';
+        voiceConversationHistory.push({ role: 'model', text: fallbackText });
         isBotSpeaking = true;
         setVoiceState('speaking');
         setTranscriptCaption('🔊 JARVIS: ' + fallbackText);

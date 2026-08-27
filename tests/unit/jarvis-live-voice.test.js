@@ -142,7 +142,7 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
   });
 
   // ──────────────────────────────────────────────────────────────────────────
-  // 5. Server Dispatch Integration Test
+  // 5. Multi-Turn Dialogue Memory & Context Preservation Tests
   // ──────────────────────────────────────────────────────────────────────────
   it('10. Server Route Dispatch: routeApiRequest dispatches /api/v1/voice/conversation cleanly', async () => {
     const res = await routeApiRequest('/api/v1/voice/conversation', 'POST', {
@@ -154,5 +154,36 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.ok(res.body.text, 'Must return text');
     assert.ok(res.body.audioBase64, 'Must return audioBase64');
     assert.strictEqual(res.body.mimeType, 'audio/mpeg');
+  });
+
+  it('11. Multi-Turn Context: Ingests 10-turn dialogue history maintaining continuous conversation thread', async () => {
+    const history = [
+      { role: 'user', text: 'Olá JARVIS, estou a planear uma alocação de 30M AED no Dubai.' },
+      { role: 'model', text: 'Boa tarde. Recomendo analisarmos Palm Jebel Ali ou Dubai South DWC para maximizar preservação de capital.' },
+      { role: 'user', text: 'Qual a garantia legal para off-plan em Palm Jebel Ali?' },
+      { role: 'model', text: 'A estrutura é 100% protegida por contas Escrow segregadas no DLD sob a Lei 8 de 2007 e Garantia Decenal do Artigo 880.' },
+    ];
+
+    const res = await handleVoiceConversationRequest('/api/v1/voice/conversation', 'POST', {
+      message: 'E como se processa a libertação desses fundos?',
+      history,
+      locale: 'pt',
+    }, {}, authHeaders);
+
+    assert.strictEqual(res.status, 200, 'Should succeed with history context');
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.text, 'Must return coherent text');
+    assert.ok(res.body.audioBase64, 'Must return audioBase64');
+  });
+
+  it('12. Punctuation Preservation: cleanSpokenText preserves commas, periods, colons and natural speech cadence', () => {
+    const textWithPunctuation = '**JARVIS:** Palm Jebel Ali, com 110km de costa; oferece rendimento sólido. Qual o seu horizonte temporal?';
+    const cleaned = cleanSpokenText(textWithPunctuation);
+    assert.ok(cleaned.includes(','), 'Must preserve commas');
+    assert.ok(cleaned.includes('.'), 'Must preserve periods');
+    assert.ok(cleaned.includes(';'), 'Must preserve semicolons');
+    assert.ok(cleaned.includes('?'), 'Must preserve question marks');
+    assert.strictEqual(cleaned.includes('*'), false, 'Must strip asterisks');
+    assert.strictEqual(cleaned, 'JARVIS: Palm Jebel Ali, com 110km de costa; oferece rendimento sólido. Qual o seu horizonte temporal?');
   });
 });

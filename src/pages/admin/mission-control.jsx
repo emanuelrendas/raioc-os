@@ -40,6 +40,8 @@ export default function MissionControlDashboard() {
   const silenceTimerRef = React.useRef(null);
   const accumulatedTextRef = React.useRef('');
   const activeVoiceAbortControllerRef = React.useRef(null);
+  const activeAudioSourceRef = React.useRef(null);
+  const voiceConversationHistoryRef = React.useRef([]);
 
   const JARVIS_OMNISCIENT_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva, Orquestração Autónoma e Copiloto Omnisciente do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
 
@@ -154,6 +156,12 @@ Arquitetura Cognitiva & Domínio Omnisciente:
     setVoiceState('thinking');
     setVoiceTranscript(`🧠 A processar mandato: "${text}"...`);
 
+    // Record user speech turn in history
+    voiceConversationHistoryRef.current.push({ role: 'user', text });
+    if (voiceConversationHistoryRef.current.length > 20) {
+      voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
+    }
+
     try {
       const res = await fetch('/api/v1/voice/conversation', {
         method: 'POST',
@@ -164,6 +172,7 @@ Arquitetura Cognitiva & Domínio Omnisciente:
         },
         body: JSON.stringify({ 
           message: text,
+          history: voiceConversationHistoryRef.current.slice(-10),
           locale: 'pt'
         }),
         signal: activeVoiceAbortControllerRef.current.signal,
@@ -171,6 +180,12 @@ Arquitetura Cognitiva & Domínio Omnisciente:
 
       const data = await res.json();
       const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+
+      // Record model response turn in history
+      voiceConversationHistoryRef.current.push({ role: 'model', text: reply });
+      if (voiceConversationHistoryRef.current.length > 20) {
+        voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
+      }
 
       if (data.audioBase64) {
         await playNeuralAudio(data.audioBase64, reply);
@@ -189,9 +204,11 @@ Arquitetura Cognitiva & Domínio Omnisciente:
         console.log('Voice dispatch aborted via barge-in.');
         return;
       }
+      const fallbackText = 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
+      voiceConversationHistoryRef.current.push({ role: 'model', text: fallbackText });
       isBotSpeakingRef.current = true;
       setVoiceState('speaking');
-      setVoiceTranscript('🔊 JARVIS: JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.');
+      setVoiceTranscript(`🔊 JARVIS: ${fallbackText}`);
       setTimeout(() => {
         isBotSpeakingRef.current = false;
         setVoiceState('listening');

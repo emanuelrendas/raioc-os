@@ -39,17 +39,31 @@ export class GeminiAdapter {
     if (activeKey) {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${this.model}:generateContent?key=${encodeURIComponent(activeKey)}`;
       
+      const contents = [];
+      if (Array.isArray(context.history) && context.history.length > 0) {
+        const recentHistory = context.history.slice(-10);
+        for (const item of recentHistory) {
+          const rawRole = (item.role || item.speaker || '').toLowerCase();
+          const role = (rawRole === 'model' || rawRole === 'assistant' || rawRole === 'bot' || rawRole === 'jarvis') ? 'model' : 'user';
+          const text = item.text || item.message || item.content || '';
+          if (text) {
+            contents.push({
+              role,
+              parts: [{ text: String(text) }],
+            });
+          }
+        }
+      }
+      const promptText = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
+      if (contents.length === 0 || contents[contents.length - 1].parts[0].text !== promptText || contents[contents.length - 1].role !== 'user') {
+        contents.push({
+          role: 'user',
+          parts: [{ text: promptText }],
+        });
+      }
+
       const payload = {
-        contents: [
-          {
-            role: 'user',
-            parts: [
-              {
-                text: typeof prompt === 'string' ? prompt : JSON.stringify(prompt),
-              },
-            ],
-          },
-        ],
+        contents,
         systemInstruction: {
           parts: [
             {
@@ -58,7 +72,7 @@ export class GeminiAdapter {
           ],
         },
         generationConfig: {
-          temperature: context.temperature !== undefined ? context.temperature : 0.2,
+          temperature: context.temperature !== undefined ? context.temperature : 0.3,
           maxOutputTokens: context.maxOutputTokens || context.max_tokens || 1024,
           topP: 0.95,
         },
@@ -139,8 +153,13 @@ export class GeminiAdapter {
    * @private
    */
   _synthesizeJarvisResponse(prompt, context = {}) {
-    const cleanPrompt = String(prompt || '').toLowerCase();
-    const isLiveVoice = context.conversationMode === 'voice_live' || context.liveVoice === true || context.maxOutputTokens <= 60 || context.max_tokens <= 60;
+    const rawPrompt = String(prompt || '').toLowerCase();
+    let cleanPrompt = rawPrompt;
+    if (Array.isArray(context.history) && context.history.length > 0) {
+      const historyText = context.history.map(h => (h.text || h.message || h.content || '')).join(' ').toLowerCase();
+      cleanPrompt = `${historyText} ${rawPrompt}`;
+    }
+    const isLiveVoice = context.conversationMode === 'voice_live' || context.liveVoice === true;
     const isVoice = isLiveVoice || context.conversationMode === 'voice' || context.voice === true;
 
     let responseText = '';
