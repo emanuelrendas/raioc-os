@@ -371,5 +371,36 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.ok(html.includes('activeVoiceStreamReader.cancel()'), 'Must cancel active SSE reader on barge-in');
     assert.ok(html.includes('VOICE_TTFA_METRIC'), 'Must report TTFA metric');
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 9. Direct MediaRecorder Audio Pipeline (ChatGPT Voice Style)
+  // ──────────────────────────────────────────────────────────────────────────
+  it('22. Multimodal Audio Payload Ingestion: POST /api/v1/voice/stream accepts direct audio base64 payload', async () => {
+    const dummyAudioBase64 = 'data:audio/webm;codecs=opus;base64,GkXfo59ChoEBQveBAULygQRC84EIQoKEd2VibUKHgQRChYECGFOAZwEAAAAAAACxEU2u14Gk17G17Euu14Gk17G17EuuzD484';
+    const res = await handleVoiceConversationRequest('/api/v1/voice/stream', 'POST', {
+      message: '',
+      audio: dummyAudioBase64,
+      audioMimeType: 'audio/webm;codecs=opus',
+      locale: 'pt',
+    }, {}, authHeaders);
+
+    assert.strictEqual(res.status, 200, 'Should return HTTP 200 OK');
+    assert.strictEqual(res.headers['Content-Type'], 'text/event-stream', 'Must return SSE stream');
+    assert.ok(res.body.includes('event: token\n'), 'Must emit token event');
+    assert.ok(res.body.includes('event: audio_chunk\n'), 'Must emit audio_chunk event');
+    assert.ok(res.body.includes('event: done\n'), 'Must emit done event');
+  });
+
+  it('23. Client MediaRecorder Audio Pipeline: mission-control.html contains MediaRecorder, recordedAudioChunks, and RMS VAD', async () => {
+    const fs = await import('node:fs');
+    const html = fs.readFileSync('mission-control.html', 'utf8');
+
+    assert.ok(html.includes('MediaRecorder'), 'Must initialize MediaRecorder');
+    assert.ok(html.includes('recordedAudioChunks'), 'Must accumulate recorded audio chunks');
+    assert.ok(html.includes('calculateMicRmsEnergy()'), 'Must calculate RMS energy for continuous VAD');
+    assert.ok(html.includes('[🎙️ A GRAVAR VOZ]'), 'Must show recording voice telemetry caption');
+    assert.ok(html.includes('[🟡 A PENSAR / GEMINI]'), 'Must show thinking voice telemetry caption');
+    assert.ok(html.includes('audio: options.audio'), 'Must transmit audio payload to /stream');
+  });
 });
 

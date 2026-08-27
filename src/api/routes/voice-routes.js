@@ -74,6 +74,8 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
     }
 
     const message = (body.message || body.prompt || query.message || query.prompt || '').trim();
+    const audio = body.audio || body.audioBase64 || body.audio_base64 || query.audio;
+    const audioMimeType = body.audioMimeType || body.mimeType || 'audio/webm;codecs=opus';
     const history = Array.isArray(body.history) ? body.history : [];
     const locale = body.locale || query.locale || 'pt';
     const voiceId = body.voiceId || query.voiceId;
@@ -81,6 +83,8 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
     try {
       const streamResult = await voiceAi.streamLiveConversation({
         message,
+        audio,
+        audioMimeType,
         history,
         locale,
         voiceId,
@@ -141,6 +145,8 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
   }
 
   const message = (body.message || body.prompt || query.message || query.prompt || '').trim();
+  const audio = body.audio || body.audioBase64 || body.audio_base64 || query.audio;
+  const audioMimeType = body.audioMimeType || body.mimeType || 'audio/webm;codecs=opus';
   const history = Array.isArray(body.history) ? body.history : [];
   const locale = body.locale || query.locale || 'pt';
   const voiceId = body.voiceId || query.voiceId;
@@ -148,6 +154,8 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
   try {
     const result = await voiceAi.synthesizeLiveConversation({
       message,
+      audio,
+      audioMimeType,
       history,
       locale,
       voiceId,

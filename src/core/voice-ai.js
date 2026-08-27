@@ -239,6 +239,8 @@ Spoken Script:`;
       temperature: 0.3,
       correlationId,
       history: Array.isArray(params.history) ? params.history.slice(-10) : [],
+      audio: params.audio || params.audioBase64,
+      audioMimeType: params.audioMimeType || 'audio/webm',
     });
 
     const rawText = cogResult.text || 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
@@ -278,7 +280,7 @@ Spoken Script:`;
 
   /**
    * Generates token-to-chunk SSE streaming payload with partial tokens and audio chunks
-   * @param {Object} params - { message, history, locale, voiceId, correlationId }
+   * @param {Object} params - { message, history, locale, voiceId, correlationId, audio, audioMimeType }
    * @returns {Promise<Object>} Formatted SSE response with events
    */
   async streamLiveConversation(params = {}) {
@@ -297,6 +299,8 @@ Spoken Script:`;
       temperature: 0.3,
       correlationId,
       history: Array.isArray(params.history) ? params.history.slice(-10) : [],
+      audio: params.audio || params.audioBase64,
+      audioMimeType: params.audioMimeType || 'audio/webm',
     });
 
     const rawText = cogResult.text || 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';

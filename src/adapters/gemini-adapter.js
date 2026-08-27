@@ -54,11 +54,47 @@ export class GeminiAdapter {
           }
         }
       }
-      const promptText = typeof prompt === 'string' ? prompt : JSON.stringify(prompt);
-      if (contents.length === 0 || contents[contents.length - 1].parts[0].text !== promptText || contents[contents.length - 1].role !== 'user') {
+      const promptText = typeof prompt === 'string' ? prompt : (prompt ? JSON.stringify(prompt) : '');
+      const userParts = [];
+      const audioInput = context.audio || context.audioBase64 || context.audioBlob;
+      if (audioInput) {
+        let rawBase64 = '';
+        let mimeType = 'audio/webm';
+        if (typeof audioInput === 'string') {
+          const match = audioInput.match(/^data:([^;]+);base64,(.*)$/s);
+          if (match) {
+            mimeType = match[1];
+            rawBase64 = match[2];
+          } else {
+            rawBase64 = audioInput;
+          }
+        } else if (typeof audioInput === 'object') {
+          rawBase64 = audioInput.data || audioInput.base64 || audioInput.audioBase64 || '';
+          mimeType = audioInput.mimeType || audioInput.type || 'audio/webm';
+          if (rawBase64.startsWith('data:')) {
+            rawBase64 = rawBase64.replace(/^data:[^;]+;base64,/, '');
+          }
+        }
+        if (rawBase64) {
+          userParts.push({
+            inlineData: {
+              mimeType,
+              data: rawBase64,
+            },
+          });
+        }
+      }
+
+      if (promptText) {
+        userParts.push({ text: promptText });
+      } else if (userParts.length > 0) {
+        userParts.push({ text: 'Ouve a diretiva em áudio e responde em conformidade executiva e fiduciária como JARVIS:' });
+      }
+
+      if (userParts.length > 0) {
         contents.push({
           role: 'user',
-          parts: [{ text: promptText }],
+          parts: userParts,
         });
       }
 

@@ -1647,6 +1647,11 @@
     let audioContext = null;
     let analyserNode = null;
     let micStream = null;
+    let mediaRecorder = null;
+    let recordedAudioChunks = [];
+    let isRecordingSpeech = false;
+    let speechStartTime = 0;
+    let activeMediaRecorderMimeType = 'audio/webm;codecs=opus';
     let speechRecognizer = null;
     let voiceState = 'listening'; // 'listening' | 'thinking' | 'speaking'
     let orbAnimationId = null;
@@ -1964,117 +1969,63 @@ Orquestras e delegas com precisão para:
           }
         }
 
-    // Calculate RMS energy on microphone stream to prevent premature cutoff on respiratory micro-pauses
-    function calculateMicRmsEnergy() {
-      if (!analyserNode) return 0;
-      try {
-        const timeData = new Uint8Array(analyserNode.frequencyBinCount);
-        analyserNode.getByteTimeDomainData(timeData);
-        let sumSquares = 0;
-        for (let i = 0; i < timeData.length; i++) {
-          const norm = (timeData[i] - 128) / 128;
-          sumSquares += norm * norm;
-        }
-        return Math.sqrt(sumSquares / timeData.length);
-      } catch (_) {
-        return 0;
-      }
-    }
-
-        // Initialize Speech Recognition with adaptive low-latency VAD (500ms - 650ms)
-        const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRec) {
-          speechRecognizer = new SpeechRec();
-          speechRecognizer.continuous = true;
-          speechRecognizer.interimResults = true;
-          speechRecognizer.lang = 'pt-PT';
-
-          speechRecognizer.onstart = () => {
-            setVoiceState('listening');
-            setTranscriptCaption('[🎙️ MIC: ATIVO] Pode falar agora... (A escutar)');
-          };
-
-          speechRecognizer.onspeechstart = () => {
-            // Only trigger barge-in if bot is not speaking or user intentionally interrupts
-            if (isBotSpeaking) {
-              // Wait for onresult to confirm genuine user speech rather than acoustic echo
-            }
-          };
-
-          speechRecognizer.onresult = (event) => {
-            let interimTranscript = '';
-            let finalTranscript = '';
-
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-              if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-              } else {
-                interimTranscript += event.results[i][0].transcript;
-              }
-            }
-
-            const currentText = (finalTranscript || interimTranscript || '').trim();
-            if (currentText) {
-              // If bot was speaking and distinct user speech is registered, trigger clean barge-in
-              if (isBotSpeaking && currentText.length >= 2) {
-                handleBargeIn();
-              }
-
-              accumulatedTranscript = currentText;
-              setTranscriptCaption('🗣️ ' + currentText);
-
-              // Adaptive silence window (500ms for >=3 words, 650ms for short phrases)
-              const wordCount = currentText.split(/\s+/).filter(Boolean).length;
-              const silenceDelay = wordCount >= 3 ? 500 : 650;
-
-              if (silenceTimer) clearTimeout(silenceTimer);
-              silenceTimer = setTimeout(() => {
-                // RMS Energy check to prevent premature cutoff during natural respiratory micro-pauses (< 400ms)
-                const rms = calculateMicRmsEnergy();
-                if (rms > 0.035 && !isBotSpeaking) {
-                  // User is still vocalizing or breathing actively, extend silence timer by 350ms
-                  silenceTimer = setTimeout(() => {
-                    if (accumulatedTranscript && accumulatedTranscript.length > 2 && voiceState === 'listening') {
-                      const toProcess = accumulatedTranscript;
-                      accumulatedTranscript = '';
-                      console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD RMS-Validated Silence Triggered: "' + toProcess + '" (RMS: ' + rms.toFixed(3) + ')');
-                      reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: toProcess.length, wordCount, rms });
-                      processVoiceDirective(toProcess);
-                    }
-                  }, 350);
-                  return;
-                }
-
-                if (accumulatedTranscript && accumulatedTranscript.length > 2 && voiceState === 'listening') {
-                  const toProcess = accumulatedTranscript;
-                  accumulatedTranscript = '';
-                  console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + toProcess + '" (RMS: ' + rms.toFixed(3) + ')');
-                  reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: toProcess.length, wordCount, rms });
-                  processVoiceDirective(toProcess);
-                }
-              }, silenceDelay);
-            }
-          };
-
-          speechRecognizer.onerror = (e) => {
-            console.warn('[VOICE_ENGINE:SPEECH_REC_WARN] Speech recognition error:', e.error);
-            reportVoiceTelemetry('VOICE_SPEECH_REC_ERROR', { error: e.error });
-          };
-
-          speechRecognizer.onend = () => {
-            if (voiceSessionActive && !isMicMuted && !isBotSpeaking) {
-              try { speechRecognizer.start(); } catch (err) {}
-            }
-          };
-
+        // Calculate RMS energy on microphone stream for continuous Voice Activity Detection (VAD)
+        function calculateMicRmsEnergy() {
+          if (!analyserNode) return 0;
           try {
-            speechRecognizer.start();
-          } catch (err) {}
-        } else {
-          setTranscriptCaption('[⚠️ NAVEGADOR SEM WEBSPEECH] Digite a sua mensagem abaixo (ou utilize Google Chrome/Edge para voz direta).');
+            const timeData = new Uint8Array(analyserNode.frequencyBinCount);
+            analyserNode.getByteTimeDomainData(timeData);
+            let sumSquares = 0;
+            for (let i = 0; i < timeData.length; i++) {
+              const norm = (timeData[i] - 128) / 128;
+              sumSquares += norm * norm;
+            }
+            return Math.sqrt(sumSquares / timeData.length);
+          } catch (_) {
+            return 0;
+          }
         }
 
-        // Start Canvas Render Loop
+        // Initialize MediaRecorder Direct Audio Pipeline (ChatGPT Voice style)
+        if (window.MediaRecorder) {
+          if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+            activeMediaRecorderMimeType = 'audio/webm;codecs=opus';
+          } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+            activeMediaRecorderMimeType = 'audio/mp4';
+          } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+            activeMediaRecorderMimeType = 'audio/webm';
+          }
+        }
+
+        if (window.MediaRecorder && micStream) {
+          try {
+            mediaRecorder = new MediaRecorder(micStream, { mimeType: activeMediaRecorderMimeType });
+            mediaRecorder.ondataavailable = (e) => {
+              if (e.data && e.data.size > 0) {
+                recordedAudioChunks.push(e.data);
+              }
+            };
+            mediaRecorder.onstop = () => {
+              if (recordedAudioChunks.length === 0) return;
+              const audioBlob = new Blob(recordedAudioChunks, { type: activeMediaRecorderMimeType });
+              recordedAudioChunks = [];
+              if (audioBlob.size < 350) return;
+
+              const fileReader = new FileReader();
+              fileReader.onloadend = () => {
+                const base64Audio = fileReader.result;
+                processVoiceDirective('', { audio: base64Audio, audioMimeType: activeMediaRecorderMimeType });
+              };
+              fileReader.readAsDataURL(audioBlob);
+            };
+            console.log(`[VOICE_ENGINE:MEDIA_RECORDER] Initialized direct MediaRecorder stream (${activeMediaRecorderMimeType})`);
+            reportVoiceTelemetry('VOICE_MEDIA_RECORDER_INITIALIZED', { mimeType: activeMediaRecorderMimeType });
+          } catch (recErr) {
+            console.warn('[VOICE_ENGINE:MEDIA_RECORDER_WARN] Failed to initialize MediaRecorder:', recErr);
+          }
+        }
+
+        // Start Dynamic Canvas Fluid Orb Loop with real-time RMS Voice Activity Detection
         startOrbCanvasLoop();
         if (window.lucide) lucide.createIcons();
       } catch (err) {
@@ -2253,6 +2204,11 @@ Orquestras e delegas com precisão para:
 
     // Barge-in (Interrupção imediata de áudio e rede quando o utilizador começa a falar)
     function handleBargeIn() {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        try { mediaRecorder.stop(); } catch (_) {}
+      }
+      isRecordingSpeech = false;
+      recordedAudioChunks = [];
       if (silenceTimer) {
         clearTimeout(silenceTimer);
         silenceTimer = null;
@@ -2286,8 +2242,7 @@ Orquestras e delegas com precisão para:
       }
     }
 
-    async function processVoiceDirective(text) {
-      console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + text + '"');
+    async function processVoiceDirective(text, options = {}) {
       if (silenceTimer) {
         clearTimeout(silenceTimer);
         silenceTimer = null;
@@ -2307,17 +2262,26 @@ Orquestras e delegas com precisão para:
       isPlayingQueue = false;
       activeVoiceAbortController = new AbortController();
 
+      const hasAudioPayload = Boolean(options.audio);
       setVoiceState('thinking');
-      setTranscriptCaption('[🧠 A PENSAR / GEMINI] A processar mandato: "' + text + '"...');
+      if (hasAudioPayload) {
+        setTranscriptCaption('[🟡 A PENSAR / GEMINI] A processar áudio fiduciário...');
+      } else {
+        setTranscriptCaption('[🧠 A PENSAR / GEMINI] A processar mandato: "' + text + '"...');
+      }
 
-      // Record user speech turn in history
-      voiceConversationHistory.push({ role: 'user', text: text });
+      // Record speech turn in history
+      if (text) {
+        voiceConversationHistory.push({ role: 'user', text: text });
+      } else {
+        voiceConversationHistory.push({ role: 'user', text: '[Diretiva de Voz Gravada]' });
+      }
       if (voiceConversationHistory.length > 20) {
         voiceConversationHistory = voiceConversationHistory.slice(-20);
       }
 
-      console.log(`[VOICE_ENGINE:SSE_STREAM_SENT] Transmitting to /api/v1/voice/stream (turn ${voiceConversationHistory.length})...`);
-      reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { textLength: text.length, historyCount: voiceConversationHistory.length });
+      console.log(`[VOICE_ENGINE:SSE_STREAM_SENT] Transmitting to /api/v1/voice/stream (turn ${voiceConversationHistory.length}, audio: ${hasAudioPayload})...`);
+      reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { hasAudio: hasAudioPayload, textLength: (text || '').length, historyCount: voiceConversationHistory.length });
 
       const tReq = performance.now();
       let streamedFullText = '';
@@ -2329,7 +2293,9 @@ Orquestras e delegas com precisão para:
           headers: getClientAuthHeaders(),
           credentials: 'same-origin',
           body: JSON.stringify({ 
-            message: text,
+            message: text || '',
+            audio: options.audio || null,
+            audioMimeType: options.audioMimeType || activeMediaRecorderMimeType,
             history: voiceConversationHistory.slice(-10),
             locale: 'pt'
           }),
@@ -2435,11 +2401,13 @@ Orquestras e delegas com precisão para:
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         let audioVolume = 0;
+        let rmsEnergy = 0;
         if (analyserNode && !isMicMuted) {
           analyserNode.getByteFrequencyData(dataArray);
           let sum = 0;
           for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
           audioVolume = sum / (dataArray.length * 255);
+          rmsEnergy = calculateMicRmsEnergy();
         } else {
           // Synthetic breathing volume
           audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
@@ -2448,8 +2416,54 @@ Orquestras e delegas com precisão para:
           }
         }
 
-        // Barge-in threshold check from raw mic volume
-        if (isBotSpeaking && audioVolume > 0.35) {
+        // Real-Time Continuous Voice Activity Detection (VAD) via RMS
+        if (voiceSessionActive && !isBotSpeaking && voiceState === 'listening' && !isMicMuted) {
+          if (rmsEnergy > 0.038) {
+            if (silenceTimer) {
+              clearTimeout(silenceTimer);
+              silenceTimer = null;
+            }
+            if (!isRecordingSpeech) {
+              isRecordingSpeech = true;
+              speechStartTime = performance.now();
+              recordedAudioChunks = [];
+              setTranscriptCaption('[🎙️ A GRAVAR VOZ] A captar diretiva...');
+              try {
+                if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                  mediaRecorder.start(100);
+                }
+              } catch (_) {}
+            }
+          } else if (isRecordingSpeech) {
+            if (!silenceTimer) {
+              silenceTimer = setTimeout(() => {
+                const speechDuration = performance.now() - speechStartTime;
+                isRecordingSpeech = false;
+                silenceTimer = null;
+                if (speechDuration >= 250) {
+                  setVoiceState('thinking');
+                  setTranscriptCaption('[🟡 A PENSAR / GEMINI] A processar áudio fiduciário...');
+                  try {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                      mediaRecorder.stop();
+                    }
+                  } catch (_) {}
+                } else {
+                  recordedAudioChunks = [];
+                  try {
+                    if (mediaRecorder && mediaRecorder.state === 'recording') {
+                      mediaRecorder.stop();
+                    }
+                  } catch (_) {}
+                  setTranscriptCaption('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+                }
+              }, 600);
+            }
+          }
+        }
+
+        // Barge-in threshold check from raw mic volume / RMS
+        if (isBotSpeaking && (audioVolume > 0.35 || rmsEnergy > 0.08)) {
           handleBargeIn();
         }
 

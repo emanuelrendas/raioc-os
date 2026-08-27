@@ -33,6 +33,11 @@ export default function MissionControlDashboard() {
   const audioContextRef = React.useRef(null);
   const analyserRef = React.useRef(null);
   const micStreamRef = React.useRef(null);
+  const mediaRecorderRef = React.useRef(null);
+  const recordedAudioChunksRef = React.useRef([]);
+  const isRecordingSpeechRef = React.useRef(false);
+  const speechStartTimeRef = React.useRef(0);
+  const activeMediaRecorderMimeTypeRef = React.useRef('audio/webm;codecs=opus');
   const animFrameRef = React.useRef(null);
   const isBotSpeakingRef = React.useRef(false);
   const speechRecognizerRef = React.useRef(null);
@@ -433,9 +438,6 @@ Orquestras e delegas com precisão para:
           isBotSpeakingRef.current = false;
           setVoiceState('listening');
           setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
-          if (speechRecognizerRef.current) {
-            try { speechRecognizerRef.current.start(); } catch (_) {}
-          }
         }
       };
       source.start(0);
@@ -446,8 +448,7 @@ Orquestras e delegas com precisão para:
   };
 
   // Process voice directive to backend with Token-to-Chunk SSE Streaming
-  const processVoiceDirective = async (text) => {
-    console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + text + '"');
+  const processVoiceDirective = async (text, options = {}) => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
@@ -467,17 +468,26 @@ Orquestras e delegas com precisão para:
     isPlayingQueueRef.current = false;
     activeVoiceAbortControllerRef.current = new AbortController();
 
+    const hasAudioPayload = Boolean(options.audio);
     setVoiceState('thinking');
-    setVoiceTranscript(`[🧠 A PENSAR / GEMINI] A processar mandato: "${text}"...`);
+    if (hasAudioPayload) {
+      setVoiceTranscript('[🟡 A PENSAR / GEMINI] A processar áudio fiduciário...');
+    } else {
+      setVoiceTranscript(`[🧠 A PENSAR / GEMINI] A processar mandato: "${text}"...`);
+    }
 
-    // Record user speech turn in history
-    voiceConversationHistoryRef.current.push({ role: 'user', text });
+    // Record speech turn in history
+    if (text) {
+      voiceConversationHistoryRef.current.push({ role: 'user', text });
+    } else {
+      voiceConversationHistoryRef.current.push({ role: 'user', text: '[Diretiva de Voz Gravada]' });
+    }
     if (voiceConversationHistoryRef.current.length > 20) {
       voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
     }
 
-    console.log(`[VOICE_ENGINE:SSE_STREAM_SENT] Transmitting to /api/v1/voice/stream (turn ${voiceConversationHistoryRef.current.length})...`);
-    reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { textLength: text.length, historyCount: voiceConversationHistoryRef.current.length });
+    console.log(`[VOICE_ENGINE:SSE_STREAM_SENT] Transmitting to /api/v1/voice/stream (turn ${voiceConversationHistoryRef.current.length}, audio: ${hasAudioPayload})...`);
+    reportVoiceTelemetry('VOICE_DIRECTIVE_SENT', { hasAudio: hasAudioPayload, textLength: (text || '').length, historyCount: voiceConversationHistoryRef.current.length });
 
     const tReq = performance.now();
     let streamedFullText = '';
@@ -489,7 +499,9 @@ Orquestras e delegas com precisão para:
         headers: getClientAuthHeaders(),
         credentials: 'same-origin',
         body: JSON.stringify({ 
-          message: text,
+          message: text || '',
+          audio: options.audio || null,
+          audioMimeType: options.audioMimeType || activeMediaRecorderMimeTypeRef.current,
           history: voiceConversationHistoryRef.current.slice(-10),
           locale: 'pt'
         }),
@@ -553,7 +565,6 @@ Orquestras e delegas com precisão para:
           }
         }
       } else {
-        // Fallback to conversation batch API if SSE body reader is unavailable
         const data = await res.json();
         const reply = data.text || 'JARVIS operacional.';
         voiceConversationHistoryRef.current.push({ role: 'model', text: reply });
@@ -582,6 +593,11 @@ Orquestras e delegas com precisão para:
 
   // Barge-in (Interrupção imediata de áudio e rede quando o utilizador começa a falar)
   const handleVoiceBargeIn = () => {
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      try { mediaRecorderRef.current.stop(); } catch (_) {}
+    }
+    isRecordingSpeechRef.current = false;
+    recordedAudioChunksRef.current = [];
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
@@ -615,6 +631,23 @@ Orquestras e delegas com precisão para:
     }
   };
 
+  // Calculate RMS energy on microphone stream for continuous Voice Activity Detection (VAD)
+  const calculateMicRmsEnergy = () => {
+    if (!analyserRef.current) return 0;
+    try {
+      const timeData = new Uint8Array(analyserRef.current.frequencyBinCount);
+      analyserRef.current.getByteTimeDomainData(timeData);
+      let sumSquares = 0;
+      for (let i = 0; i < timeData.length; i++) {
+        const norm = (timeData[i] - 128) / 128;
+        sumSquares += norm * norm;
+      }
+      return Math.sqrt(sumSquares / timeData.length);
+    } catch (_) {
+      return 0;
+    }
+  };
+
   // Live Voice Session Controls (ChatGPT / Gemini Live style)
   const startLiveVoiceSession = async () => {
     console.log('[VOICE_ENGINE:INIT] Live Voice Session Initiated');
@@ -643,112 +676,46 @@ Orquestras e delegas com precisão para:
             const source = ctx.createMediaStreamSource(stream);
             source.connect(analyser);
             reportVoiceTelemetry('VOICE_MIC_CONNECTED');
+
+            // Setup MediaRecorder Direct Audio Pipeline
+            if (window.MediaRecorder) {
+              if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                activeMediaRecorderMimeTypeRef.current = 'audio/webm;codecs=opus';
+              } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                activeMediaRecorderMimeTypeRef.current = 'audio/mp4';
+              } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                activeMediaRecorderMimeTypeRef.current = 'audio/webm';
+              }
+
+              try {
+                const rec = new MediaRecorder(stream, { mimeType: activeMediaRecorderMimeTypeRef.current });
+                rec.ondataavailable = (e) => {
+                  if (e.data && e.data.size > 0) {
+                    recordedAudioChunksRef.current.push(e.data);
+                  }
+                };
+                rec.onstop = () => {
+                  if (recordedAudioChunksRef.current.length === 0) return;
+                  const audioBlob = new Blob(recordedAudioChunksRef.current, { type: activeMediaRecorderMimeTypeRef.current });
+                  recordedAudioChunksRef.current = [];
+                  if (audioBlob.size < 350) return;
+
+                  const fileReader = new FileReader();
+                  fileReader.onloadend = () => {
+                    const base64Audio = fileReader.result;
+                    processVoiceDirective('', { audio: base64Audio, audioMimeType: activeMediaRecorderMimeTypeRef.current });
+                  };
+                  fileReader.readAsDataURL(audioBlob);
+                };
+                mediaRecorderRef.current = rec;
+                console.log(`[VOICE_ENGINE:MEDIA_RECORDER] Initialized direct MediaRecorder stream (${activeMediaRecorderMimeTypeRef.current})`);
+                reportVoiceTelemetry('VOICE_MEDIA_RECORDER_INITIALIZED', { mimeType: activeMediaRecorderMimeTypeRef.current });
+              } catch (recErr) {
+                console.warn('[VOICE_ENGINE:MEDIA_RECORDER_WARN] Failed to initialize MediaRecorder:', recErr);
+              }
+            }
           }
         }
-      }
-
-      // Initialize Speech Recognition with adaptive low-latency VAD (500ms - 650ms)
-      const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (SpeechRec) {
-        const recognizer = new SpeechRec();
-        recognizer.continuous = true;
-        recognizer.interimResults = true;
-        recognizer.lang = 'pt-PT';
-        speechRecognizerRef.current = recognizer;
-
-        // Calculate RMS energy on microphone stream to prevent premature cutoff on respiratory micro-pauses
-        const calculateMicRmsEnergy = () => {
-          if (!analyserRef.current) return 0;
-          try {
-            const timeData = new Uint8Array(analyserRef.current.frequencyBinCount);
-            analyserRef.current.getByteTimeDomainData(timeData);
-            let sumSquares = 0;
-            for (let i = 0; i < timeData.length; i++) {
-              const norm = (timeData[i] - 128) / 128;
-              sumSquares += norm * norm;
-            }
-            return Math.sqrt(sumSquares / timeData.length);
-          } catch (_) {
-            return 0;
-          }
-        };
-
-        recognizer.onstart = () => {
-          setVoiceState('listening');
-          setVoiceTranscript('[🎙️ MIC: ATIVO] Pode falar agora... (A escutar)');
-        };
-
-        recognizer.onspeechstart = () => {
-          if (isBotSpeakingRef.current) {
-            // Wait for onresult to confirm genuine user speech
-          }
-        };
-
-        recognizer.onresult = (event) => {
-          let interim = '';
-          let final = '';
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) final += event.results[i][0].transcript;
-            else interim += event.results[i][0].transcript;
-          }
-
-          const currentText = (final || interim || '').trim();
-          if (currentText) {
-            if (isBotSpeakingRef.current && currentText.length >= 2) {
-              handleVoiceBargeIn();
-            }
-
-            accumulatedTextRef.current = currentText;
-            setVoiceTranscript(`🗣️ ${currentText}`);
-
-            // Adaptive silence window (500ms for >=3 words, 650ms for short phrases)
-            const wordCount = currentText.split(/\s+/).filter(Boolean).length;
-            const silenceDelay = wordCount >= 3 ? 500 : 650;
-
-            if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
-            silenceTimerRef.current = setTimeout(() => {
-              // RMS Energy check to prevent premature cutoff during natural respiratory micro-pauses (< 400ms)
-              const rms = calculateMicRmsEnergy();
-              if (rms > 0.035 && !isBotSpeakingRef.current) {
-                // User is still vocalizing or breathing actively, extend silence timer by 350ms
-                silenceTimerRef.current = setTimeout(() => {
-                  if (accumulatedTextRef.current && accumulatedTextRef.current.length > 2) {
-                    const textToSend = accumulatedTextRef.current;
-                    accumulatedTextRef.current = '';
-                    console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD RMS-Validated Silence Triggered: "' + textToSend + '" (RMS: ' + rms.toFixed(3) + ')');
-                    reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: textToSend.length, wordCount, rms });
-                    processVoiceDirective(textToSend);
-                  }
-                }, 350);
-                return;
-              }
-
-              if (accumulatedTextRef.current && accumulatedTextRef.current.length > 2) {
-                const textToSend = accumulatedTextRef.current;
-                accumulatedTextRef.current = '';
-                console.log('[VOICE_ENGINE:VAD_TRIGGER] VAD Silence Triggered: "' + textToSend + '" (RMS: ' + rms.toFixed(3) + ')');
-                reportVoiceTelemetry('VOICE_VAD_TRIGGERED', { textLength: textToSend.length, wordCount, rms });
-                processVoiceDirective(textToSend);
-              }
-            }, silenceDelay);
-          }
-        };
-
-        recognizer.onerror = (e) => {
-          console.warn('[VOICE_ENGINE:SPEECH_REC_WARN] Speech recognition error:', e.error);
-          reportVoiceTelemetry('VOICE_SPEECH_REC_ERROR', { error: e.error });
-        };
-
-        recognizer.onend = () => {
-          if (!isBotSpeakingRef.current && speechRecognizerRef.current) {
-            try { recognizer.start(); } catch (err) {}
-          }
-        };
-
-        try { recognizer.start(); } catch (err) {}
-      } else {
-        setVoiceTranscript('[⚠️ NAVEGADOR SEM WEBSPEECH] Digite a sua mensagem abaixo (ou utilize Google Chrome/Edge para voz direta).');
       }
     } catch (err) {
       console.warn('[VOICE_ENGINE:INIT_ERROR] Voice init warning:', err);
@@ -779,6 +746,10 @@ Orquestras e delegas com precisão para:
 
     isBotSpeakingRef.current = false;
 
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      try { mediaRecorderRef.current.stop(); } catch (e) {}
+      mediaRecorderRef.current = null;
+    }
     if (speechRecognizerRef.current) {
       try { speechRecognizerRef.current.stop(); } catch (e) {}
       speechRecognizerRef.current = null;
@@ -794,31 +765,6 @@ Orquestras e delegas com precisão para:
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
       animFrameRef.current = null;
-    }
-  };
-
-  const handleVoiceBargeIn = () => {
-    if (silenceTimerRef.current) {
-      clearTimeout(silenceTimerRef.current);
-      silenceTimerRef.current = null;
-    }
-    if (playbackSafetyTimeoutRef.current) {
-      clearTimeout(playbackSafetyTimeoutRef.current);
-      playbackSafetyTimeoutRef.current = null;
-    }
-    if (activeVoiceAbortControllerRef.current) {
-      activeVoiceAbortControllerRef.current.abort();
-      activeVoiceAbortControllerRef.current = null;
-    }
-    if (activeAudioSourceRef.current) {
-      try { activeAudioSourceRef.current.stop(); } catch (e) {}
-      activeAudioSourceRef.current = null;
-    }
-    if (isBotSpeakingRef.current) {
-      isBotSpeakingRef.current = false;
-      reportVoiceTelemetry('VOICE_BARGE_IN_TRIGGERED');
-      setVoiceState('listening');
-      setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
     }
   };
 
@@ -839,7 +785,7 @@ Orquestras e delegas com precisão para:
     processVoiceDirective(text);
   };
 
-  // Canvas Fluid Orb Animation Loop
+  // Canvas Fluid Orb Animation Loop with Real-Time RMS VAD
   useEffect(() => {
     if (!liveVoiceOpen || !canvasRef.current) return;
     const canvas = canvasRef.current;
@@ -852,11 +798,13 @@ Orquestras e delegas com precisão para:
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       let audioVolume = 0;
+      let rmsEnergy = 0;
       if (analyserRef.current && !isMicMuted) {
         analyserRef.current.getByteFrequencyData(dataArray);
         let sum = 0;
         for (let i = 0; i < dataArray.length; i++) sum += dataArray[i];
         audioVolume = sum / (dataArray.length * 255);
+        rmsEnergy = calculateMicRmsEnergy();
       } else {
         audioVolume = (Math.sin(t * 1.5) + 1) * 0.05;
         if (voiceState === 'speaking') {
@@ -864,7 +812,53 @@ Orquestras e delegas com precisão para:
         }
       }
 
-      if (isBotSpeakingRef.current && audioVolume > 0.35) {
+      // Real-Time Continuous Voice Activity Detection (VAD) via RMS
+      if (liveVoiceOpen && !isBotSpeakingRef.current && voiceState === 'listening' && !isMicMuted) {
+        if (rmsEnergy > 0.038) {
+          if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+          }
+          if (!isRecordingSpeechRef.current) {
+            isRecordingSpeechRef.current = true;
+            speechStartTimeRef.current = performance.now();
+            recordedAudioChunksRef.current = [];
+            setVoiceTranscript('[🎙️ A GRAVAR VOZ] A captar diretiva...');
+            try {
+              if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'inactive') {
+                mediaRecorderRef.current.start(100);
+              }
+            } catch (_) {}
+          }
+        } else if (isRecordingSpeechRef.current) {
+          if (!silenceTimerRef.current) {
+            silenceTimerRef.current = setTimeout(() => {
+              const speechDuration = performance.now() - speechStartTimeRef.current;
+              isRecordingSpeechRef.current = false;
+              silenceTimerRef.current = null;
+              if (speechDuration >= 250) {
+                setVoiceState('thinking');
+                setVoiceTranscript('[🟡 A PENSAR / GEMINI] A processar áudio fiduciário...');
+                try {
+                  if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                    mediaRecorderRef.current.stop();
+                  }
+                } catch (_) {}
+              } else {
+                recordedAudioChunksRef.current = [];
+                try {
+                  if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+                    mediaRecorderRef.current.stop();
+                  }
+                } catch (_) {}
+                setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+              }
+            }, 600);
+          }
+        }
+      }
+
+      if (isBotSpeakingRef.current && (audioVolume > 0.35 || rmsEnergy > 0.08)) {
         handleVoiceBargeIn();
       }
 
