@@ -31,7 +31,7 @@ describe('INTEGRATION: Executive AI Chat Gateway (/api/chat & /api/executive/cha
     assert.strictEqual(body.sender, 'JARVIS');
     assert.strictEqual(typeof body.message, 'string');
     assert.ok(body.message.length > 0);
-    assert.strictEqual(body.aiModel, 'gemini-2.5-flash');
+    assert.strictEqual(body.aiModel, 'gemini-3.6-flash');
     assert.ok(body.status);
     assert.strictEqual(typeof body.priority, 'number');
     assert.ok(body.timestamp);
@@ -100,15 +100,15 @@ describe('INTEGRATION: Executive AI Chat Gateway (/api/chat & /api/executive/cha
     try {
       const adapter = new (geminiAdapter.constructor)({
         apiKey: 'test_google_ai_key_mock_123',
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.6-flash',
       });
 
       const result = await adapter.generateResponse('Check yield for Rosehill');
       assert.strictEqual(result.success, true);
       assert.strictEqual(result.provider, 'google_ai_studio');
-      assert.strictEqual(result.model, 'gemini-2.5-flash');
+      assert.strictEqual(result.model, 'gemini-3.6-flash');
       assert.ok(result.text.includes('8.4% audited net yield'));
-      assert.ok(interceptedUrl.includes('gemini-2.5-flash:generateContent'));
+      assert.ok(interceptedUrl.includes('gemini-3.6-flash:generateContent'));
       assert.ok(interceptedUrl.includes('test_google_ai_key_mock_123'));
       assert.ok(interceptedPayload.systemInstruction.parts[0].text.includes('Law 8 of 2007'));
     } finally {
@@ -117,3 +117,4 @@ describe('INTEGRATION: Executive AI Chat Gateway (/api/chat & /api/executive/cha
   });
 
 });
+

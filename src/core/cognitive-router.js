@@ -11,7 +11,7 @@ import { logger } from '../logging/audit-logger.js';
 export class GoogleAIStudioAdapter {
   constructor() {
     this.name = 'google_ai_studio';
-    this.model = 'gemini-2.5-flash';
+    this.model = 'gemini-3.6-flash';
   }
 
   async generate(prompt, context = {}) {

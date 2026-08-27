@@ -41,7 +41,7 @@ describe('INTEGRATION: Enterprise Core Registries & Knowledge Graph', () => {
     assert.strictEqual(resCap.status, 200);
     assert.ok(resCap.body.agents.some((a) => a.id === 'mark_lead_triage'));
 
-    const resModel = await routeApiRequest('/api/core/agents?model=gemini-2.5-flash', 'GET');
+    const resModel = await routeApiRequest('/api/core/agents?model=gemini-3.6-flash', 'GET');
     assert.strictEqual(resModel.status, 200);
     assert.ok(resModel.body.agents.length >= 6);
   });
@@ -62,7 +62,7 @@ describe('INTEGRATION: Enterprise Core Registries & Knowledge Graph', () => {
       id: 'orion_satellite_intelligence',
       name: 'ORION',
       role: 'Satellite Earth Observation & Construction Milestone Specialist',
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3.6-flash',
       capabilities: ['satellite_imagery_analysis', 'dld_project_inspection', 'escrow_milestone_audit'],
       permissions: ['read:satellite', 'audit:construction'],
       cost_budget: { monthly_limit_usd: 350, current_spend_usd: 0, currency: 'USD' },
@@ -239,3 +239,4 @@ describe('INTEGRATION: Enterprise Core Registries & Knowledge Graph', () => {
     assert.ok(traverseRes.body.graph.edges.some((e) => e.id === 'edge_valia_located_creek'));
   });
 });
+

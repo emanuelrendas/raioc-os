@@ -178,7 +178,7 @@ export async function handleGeminiAdvisor(payload = {}, headers = {}) {
     body: {
       success: true,
       tool: 'gemini_executive_advisor',
-      model: outcome.model || 'gemini-2.5-flash',
+      model: outcome.model || 'gemini-3.6-flash',
       provider: outcome.provider,
       prompt,
       response: outcome.text,

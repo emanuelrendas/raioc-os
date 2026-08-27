@@ -430,7 +430,7 @@ export async function handleTelemetryRequest(path, context = {}) {
         success: true,
         sender: 'JARVIS',
         message: responseText,
-        aiModel: aiOutcome.model || 'gemini-2.5-flash',
+        aiModel: aiOutcome.model || 'gemini-3.6-flash',
         aiProvider: aiOutcome.provider || 'google_ai_studio',
         reportId: report.reportId,
         status: report.status,

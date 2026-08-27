@@ -140,11 +140,11 @@ export const config = {
   gemini: {
     enabled: process.env.GEMINI_ENABLED !== 'false',
     apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
     timeoutMs: parseInt(process.env.GEMINI_TIMEOUT_MS || '8000', 10),
   },
   googleAi: {
     apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_API_KEY || '',
-    model: process.env.GEMINI_MODEL || 'gemini-2.5-flash',
+    model: process.env.GEMINI_MODEL || 'gemini-3.6-flash',
   },
 };
