@@ -6,6 +6,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert';
 import handler from '../api/index.js';
+import { secretsManager } from '../src/config/secrets-manager.js';
 
 function createMockRes() {
   let statusCode = 200;
@@ -316,7 +317,17 @@ describe('PRODUCTION RECOVERY: 100% Endpoint Verification via Single Gateway (ap
         }],
       }],
     };
-    await handler({ url: '/api/webhooks/instagram', method: 'POST', body: payload, headers: {} }, resPost);
+    process.env.META_APP_SECRET = process.env.META_APP_SECRET || 'wa_sec_secret_key_888';
+    const secret = process.env.META_APP_SECRET;
+    const signature = `sha256=${secretsManager.generateHmacSignature(payload, secret)}`;
+    await handler({
+      url: '/api/webhooks/instagram',
+      method: 'POST',
+      body: payload,
+      headers: {
+        'x-hub-signature-256': signature,
+      },
+    }, resPost);
     const outPost = resPost._get();
     assert.strictEqual(outPost.status, 200);
     assert.strictEqual(outPost.body.status, 'PROCESSED');
