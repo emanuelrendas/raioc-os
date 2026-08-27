@@ -10,161 +10,20 @@ import { propertyCalculators } from '../calculators/property-calculators.js';
 import { MultimodalEngine } from '../../engines/multimodal-engine.js';
 import { geminiAdapter } from '../../adapters/gemini-adapter.js';
 import { logger } from '../../logging/audit-logger.js';
+import { executeDeterministicOpalCalculation, calculateExactIrr } from '../../services/corridor-benchmark-service.js';
 
 const multimodalEngine = new MultimodalEngine();
 
-function calculateExactIrr(cashFlows, guess = 0.1) {
-  let rate = guess;
-  const maxIterations = 100;
-  const tolerance = 1e-7;
-
-  for (let i = 0; i < maxIterations; i++) {
-    let npv = 0;
-    let dNpv = 0;
-
-    for (let t = 0; t < cashFlows.length; t++) {
-      const discountFactor = Math.pow(1 + rate, t);
-      npv += cashFlows[t] / discountFactor;
-      if (t > 0) {
-        dNpv -= (t * cashFlows[t]) / Math.pow(1 + rate, t + 1);
-      }
-    }
-
-    if (Math.abs(npv) < tolerance) {
-      return rate;
-    }
-
-    if (Math.abs(dNpv) < 1e-10) break;
-
-    const newRate = rate - npv / dNpv;
-    if (Math.abs(newRate - rate) < tolerance) {
-      return newRate;
-    }
-    rate = newRate;
-  }
-
-  return rate;
-}
-
 /**
- * Handle Google Opal ROI & Statutory Shield calculations
+ * Handle Google Opal ROI & Statutory Shield calculations (Deterministic Corridors)
  * @param {Object} payload 
  * @returns {Object} HTTP response
  */
 export async function handleOpalRoi(payload = {}) {
-  const price = Number(payload.purchasePriceAed || payload.propertyValueAed || payload.budgetAed || payload.price || 2500000);
-  const sqft = Number(payload.unitSizeSqft || payload.sqft || 1100);
-  const grossRent = Number(payload.expectedAnnualRentAed || payload.annualRentAed || payload.rent || (price * 0.066));
-  const scRate = Number(payload.serviceChargePerSqft || payload.serviceChargesPerSqFt || payload.sc || 18);
-  const capitalGrowthRate = Number(payload.capitalGrowthRate || 0.05);
-  const rentalGrowthRate = Number(payload.rentalGrowthRate || 0.04);
-
-  const acquisition = propertyCalculators.calculateAcquisitionCost({ propertyPriceAed: price, purchasePriceAed: price, purchasePrice: price });
-  const gv = propertyCalculators.calculateGoldenVisaEligibility({ propertyValueAed: price, purchasePriceAed: price });
-  const yieldModel = propertyCalculators.calculateRentalYield({
-    propertyPriceAed: price,
-    annualRentAed: grossRent,
-    serviceChargesPerSqFt: scRate,
-    propertySqFt: sqft,
-  });
-
-  const totalAcquisitionCostAed = acquisition.breakdown?.totalAcquisitionCosts || Math.round(price * 0.065);
-  const allInOutlayAed = acquisition.totalOutlayAed || (price + totalAcquisitionCostAed);
-  const annualServiceCharge = scRate * sqft;
-  const netOperatingIncomeY1 = Math.round(grossRent - annualServiceCharge);
-  const grossYieldPct = Number(((grossRent / price) * 100).toFixed(2));
-  const capRate = Number(((netOperatingIncomeY1 / price) * 100).toFixed(2));
-  const netYieldPct = yieldModel.longTerm?.netYieldPercent || capRate;
-  const netYieldOnAllIn = Number(((netOperatingIncomeY1 / allInOutlayAed) * 100).toFixed(2));
-
-  // 5-Year Cash Flow Pro-Forma & IRR
-  const cashFlowsProForma = [];
-  const irrCashFlowArray = [-allInOutlayAed];
-  let currentRent = grossRent;
-  let currentSc = annualServiceCharge;
-  let currentValuation = price;
-
-  for (let yr = 1; yr <= 5; yr++) {
-    if (yr > 1) {
-      currentRent *= (1 + rentalGrowthRate);
-      currentSc *= 1.025;
-      currentValuation *= (1 + capitalGrowthRate);
-    }
-    const noi = currentRent - currentSc;
-    const isExitYear = yr === 5;
-    const netCashFlow = isExitYear ? noi + currentValuation : noi;
-
-    cashFlowsProForma.push({
-      year: yr,
-      grossRentAed: Math.round(currentRent),
-      serviceChargesAed: Math.round(currentSc),
-      netOperatingIncomeAed: Math.round(noi),
-      assetValuationAed: Math.round(currentValuation),
-      netCashFlowAed: Math.round(netCashFlow),
-    });
-    irrCashFlowArray.push(netCashFlow);
-  }
-
-  const fiveYearIrr = calculateExactIrr(irrCashFlowArray);
-  const fiveYearIrrPercent = Number((fiveYearIrr * 100).toFixed(2));
-
-  const memorandumId = `MEMO-OPAL-${Date.now()}`;
-  const memorandumMarkdown = `# 🏛 INSTITUTIONAL REAL ESTATE INVESTMENT MEMORANDUM (OPAL v2.5)
-**Reference ID:** \`${memorandumId}\`  
-**Underwriter Engine:** ATLAS & LEX Opal Intelligence  
-**Asset Acquisition Price:** AED ${price.toLocaleString()}  
-**All-In Outlay:** AED ${allInOutlayAed.toLocaleString()}  
-**Cap Rate:** ${capRate}% Net p.a.  
-**5-Year IRR (TIR):** ${fiveYearIrrPercent}% p.a.  
-**Statutory Ringfencing:** Dubai Law No. (8) of 2007 (100% Escrow Guarantee)  
-`;
-
+  const result = executeDeterministicOpalCalculation(payload);
   return {
     status: 200,
-    body: {
-      success: true,
-      tool: 'google_opal_roi_engine',
-      version: 'v2.5.0-ENTERPRISE',
-      memorandumId,
-      inputs: {
-        purchasePriceAed: price,
-        purchasePriceUsd: Math.round(price / 3.6725),
-        unitSizeSqft: sqft,
-        expectedAnnualRentAed: grossRent,
-        serviceChargePerSqft: scRate,
-        capitalGrowthRate,
-        rentalGrowthRate,
-      },
-      statutoryShield: {
-        goldenVisaEligible: gv.isEligible,
-        goldenVisaThresholdAed: 2000000,
-        goldenVisaThresholdUsd: 544590,
-        statutoryDecree: 'UAE Cabinet Resolution No. 65 of 2022',
-        escrowProtection: 'Dubai Law No. (8) of 2007 (100% Escrow trust banking + 5% post-completion retention)',
-        decennialLiability: 'UAE Civil Code Art. 880 (10-Year Decennial Structural Warranty)',
-      },
-      financialMetrics: {
-        grossYieldPct,
-        netYieldPct,
-        capRate,
-        netYieldOnAllIn,
-        fiveYearIrr: fiveYearIrrPercent,
-        auditedNetYieldBand: '6.1% – 8.3% Net p.a. (Post-Mollak deductions)',
-        annualServiceChargeAed: annualServiceCharge,
-        netOperatingIncomeAed: netOperatingIncomeY1,
-        totalAcquisitionCostAed,
-        allInOutlayAed,
-      },
-      fiveYearProForma: cashFlowsProForma,
-      institutionalMemorandum: {
-        id: memorandumId,
-        title: 'INSTITUTIONAL REAL ESTATE INVESTMENT MEMORANDUM (OPAL v2.5)',
-        markdown: memorandumMarkdown,
-        generatedAt: new Date().toISOString(),
-        status: 'CERTIFIED_BY_LEX_AND_ATLAS',
-      },
-      auditTimestamp: new Date().toISOString(),
-    },
+    body: result,
   };
 }
 

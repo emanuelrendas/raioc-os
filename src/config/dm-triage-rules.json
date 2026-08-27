@@ -1,0 +1,105 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-08-27T12:00:00.000Z",
+  "agent": "DM_CONVERSION",
+  "hitl_threshold_aed": 10000000,
+  "qualification_workflow": {
+    "step_1": {
+      "step_id": "CAPITAL_SCOPE",
+      "step_number": 1,
+      "parameter": "capital_scope",
+      "question_en": "What is your target capital allocation scope for the Dubai real estate portfolio?",
+      "question_pt": "Qual o montante de capital planeado para a alocação no mercado imobiliário do Dubai?",
+      "options": [
+        {
+          "key": "TIER_SOVEREIGN_UHNW",
+          "label": "AED 25M - 50M+ (Institutional / Sovereign Mandate)",
+          "min_aed": 25000000,
+          "max_aed": 100000000,
+          "requires_hitl": true,
+          "riis_points": 40,
+          "routing_priority": "CRITICAL"
+        },
+        {
+          "key": "TIER_PRIVATE_WEALTH",
+          "label": "AED 10M - 25M (High Net Worth Private Wealth)",
+          "min_aed": 10000000,
+          "max_aed": 25000000,
+          "requires_hitl": true,
+          "riis_points": 30,
+          "routing_priority": "HIGH"
+        },
+        {
+          "key": "TIER_ACCELERATED_ENTRY",
+          "label": "AED 2M - 10M (Golden Visa / Entry Allocation)",
+          "min_aed": 2000000,
+          "max_aed": 10000000,
+          "requires_hitl": false,
+          "riis_points": 20,
+          "routing_priority": "NORMAL"
+        }
+      ]
+    },
+    "step_2": {
+      "step_id": "CORRIDOR_VETOR",
+      "step_number": 2,
+      "parameter": "corridor_vetor",
+      "question_en": "Which sovereign corridor best aligns with your strategic investment thesis?",
+      "question_pt": "Qual o corredor estratégico prioritário para a tese de investimento?",
+      "options": [
+        {
+          "key": "PALM_JEBEL_ALI",
+          "corridor_id": "PALM_JEBEL_ALI",
+          "label": "Palm Jebel Ali (Capital Preservation & Ultra-Prime Waterfront)",
+          "strategy": "CAPITAL_PRESERVATION_ULTRA_PRIME",
+          "target_cap_rate": [0.048, 0.055],
+          "riis_points": 35
+        },
+        {
+          "key": "DUBAI_SOUTH_DWC",
+          "corridor_id": "DUBAI_SOUTH_DWC",
+          "label": "Dubai South / DWC (Macro-Infrastructure & High Net Yield)",
+          "strategy": "MACRO_INFRASTRUCTURE_HIGH_YIELD",
+          "target_cap_rate": [0.078, 0.088],
+          "riis_points": 30
+        }
+      ]
+    },
+    "step_3": {
+      "step_id": "OWNERSHIP_VEHICLE",
+      "step_number": 3,
+      "parameter": "ownership_vehicle",
+      "question_en": "What is the intended ownership vehicle for legal custody and asset shielding?",
+      "question_pt": "Qual o veículo societário pretendido para a custódia e blindagem patrimonial?",
+      "options": [
+        {
+          "key": "SPV_DIFC_ADGM",
+          "label": "DIFC / ADGM Special Purpose Vehicle (Common Law Trust Shield)",
+          "structuring": "CORPORATE_SPV_COMMON_LAW",
+          "tax_shielding": "0% Personal / Double Tax Treaty Ringfence",
+          "riis_points": 25
+        },
+        {
+          "key": "INDIVIDUAL_DIRECT",
+          "label": "Individual Direct Title Deed (10-Year Golden Visa Path)",
+          "structuring": "FREEHOLD_INDIVIDUAL",
+          "tax_shielding": "0% Capital Gains / 0% Property Tax",
+          "riis_points": 15
+        }
+      ]
+    }
+  },
+  "escalation_policies": {
+    "hitl_auto_trigger": {
+      "condition": "budget_aed >= 10000000 || capital_scope === 'TIER_SOVEREIGN_UHNW'",
+      "action": "CREATE_EXECUTIVE_APPROVAL_GATE",
+      "assignee": "Emanuel Rendas (CEO)",
+      "sla_minutes": 15
+    },
+    "voice_outreach_trigger": {
+      "condition": "approval_status === 'APPROVED' && phone_verified === true",
+      "action": "DISPATCH_AIDA_FIDUCIARY_VOICE",
+      "template": "OBJ_OFFPLAN_ESCROW_LAW8"
+    }
+  }
+}

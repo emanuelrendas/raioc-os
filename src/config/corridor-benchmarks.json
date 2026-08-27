@@ -1,0 +1,61 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2026-08-27T12:00:00.000Z",
+  "jurisdiction": "DUBAI_DLD_RERA",
+  "corridors": {
+    "PALM_JEBEL_ALI": {
+      "id": "PALM_JEBEL_ALI",
+      "slug": "palm-jebel-ali",
+      "name": "Palm Jebel Ali Sovereign Corridor",
+      "strategy": "CAPITAL_PRESERVATION_ULTRA_PRIME",
+      "macro_thesis": "Ultra-prime waterfront frond expansion capturing UHNW sovereign capital preservation with strict physical supply constraints.",
+      "cap_rate": [0.048, 0.055],
+      "cagr_10y": [0.085, 0.102],
+      "irr_7y": [0.135, 0.158],
+      "service_charge": [18, 26],
+      "statutory": {
+        "dld": 0.04,
+        "trustee": 4200,
+        "oqood": 1000,
+        "sinking_fund": 0.0125
+      },
+      "regulatory_anchors": {
+        "escrow_law": "Dubai Law No. (8) of 2007 / UAE Law No. 8 of 2007 (100% Escrow Guarantee & 5% Post-Completion Retention)",
+        "structural_warranty": "UAE Civil Code Art. 880 (10-Year Decennial Structural Warranty)",
+        "golden_visa": "UAE Cabinet Resolution No. 65 of 2022 (10-Year Golden Visa at AED 2M+)"
+      },
+      "target_ticket_aed": {
+        "min": 18000000,
+        "recommended": 35000000,
+        "max": 150000000
+      }
+    },
+    "DUBAI_SOUTH_DWC": {
+      "id": "DUBAI_SOUTH_DWC",
+      "slug": "dubai-south-dwc",
+      "name": "Dubai South & Al Maktoum International (DWC) Corridor",
+      "strategy": "MACRO_INFRASTRUCTURE_HIGH_YIELD",
+      "macro_thesis": "Global aerotropolis anchor surrounding the AED 128B Al Maktoum International expansion with high rental yield compression.",
+      "cap_rate": [0.078, 0.088],
+      "cagr_10y": [0.060, 0.075],
+      "irr_7y": [0.145, 0.165],
+      "service_charge": [12, 16],
+      "statutory": {
+        "dld": 0.04,
+        "trustee": 4200,
+        "oqood": 1000,
+        "sinking_fund": 0.0150
+      },
+      "regulatory_anchors": {
+        "escrow_law": "Dubai Law No. (8) of 2007 / UAE Law No. 8 of 2007 (100% Escrow Guarantee & 5% Post-Completion Retention)",
+        "structural_warranty": "UAE Civil Code Art. 880 (10-Year Decennial Structural Warranty)",
+        "golden_visa": "UAE Cabinet Resolution No. 65 of 2022 (10-Year Golden Visa at AED 2M+)"
+      },
+      "target_ticket_aed": {
+        "min": 2500000,
+        "recommended": 8500000,
+        "max": 35000000
+      }
+    }
+  }
+}
