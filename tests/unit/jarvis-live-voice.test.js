@@ -219,4 +219,47 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.strictEqual(res.body.success, true);
     assert.ok(res.body.text);
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 7. Voice Engine Zero-Failure Audio Pipeline (RAIOC-VOICE-PIPELINE-2026-V1)
+  // ──────────────────────────────────────────────────────────────────────────
+  it('15. Anti-401 Header Resolution: Accepts requests with x-requested-with RAIOC_MISSION_CONTROL_V2 and x-raioc-secret', async () => {
+    const res = await handleVoiceConversationRequest('/api/v1/voice/conversation', 'POST', {
+      message: 'Status do pipeline de áudio dual-layer',
+    }, {}, {
+      'content-type': 'application/json',
+      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+      'x-requested-with': 'RAIOC_MISSION_CONTROL_V2',
+    });
+
+    assert.strictEqual(res.status, 200, 'Should accept x-requested-with and secret header auth');
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.text);
+    assert.ok(res.body.audioBase64);
+  });
+
+  it('16. Client Audio Pipeline Validation: mission-control.html contains micro-buffer unlock, 1.5s safety timer, and visual telemetry tags', async () => {
+    const fs = await import('node:fs');
+    const html = fs.readFileSync('mission-control.html', 'utf8');
+
+    // 1. Desbloqueio síncrono & micro-buffer
+    assert.ok(html.includes('createBuffer(1, Math.max(1, Math.floor(window.voiceAudioCtx.sampleRate * 0.01))'), 'Must include 10ms micro-buffer creation');
+    assert.ok(html.includes('window.voiceAudioCtx.resume()'), 'Must include AudioContext resume');
+
+    // 2. Dupla camada & 1.5s safety timer
+    assert.ok(html.includes('playbackSafetyTimeout = setTimeout'), 'Must include safety timeout for neural audio');
+    assert.ok(html.includes('1500'), 'Safety timeout must be configured to 1.5s (1500ms)');
+    assert.ok(html.includes('speakNaturalVoiceFallback'), 'Must include speech synthesis fallback');
+
+    // 3. Cabeçalhos Anti-401
+    assert.ok(html.includes("'x-requested-with': 'RAIOC_MISSION_CONTROL_V2'"), 'Must include x-requested-with header');
+    assert.ok(html.includes("'x-raioc-secret': authToken"), 'Must include x-raioc-secret header');
+
+    // 4. Telemetria visual
+    assert.ok(html.includes('[🎙️ MIC: ATIVO]'), 'Must include [🎙️ MIC: ATIVO] telemetry tag');
+    assert.ok(html.includes('[🧠 A PENSAR / GEMINI]'), 'Must include [🧠 A PENSAR / GEMINI] telemetry tag');
+    assert.ok(html.includes('[⚡ A SINTETIZAR]'), 'Must include [⚡ A SINTETIZAR] telemetry tag');
+    assert.ok(html.includes('[🔊 A TOCAR ÁUDIO]'), 'Must include [🔊 A TOCAR ÁUDIO] telemetry tag');
+    assert.ok(html.includes('[🎙️ PRONTO]'), 'Must include [🎙️ PRONTO] telemetry tag');
+  });
 });
