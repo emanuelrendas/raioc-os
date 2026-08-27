@@ -16,14 +16,14 @@ export async function POST(request: Request) {
     });
 
     const body = await request.json().catch(() => ({}));
-    const approvalId = body.approvalId || body.id;
+    const approvalId = body.approvalId || body.id || body.approval_id;
 
     if (!approvalId) {
       return NextResponse.json(
         {
           success: false,
           error: 'MISSING_APPROVAL_ID',
-          message: 'Field approvalId or id is required to make an executive decision',
+          message: 'Field approvalId, approval_id or id is required to make an executive decision',
         },
         { status: 400 }
       );
@@ -42,7 +42,7 @@ export async function POST(request: Request) {
     }
 
     const cleanDecision = rawDecision.startsWith('APP') ? 'APPROVED' : 'REJECTED';
-    const actor = body.actor || 'Emanuel Rendas (Chief Executive Officer)';
+    const actor = body.actor || body.decided_by || body.decidedBy || 'Emanuel Rendas (Chief Executive Officer)';
     const note = body.note || body.comments || `1-Click Executive HITL ${cleanDecision} via Mission Control`;
     const correlationId = rawHeaders['x-correlation-id'] || body.correlation_id || `corr_hitl_${Date.now()}`;
     const traceparent = rawHeaders['traceparent'] || body.traceparent || `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`;

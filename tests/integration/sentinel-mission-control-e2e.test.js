@@ -253,9 +253,9 @@ test('1-CLICK HITL DECISION CONSOLE: Immediate Unblocking & AIDA Voice Dispatch 
     '/api/v1/approvals/decide',
     'POST',
     {
-      approvalId: rejectApprovalId,
+      approval_id: rejectApprovalId,
       decision: 'REJECTED',
-      actor: 'Emanuel Rendas (CEO)',
+      decided_by: 'Emanuel Rendas',
       note: 'Rejected due to insufficient proof of funds documentation.',
     }
   );
@@ -264,4 +264,54 @@ test('1-CLICK HITL DECISION CONSOLE: Immediate Unblocking & AIDA Voice Dispatch 
   assert.strictEqual(rejectRes.body.decision, 'REJECTED');
   assert.strictEqual(rejectRes.body.approval.status, 'REJECTED');
   assert.strictEqual(rejectRes.body.dispatchedEvent, null, 'No voice dispatch on rejected approval');
+});
+
+test('MISSION CONTROL V2 UI INTERACTION: 1-Click Button Payload (approval_id, decision: APPROVED, decided_by: Emanuel Rendas)', async () => {
+  const uiApprovalId = `appr_ui_click_${Date.now()}`;
+  const investorName = 'Dr. Heinrich Schmidt';
+  const targetAsset = 'Palm Jebel Ali Frond Mansion';
+
+  await supabase.createApproval({
+    id: uiApprovalId,
+    title: `VIP Mandate - ${investorName}`,
+    agent: 'MARK (Lead Triage Specialist)',
+    category: 'HIGH_VALUE_MANDATE',
+    priority: 'CRITICAL',
+    status: 'PENDING',
+    recipient: investorName,
+    targetAsset,
+    payload: {
+      intent: 'INVESTOR_FOLLOWUP',
+      recipient: investorName,
+      targetAsset,
+      budgetAed: 48000000,
+      channel: 'WHATSAPP',
+      country: 'Germany',
+      diraScore: 98,
+    },
+  });
+
+  // Simulate exact UI button click payload
+  const buttonClickRes = await handleApprovalsRequest(
+    '/api/v1/approvals/decide',
+    'POST',
+    {
+      approval_id: uiApprovalId,
+      decision: 'APPROVED',
+      decided_by: 'Emanuel Rendas',
+    },
+    {},
+    {
+      'Authorization': 'Bearer raioc_sovereign_auth_2026_x99',
+      'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99',
+      'x-correlation-id': `corr_btn_click_${Date.now()}`,
+    }
+  );
+
+  assert.strictEqual(buttonClickRes.status, 200);
+  assert.strictEqual(buttonClickRes.body.success, true);
+  assert.strictEqual(buttonClickRes.body.decision, 'APPROVED');
+  assert.strictEqual(buttonClickRes.body.approvalId, uiApprovalId);
+  assert.ok(buttonClickRes.body.dispatchedEvent, 'Must dispatch voice outreach to AIDA');
+  assert.strictEqual(buttonClickRes.body.dispatchedEvent.type, 'raioc.voice.outreach_dispatched.v1');
 });

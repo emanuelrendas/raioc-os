@@ -1068,16 +1068,29 @@ export function renderMissionControlHtml() {
 
     async function resolveApproval(id, resolution) {
       try {
-        const res = await fetch('/api/v1/mission-control/approvals', {
+        const res = await fetch('/api/v1/approvals/decide', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ id, resolution, actor: 'Emanuel Rendas (Executive)' })
+          headers: { 
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer raioc_sovereign_auth_2026_x99',
+            'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99'
+          },
+          body: JSON.stringify({ 
+            approval_id: id, 
+            approvalId: id, 
+            decision: resolution, 
+            decided_by: 'Emanuel Rendas (Chief Executive Officer)',
+            actor: 'Emanuel Rendas (Chief Executive Officer)',
+            note: resolution === 'APPROVED' 
+              ? 'Aprovado via Mission Control V2. Despacho autónomo da AIDA autorizado.' 
+              : 'Rejeitado e arquivado no registo de auditoria.'
+          })
         });
         if (res.ok) {
           await fetchTelemetryState();
         }
       } catch (err) {
-        alert('Failed to resolve approval: ' + err.message);
+        console.error('Failed to resolve approval:', err);
       }
     }
 

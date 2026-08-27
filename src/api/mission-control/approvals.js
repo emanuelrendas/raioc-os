@@ -36,11 +36,11 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
       }
     }
 
-    const approvalId = body.approvalId || body.id;
+    const approvalId = body.approvalId || body.id || body.approval_id;
     if (!approvalId) {
       return {
         status: 400,
-        body: { success: false, error: 'Missing required field: approvalId or id' },
+        body: { success: false, error: 'Missing required field: approvalId, approval_id or id' },
       };
     }
 
@@ -53,7 +53,7 @@ export async function handleApprovalsRequest(url, method = 'GET', body = {}, que
     }
 
     const cleanAction = rawAction.startsWith('APP') ? 'APPROVED' : 'REJECTED';
-    const actor = body.actor || 'Emanuel Rendas (Chief Executive Officer)';
+    const actor = body.actor || body.decided_by || body.decidedBy || 'Emanuel Rendas (Chief Executive Officer)';
     const resolutionNote = body.note || body.comments || `Action ${cleanAction} via Mission Control`;
     const correlationId = headers['x-correlation-id'] || body.correlation_id || `corr_appr_${Date.now()}`;
     const traceparent = headers['traceparent'] || body.traceparent;
