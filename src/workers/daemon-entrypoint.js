@@ -5,12 +5,14 @@
  * 1. JARVIS Continuous Executive Operating System Loop (Opportunity scanning & self-healing)
  * 2. SENTINEL Mesh Monitor (Continuous health probes & circuit breaking)
  * 3. Distributed Autonomous Scheduler (Interval task execution & lease locking)
- * 4. Graceful Shutdown & Signal Trapping (SIGTERM, SIGINT) with connection draining.
+ * 4. Memory RSS Watchdog (Warning @ 180MB, Orderly drain @ 250MB)
+ * 5. Graceful Shutdown & Signal Trapping (SIGTERM, SIGINT) with connection draining.
  */
 
 import { jarvis } from '../agents/specialists/jarvis-orchestrator.js';
 import { sentinelMeshMonitor } from '../core/sentinel-mesh-monitor.js';
 import { distributedScheduler } from '../core/distributed-scheduler.js';
+import { memoryRssMonitor } from '../monitoring/memory-rss-monitor.js';
 import { startApiServer } from '../api/server.js';
 import { logger } from '../logging/audit-logger.js';
 import { isServerlessRuntime } from '../config/env.js';
@@ -31,6 +33,7 @@ let daemonState = {
  * @param {number} [options.port=3000] - Port for the health/API server
  * @param {number} [options.jarvisIntervalMs=30000] - JARVIS executive tick interval
  * @param {number} [options.sentinelIntervalMs=60000] - Sentinel mesh probe interval
+ * @param {number} [options.memoryCheckIntervalMs=15000] - Memory monitor probe interval
  * @param {boolean} [options.startHttp=true] - Whether to start the HTTP API / Health server
  * @returns {Promise<Object>} Daemon runtime status
  */
@@ -47,18 +50,19 @@ export async function startDaemon(options = {}) {
   const port = parseInt(process.env.PORT || options.port || '3000', 10);
   const jarvisIntervalMs = options.jarvisIntervalMs || 30000;
   const sentinelIntervalMs = options.sentinelIntervalMs || 60000;
+  const memoryCheckIntervalMs = options.memoryCheckIntervalMs || 15000;
   const startHttp = options.startHttp !== false;
 
   logger.info('DAEMON', '🚀 Initializing RAIOC OS Persistent Always-On Daemon Runtime...');
 
   const activeServices = [];
 
-  // 1. Optional HTTP Server for Healthchecks and Inbound Webhooks
+  // 1. Optional HTTP Server for Healthchecks, /healthz, and Inbound Webhooks
   if (startHttp) {
     try {
       daemonState.httpServer = await startApiServer(port);
       activeServices.push(`API_SERVER_PORT_${port}`);
-      logger.info('DAEMON', `✅ HTTP & Healthcheck server listening on port ${port}`);
+      logger.info('DAEMON', `✅ HTTP & Healthcheck server listening on port ${port} (Route: /healthz active)`);
     } catch (err) {
       logger.warn('DAEMON', `HTTP Server already running or could not bind port ${port}: ${err.message}`);
     }
@@ -91,6 +95,18 @@ export async function startDaemon(options = {}) {
     logger.error('DAEMON', `Failed to start Distributed Scheduler: ${err.message}`);
   }
 
+  // 5. Start Memory RSS Watchdog
+  try {
+    memoryRssMonitor.start(memoryCheckIntervalMs, () => {
+      logger.error('DAEMON', 'Executing critical memory drain triggered by RSS monitor.');
+      stopDaemon();
+    });
+    activeServices.push('MEMORY_RSS_WATCHDOG');
+    logger.info('DAEMON', `✅ Memory RSS Watchdog active (${memoryCheckIntervalMs}ms interval, 180MB warn, 250MB drain)`);
+  } catch (err) {
+    logger.error('DAEMON', `Failed to start Memory RSS Monitor: ${err.message}`);
+  }
+
   daemonState = {
     ...daemonState,
     isRunning: true,
@@ -100,7 +116,7 @@ export async function startDaemon(options = {}) {
     activeServices,
   };
 
-  // 5. Register Process Signal Handlers for Graceful Shutdown
+  // 6. Register Process Signal Handlers for Graceful Shutdown
   registerSignalHandlers();
 
   logger.info('DAEMON', '🟢 RAIOC OS Always-On Persistent Daemon fully operational', {
@@ -122,7 +138,14 @@ export async function stopDaemon() {
 
   logger.info('DAEMON', '🛑 Initiating graceful shutdown of persistent daemon...');
 
-  // 1. Stop JARVIS Executive Loop
+  // 1. Stop Memory Monitor
+  try {
+    memoryRssMonitor.stop();
+  } catch (err) {
+    logger.error('DAEMON', `Error stopping Memory Monitor: ${err.message}`);
+  }
+
+  // 2. Stop JARVIS Executive Loop
   try {
     jarvis.stopContinuousExecutiveLoop();
     logger.info('DAEMON', '⏹️ Stopped JARVIS executive loop');
@@ -130,7 +153,7 @@ export async function stopDaemon() {
     logger.error('DAEMON', `Error stopping JARVIS: ${err.message}`);
   }
 
-  // 2. Stop SENTINEL Mesh Probing
+  // 3. Stop SENTINEL Mesh Probing
   try {
     sentinelMeshMonitor.stopMeshProbing();
     logger.info('DAEMON', '⏹️ Stopped SENTINEL mesh prober');
@@ -138,7 +161,7 @@ export async function stopDaemon() {
     logger.error('DAEMON', `Error stopping SENTINEL: ${err.message}`);
   }
 
-  // 3. Stop Distributed Scheduler
+  // 4. Stop Distributed Scheduler
   try {
     await distributedScheduler.stop();
     logger.info('DAEMON', '⏹️ Stopped Distributed Scheduler');
@@ -146,7 +169,7 @@ export async function stopDaemon() {
     logger.error('DAEMON', `Error stopping Distributed Scheduler: ${err.message}`);
   }
 
-  // 4. Close HTTP Server if listening
+  // 5. Close HTTP Server if listening
   if (daemonState.httpServer && typeof daemonState.httpServer.close === 'function') {
     try {
       await new Promise((resolve) => {

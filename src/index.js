@@ -31,6 +31,7 @@ import { openAiClient } from './integrations/openai/openai-client.js';
 import { gmailAdapter } from './adapters/gmail-adapter.js';
 import { calendarAdapter } from './adapters/calendar-adapter.js';
 import { whatsAppCloudAdapter } from './adapters/whatsapp-cloud-adapter.js';
+import { elevenLabsAdapter } from './adapters/elevenlabs-adapter.js';
 import { n8nAdapter, dispatchN8nEvent } from './adapters/n8n-adapter.js';
 import { telegramAdapter, sendTelegramAlert, NOTIF_TEMPLATES } from './adapters/telegram-adapter.js';
 import { toolRegistry } from './agents/tool-registry.js';
@@ -39,6 +40,7 @@ import { AgentAction, AgentContext, ExecutionResult } from './agents/agent-actio
 import { correlationTracer } from './monitoring/correlation-tracer.js';
 import { metricsCollector } from './monitoring/metrics-collector.js';
 import { connectorHealthMatrix } from './monitoring/connector-health-matrix.js';
+import { memoryRssMonitor } from './monitoring/memory-rss-monitor.js';
 
 // Operational Layer & Specialist Agents
 import { BaseSpecialistAgent } from './agents/specialists/base-agent.js';
@@ -107,6 +109,7 @@ export {
   gmailAdapter,
   calendarAdapter,
   whatsAppCloudAdapter,
+  elevenLabsAdapter,
   n8nAdapter,
   dispatchN8nEvent,
   telegramAdapter,
@@ -120,6 +123,7 @@ export {
   correlationTracer,
   metricsCollector,
   connectorHealthMatrix,
+  memoryRssMonitor,
   // Operational Multi-Agent Exports
   BaseSpecialistAgent,
   jarvis,

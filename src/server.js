@@ -4,19 +4,24 @@
  */
 
 import { startApiServer } from './api/server.js';
+import { memoryRssMonitor } from './monitoring/memory-rss-monitor.js';
 import { logger } from './logging/audit-logger.js';
 
 const port = parseInt(process.env.PORT || '3000', 10);
 
 logger.info('SERVER', `Starting RAIOC OS Standalone Server on port ${port}...`);
 
+// Start memory RSS monitor (warning at 180MB, critical drain at 250MB)
+memoryRssMonitor.start(15000);
+
 const serverPromise = startApiServer(port);
 
 serverPromise.then((server) => {
-  logger.info('SERVER', `RAIOC OS Server ready on port ${port}`);
+  logger.info('SERVER', `RAIOC OS Server ready on port ${port} with /healthz active`);
 
   const shutdown = (signal) => {
     logger.info('SERVER', `Received ${signal}. Shutting down server gracefully...`);
+    memoryRssMonitor.stop();
     if (server && typeof server.close === 'function') {
       server.close(() => {
         logger.info('SERVER', 'Server closed gracefully.');

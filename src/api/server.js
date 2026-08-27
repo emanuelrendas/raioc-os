@@ -43,6 +43,11 @@ import { metricsCollector } from '../monitoring/metrics-collector.js';
 import { agentEventBus } from '../events/agent-event-bus.js';
 import { executiveDashboard } from '../operational/executive-dashboard.js';
 import { connectorHealthMatrix } from '../monitoring/connector-health-matrix.js';
+import { memoryRssMonitor } from '../monitoring/memory-rss-monitor.js';
+import { agentDirectory } from '../agents/agent-directory.js';
+import { jarvis } from '../agents/specialists/jarvis-orchestrator.js';
+import { sentinelMeshMonitor } from '../core/sentinel-mesh-monitor.js';
+import { distributedScheduler } from '../core/distributed-scheduler.js';
 import { logger } from '../logging/audit-logger.js';
 
 export async function routeApiRequest(reqPath, method = 'GET', body = {}, query = {}, headers = {}) {
@@ -90,6 +95,31 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
         status: 200,
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
         body: html,
+      };
+    }
+    // 0c. Liveness & Resource Healthcheck (/healthz, /api/healthz)
+    else if (url === '/healthz' || url === '/api/healthz') {
+      const mem = memoryRssMonitor.getMemoryMetrics();
+      const activeAgents = agentDirectory.listAgents().length;
+      const loopStatus = {
+        jarvis_loop: Boolean(jarvis.isLoopRunning),
+        sentinel_prober: Boolean(sentinelMeshMonitor.isProbingActive),
+        distributed_scheduler: Boolean(distributedScheduler.isRunning),
+      };
+
+      response = {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+        body: {
+          status: 'OK',
+          uptime: Math.round(process.uptime() * 100) / 100,
+          memory_rss_mb: mem.rssMb,
+          memory_metrics: mem,
+          active_agents_count: activeAgents,
+          loop_status: loopStatus,
+          runtime_mode: process.env.RUNTIME_MODE || 'development',
+          timestamp: new Date().toISOString(),
+        },
       };
     }
     // 1. Dashboard UI, Executive Telemetry & Chat (/dashboard, /api/chat, /api/dashboard/*, /api/executive/*, /api/telemetry/*, /health, /api/health, /api/test-email)
