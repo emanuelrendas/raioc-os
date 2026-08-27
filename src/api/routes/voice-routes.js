@@ -197,7 +197,7 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
       body: {
         success: false,
         error: err.message,
-        text: 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.',
+        text: 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.',
         latencyMs: Date.now() - startTime,
       },
     };

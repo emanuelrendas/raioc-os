@@ -14,11 +14,25 @@ import { renderMissionControlHtml } from '../src/site/mission-control-html.js';
 import { supabase } from '../src/db/supabase-client.js';
 import { sitePages } from '../src/site/site-pages.js';
 
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '15mb',
+    },
+    responseLimit: '15mb',
+  },
+};
+
 export default async function handler(req, res) {
   const headers = req.headers || {};
   let query = req.query || {};
   const method = req.method || 'GET';
-  const body = req.body || {};
+  let body = req.body || {};
+  if (typeof body === 'string') {
+    try {
+      body = JSON.parse(body);
+    } catch (_) {}
+  }
   const host = (headers['x-forwarded-host'] || headers.host || '').toLowerCase();
 
   // Set Global Security & Permissions Headers

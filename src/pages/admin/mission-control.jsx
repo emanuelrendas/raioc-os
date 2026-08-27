@@ -574,6 +574,9 @@ Orquestras e delegas com precisão para:
               const totalElapsed = performance.now() - tReq;
               console.log(`[VOICE_ENGINE:STREAM_DONE] SSE stream completed in ${totalElapsed.toFixed(2)}ms (${eventData.totalChunks} chunks)`);
               reportVoiceTelemetry('VOICE_STREAM_COMPLETED', { totalMs: totalElapsed, chunks: eventData.totalChunks });
+              if (!firstChunkReceived && streamedFullText) {
+                speakNaturalVoiceFallback(streamedFullText.trim());
+              }
             }
           }
         }
@@ -586,7 +589,7 @@ Orquestras e delegas com precisão para:
         }
       } else {
         const data = await res.json();
-        const reply = data.text || 'JARVIS operacional.';
+        const reply = data.text || 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.';
         voiceConversationHistoryRef.current.push({ role: 'model', text: reply });
         if (data.audioBase64 && !data.fallbackRequired) {
           await playNeuralAudio(data.audioBase64, reply, false);
@@ -602,12 +605,87 @@ Orquestras e delegas com precisão para:
       }
       console.warn('[VOICE_ENGINE:STREAM_FAIL] Stream error, switching to natural fallback:', err);
       reportVoiceTelemetry('VOICE_REQUEST_FAILED', { error: err.message });
-      const fallbackText = 'JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.';
+      const fallbackText = 'Estou com dificuldade em contactar a API do Gemini. Por favor verifica as variáveis de ambiente.';
       voiceConversationHistoryRef.current.push({ role: 'model', text: fallbackText });
       speakNaturalVoiceFallback(fallbackText);
     } finally {
       activeVoiceAbortControllerRef.current = null;
       activeVoiceStreamReaderRef.current = null;
+    }
+  };
+
+  // Audible Zero-Silence Speech Synthesis & Neural Audio Playback
+  const speakNaturalVoiceFallback = (spokenText) => {
+    if (!spokenText || typeof window === 'undefined' || !window.speechSynthesis) return;
+    try {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(spokenText);
+      utterance.lang = 'pt-PT';
+      utterance.rate = 1.05;
+      utterance.pitch = 1.0;
+
+      isBotSpeakingRef.current = true;
+      setVoiceState('speaking');
+
+      utterance.onstart = () => {
+        isBotSpeakingRef.current = true;
+        setVoiceState('speaking');
+      };
+      utterance.onend = () => {
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+      };
+      utterance.onerror = (e) => {
+        console.warn('[VOICE_ENGINE:SPEECH_SYNTHESIS_ERROR]', e);
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+      };
+      window.speechSynthesis.speak(utterance);
+    } catch (err) {
+      console.warn('[VOICE_ENGINE:FALLBACK_SYNTHESIS_FAIL]', err);
+    }
+  };
+
+  const playNeuralAudio = async (audioBase64, spokenText, isStreaming = false) => {
+    if (!audioBase64 || audioBase64.length < 50) {
+      speakNaturalVoiceFallback(spokenText);
+      return;
+    }
+
+    const ctx = await unlockAudioContext();
+    if (!ctx) {
+      speakNaturalVoiceFallback(spokenText);
+      return;
+    }
+
+    try {
+      const arrayBuffer = base64ToArrayBuffer(audioBase64);
+      if (!arrayBuffer || arrayBuffer.byteLength < 32) {
+        speakNaturalVoiceFallback(spokenText);
+        return;
+      }
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      if (analyserRef.current) source.connect(analyserRef.current);
+      source.connect(ctx.destination);
+
+      isBotSpeakingRef.current = true;
+      setVoiceState('speaking');
+      activeAudioSourceRef.current = source;
+
+      source.onended = () => {
+        activeAudioSourceRef.current = null;
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('[🎙️ PRONTO] Pode falar agora... (A escutar)');
+      };
+      source.start(0);
+    } catch (err) {
+      console.warn('[VOICE_ENGINE:PLAY_NEURAL_FAIL] Decoding failed, falling back to speech synthesis:', err);
+      speakNaturalVoiceFallback(spokenText);
     }
   };
 

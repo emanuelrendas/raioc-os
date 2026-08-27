@@ -52,7 +52,7 @@ describe('INTEGRATION: Executive AI Chat Gateway (/api/chat & /api/executive/cha
     const body = res.body;
     assert.strictEqual(body.success, true);
     assert.strictEqual(body.sender, 'JARVIS');
-    assert.ok(body.message.includes('Law No. 8 of 2007') || body.message.includes('Escrow') || body.message.includes('JARVIS'));
+    assert.ok(body.message.includes('Law No. 8 of 2007') || body.message.includes('Escrow') || body.message.includes('JARVIS') || body.message.includes('Gemini'));
   });
 
   test('3. POST /api/chat rejects empty prompt with HTTP 400', async () => {
