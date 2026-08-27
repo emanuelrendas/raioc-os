@@ -21,6 +21,14 @@ export default async function handler(req, res) {
   const body = req.body || {};
   const host = (headers['x-forwarded-host'] || headers.host || '').toLowerCase();
 
+  // Set Global Security & Permissions Headers
+  if (typeof res.setHeader === 'function') {
+    res.setHeader('Permissions-Policy', 'microphone=*, camera=(), geolocation=()');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN');
+  }
+
   // Extract query parameters from req.url if req.query was not passed
   if (Object.keys(query).length === 0 && req.url && req.url.includes('?')) {
     try {

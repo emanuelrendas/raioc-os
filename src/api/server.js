@@ -284,6 +284,7 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       headers: {
         'Content-Type': response.headers?.['Content-Type'] || 'application/json',
         'X-Correlation-ID': correlationId,
+        'Permissions-Policy': 'microphone=*, camera=(), geolocation=()',
         ...extraHeaders,
         ...(response.headers || {}),
       },
@@ -300,6 +301,7 @@ export function startApiServer(port = 3000) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key, X-Correlation-ID, X-N8N-Signature, X-Hub-Signature-256');
+    res.setHeader('Permissions-Policy', 'microphone=*, camera=(), geolocation=()');
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);

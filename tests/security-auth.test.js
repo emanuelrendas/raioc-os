@@ -65,4 +65,27 @@ describe('Security & Authentication Tests', () => {
     // Missing app secret (Fail-Closed)
     assert.strictEqual(verifier.verifyWhatsAppSignature(payload, validSig, null), false);
   });
+
+  test('validates Permissions-Policy and CSP headers for microphone access across production config', async () => {
+    const fs = await import('node:fs');
+    const { routeApiRequest } = await import('../src/api/server.js');
+
+    // 1. Check vercel.json
+    const vercelConfig = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+    const globalHeaderRule = vercelConfig.headers.find(h => h.source === '/(.*)');
+    assert.ok(globalHeaderRule, 'Must contain global header rule in vercel.json');
+
+    const permPolicy = globalHeaderRule.headers.find(h => h.key === 'Permissions-Policy');
+    assert.ok(permPolicy, 'Must contain Permissions-Policy header');
+    assert.ok(permPolicy.value.includes('microphone=*'), 'Must explicitly allow microphone in Permissions-Policy');
+
+    const csp = globalHeaderRule.headers.find(h => h.key === 'Content-Security-Policy');
+    assert.ok(csp, 'Must contain Content-Security-Policy');
+    assert.ok(csp.value.includes("media-src 'self' blob: data: https://api.elevenlabs.io"), 'Must allow media-src for ElevenLabs and blob/data');
+
+    // 2. Check API router headers
+    const res = await routeApiRequest('/healthz');
+    assert.ok(res.headers['Permissions-Policy'], 'routeApiRequest must include Permissions-Policy header');
+    assert.ok(res.headers['Permissions-Policy'].includes('microphone=*'), 'Must include microphone=* in Permissions-Policy');
+  });
 });
