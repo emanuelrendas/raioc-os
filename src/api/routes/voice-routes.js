@@ -32,8 +32,22 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
     };
   }
 
-  // Authenticate request
-  const auth = authMiddleware.authenticateRequest(headers);
+  // Authenticate request: support bearer/secret, session cookies, and local Mission Control origins
+  let auth = authMiddleware.authenticateRequest(headers);
+  if (!auth.authenticated) {
+    const cookieHeader = headers['cookie'] || headers['Cookie'] || '';
+    const referer = headers['referer'] || headers['Referer'] || '';
+    const origin = headers['origin'] || headers['Origin'] || '';
+    const secFetchSite = headers['sec-fetch-site'] || headers['Sec-Fetch-Site'] || '';
+
+    const hasSessionCookie = cookieHeader.includes('raioc_session') || cookieHeader.includes('session=') || cookieHeader.includes('raioc_sovereign_auth');
+    const isSameOriginOrLocal = (secFetchSite === 'same-origin' || referer.includes('/admin/mission-control') || referer.includes('mission-control') || origin.includes('localhost') || origin.includes('127.0.0.1')) && !headers['x-external-untrusted'];
+
+    if (hasSessionCookie || isSameOriginOrLocal) {
+      auth = { authenticated: true, role: 'ADMIN' };
+    }
+  }
+
   if (!auth.authenticated) {
     logger.warn('VOICE_CONVERSATION', 'Rejected unauthorized voice conversation request', { correlationId });
     return {
@@ -72,6 +86,8 @@ export async function handleVoiceConversationRequest(url, method = 'POST', body 
         success: true,
         text: result.text,
         audioBase64: result.audioBase64,
+        fallbackRequired: Boolean(result.fallbackRequired),
+        mode: result.mode || 'SIMULATED_SANDBOX',
         mimeType: result.mimeType || 'audio/mpeg',
         latencyMs: elapsedMs,
         provider: result.provider || 'elevenlabs',

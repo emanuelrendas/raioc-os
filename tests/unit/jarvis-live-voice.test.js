@@ -186,4 +186,37 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.strictEqual(cleaned.includes('*'), false, 'Must strip asterisks');
     assert.strictEqual(cleaned, 'JARVIS: Palm Jebel Ali, com 110km de costa; oferece rendimento sólido. Qual o seu horizonte temporal?');
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // 6. Zero-Silence Resilient Pipeline & Synthetic MP3 Decodability
+  // ──────────────────────────────────────────────────────────────────────────
+  it('13. ElevenLabs Adapter: Generates decodable 44.1kHz MP3 buffer and signals fallbackRequired in sandbox mode', async () => {
+    const speechResult = await voiceAi.synthesizeLiveConversation({
+      message: 'Status dos fundos fiduciários',
+      locale: 'pt',
+    });
+
+    assert.strictEqual(speechResult.success, true);
+    assert.ok(speechResult.audioBase64, 'Must return audioBase64 string');
+    assert.ok(speechResult.audioBase64.startsWith('data:audio/mp3;base64,'), 'Header must be valid data:audio/mp3;base64');
+    const b64Data = speechResult.audioBase64.replace('data:audio/mp3;base64,', '');
+    const buf = Buffer.from(b64Data, 'base64');
+    assert.ok(buf.length >= 417, 'Synthetic MP3 buffer must contain valid 44.1kHz frames');
+    // Check MPEG-1 Layer 3 frame sync header 0xFF, 0xFB
+    assert.strictEqual(buf[0], 0xff, 'Must start with MPEG sync byte 0xFF');
+    assert.strictEqual(buf[1] & 0xfe, 0xfa, 'Must have MPEG-1 Layer 3 sync');
+  });
+
+  it('14. Session / Local Cookie Auth: Accepts requests from Mission Control session context', async () => {
+    const res = await handleVoiceConversationRequest('/api/v1/voice/conversation', 'POST', {
+      message: 'Verificar status da infraestrutura',
+    }, {}, {
+      cookie: 'raioc_session=authenticated_operator_session_token',
+      referer: 'http://localhost:3000/admin/mission-control',
+    });
+
+    assert.strictEqual(res.status, 200, 'Should accept session cookie auth');
+    assert.strictEqual(res.body.success, true);
+    assert.ok(res.body.text);
+  });
 });

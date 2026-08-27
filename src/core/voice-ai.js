@@ -264,6 +264,8 @@ Spoken Script:`;
       success: true,
       text,
       audioBase64: speechResult.audioBase64,
+      fallbackRequired: Boolean(speechResult.fallbackRequired),
+      mode: speechResult.mode || 'SIMULATED_SANDBOX',
       mimeType: 'audio/mpeg',
       latencyMs,
       provider: 'elevenlabs',

@@ -9,6 +9,30 @@
 import { createHash } from 'node:crypto';
 import { logger } from '../logging/audit-logger.js';
 
+/**
+ * Generates a valid 44.1kHz MPEG-1 Layer 3 silent MP3 buffer to ensure decodeAudioData validity
+ * @param {number} seconds - Duration in seconds
+ * @returns {Buffer}
+ */
+function generateValidSyntheticMp3Buffer(seconds = 1) {
+  const frameLength = 417; // 44.1 kHz, 128 kbps
+  const frameCount = Math.max(2, Math.round(seconds * 38.28));
+  const buffer = Buffer.alloc(frameLength * frameCount);
+
+  for (let f = 0; f < frameCount; f++) {
+    const offset = f * frameLength;
+    // MPEG Frame Sync & Header: 0xFF, 0xFB, 0x90, 0x64 (MPEG-1 Layer 3, 128kbps, 44100Hz, no CRC, no padding)
+    buffer[offset] = 0xff;
+    buffer[offset + 1] = 0xfb;
+    buffer[offset + 2] = 0x90;
+    buffer[offset + 3] = 0x64;
+    for (let i = 4; i < frameLength; i++) {
+      buffer[offset + i] = 0x00;
+    }
+  }
+  return buffer;
+}
+
 export class ElevenLabsAdapter {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.ELEVENLABS_API_KEY || process.env.ELEVENLABS_KEY || '';
@@ -97,6 +121,7 @@ export class ElevenLabsAdapter {
         return {
           success: true,
           mode: 'LIVE',
+          fallbackRequired: false,
           voiceId,
           modelId,
           locale,
@@ -113,21 +138,22 @@ export class ElevenLabsAdapter {
       }
     }
 
-    // --- Deterministic Simulated Sandbox Mode ---
-    logger.info('ELEVENLABS_ADAPTER', `Generating deterministic sandbox audio payload (${wordCount} words, ${durationSeconds}s)...`);
+    // --- Deterministic Simulated Sandbox Mode (Valid 44.1kHz MP3 Buffer) ---
+    logger.info('ELEVENLABS_ADAPTER', `Generating deterministic 44.1kHz sandbox audio payload (${wordCount} words, ${durationSeconds}s)...`);
 
-    const textBase64Header = Buffer.from(text).toString('base64');
-    const mockAudioBase64 = `data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAVAAACaAA...${textBase64Header.substring(0, 80)}`;
+    const validMp3Buffer = generateValidSyntheticMp3Buffer(2);
+    const mockAudioBase64 = `data:audio/mp3;base64,${validMp3Buffer.toString('base64')}`;
 
     return {
       success: true,
       mode: 'SIMULATED_SANDBOX',
+      fallbackRequired: true,
       voiceId,
       modelId,
       locale,
       audioSha256,
       durationSeconds,
-      byteLength: 48000,
+      byteLength: validMp3Buffer.length,
       audioBase64: mockAudioBase64,
       audioUrl: `https://assets.emanuelrendas.com/audio/fiduciary/sandbox_${locale}_${audioSha256.substring(0, 12)}.mp3`,
       timestamp: new Date().toISOString(),

@@ -138,8 +138,157 @@ Arquitetura Cognitiva & Domínio Omnisciente:
     }
   };
 
+  // Base64 helper
+  const base64ToArrayBuffer = (base64) => {
+    if (!base64) return new ArrayBuffer(0);
+    const cleanBase64 = base64.includes(',') ? base64.split(',')[1] : base64;
+    const binaryString = window.atob(cleanBase64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  };
+
+  // AudioContext unlocker singleton
+  const unlockAudioContext = async () => {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!window.voiceAudioCtx && AudioCtx) {
+        window.voiceAudioCtx = new AudioCtx();
+      }
+      if (window.voiceAudioCtx && window.voiceAudioCtx.state === 'suspended') {
+        await window.voiceAudioCtx.resume();
+        console.log('[VOICE_DEBUG] AudioContext resumed successfully');
+      }
+      audioContextRef.current = window.voiceAudioCtx;
+      return window.voiceAudioCtx;
+    } catch (e) {
+      console.warn('[VOICE_DEBUG] AudioContext unlock error:', e);
+      return null;
+    }
+  };
+
+  // Natural voice speech synthesis fallback (Zero-Silence Guarantee)
+  const speakNaturalVoiceFallback = (textToSpeak) => {
+    console.log('[VOICE_DEBUG] Audio Playing (SpeechSynthesis Fallback):', textToSpeak);
+    if (typeof window === 'undefined') return;
+
+    if (window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToSpeak);
+        utterance.rate = 1.05;
+        utterance.pitch = 1.0;
+
+        const voices = window.speechSynthesis.getVoices();
+        const ptVoice = voices.find(v => (v.lang && (v.lang.includes('pt') || v.lang.includes('PT')))) || voices[0];
+        if (ptVoice) utterance.voice = ptVoice;
+
+        isBotSpeakingRef.current = true;
+        setVoiceState('speaking');
+        setVoiceTranscript(`🔊 JARVIS: ${textToSpeak}`);
+
+        utterance.onend = () => {
+          console.log('[VOICE_DEBUG] SpeechSynthesis playback completed');
+          isBotSpeakingRef.current = false;
+          setVoiceState('listening');
+          setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+          if (speechRecognizerRef.current) {
+            try { speechRecognizerRef.current.start(); } catch (err) {}
+          }
+        };
+
+        utterance.onerror = (e) => {
+          console.warn('[VOICE_DEBUG] SpeechSynthesis error:', e);
+          isBotSpeakingRef.current = false;
+          setVoiceState('listening');
+          setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+        };
+
+        window.speechSynthesis.speak(utterance);
+      } catch (err) {
+        console.warn('[VOICE_DEBUG] SpeechSynthesis exception:', err);
+      }
+    } else {
+      isBotSpeakingRef.current = true;
+      setVoiceState('speaking');
+      setVoiceTranscript(`🔊 JARVIS: ${textToSpeak}`);
+      setTimeout(() => {
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+      }, 4000);
+    }
+  };
+
+  // Dual-layer Neural Web Audio Player
+  const playNeuralAudio = async (audioBase64, text, fallbackRequired = false) => {
+    if (fallbackRequired || !audioBase64) {
+      speakNaturalVoiceFallback(text);
+      return;
+    }
+
+    if (activeAudioSourceRef.current) {
+      try { activeAudioSourceRef.current.stop(); } catch (e) {}
+      activeAudioSourceRef.current = null;
+    }
+
+    try {
+      const ctx = await unlockAudioContext();
+      if (!ctx) {
+        speakNaturalVoiceFallback(text);
+        return;
+      }
+
+      const arrayBuffer = base64ToArrayBuffer(audioBase64);
+      if (!arrayBuffer || arrayBuffer.byteLength < 32) {
+        speakNaturalVoiceFallback(text);
+        return;
+      }
+
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+      if (!audioBuffer || audioBuffer.duration < 0.1) {
+        speakNaturalVoiceFallback(text);
+        return;
+      }
+
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+
+      if (analyserRef.current) {
+        source.connect(analyserRef.current);
+      }
+      source.connect(ctx.destination);
+
+      isBotSpeakingRef.current = true;
+      setVoiceState('speaking');
+      setVoiceTranscript(`🔊 JARVIS: ${text}`);
+      console.log('[VOICE_DEBUG] Audio Playing (Neural Web Audio):', text);
+
+      source.onended = () => {
+        console.log('[VOICE_DEBUG] Neural Audio playback completed');
+        isBotSpeakingRef.current = false;
+        activeAudioSourceRef.current = null;
+        setVoiceState('listening');
+        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+        if (speechRecognizerRef.current) {
+          try { speechRecognizerRef.current.start(); } catch (err) {}
+        }
+      };
+
+      source.start(0);
+      activeAudioSourceRef.current = source;
+    } catch (err) {
+      console.warn('[VOICE_DEBUG] Neural audio decode failed, falling back to SpeechSynthesis:', err);
+      speakNaturalVoiceFallback(text);
+    }
+  };
+
   // Process voice directive to backend
   const processVoiceDirective = async (text) => {
+    console.log('[VOICE_DEBUG] VAD Silence Triggered: "' + text + '"');
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
@@ -162,6 +311,8 @@ Arquitetura Cognitiva & Domínio Omnisciente:
       voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
     }
 
+    console.log('[VOICE_DEBUG] Payload Sent: { message: "' + text + '", historyLength: ' + voiceConversationHistoryRef.current.length + ' }');
+
     try {
       const res = await fetch('/api/v1/voice/conversation', {
         method: 'POST',
@@ -179,6 +330,7 @@ Arquitetura Cognitiva & Domínio Omnisciente:
       });
 
       const data = await res.json();
+      console.log('[VOICE_DEBUG] Response Received: { text: "' + (data.text || '') + '", hasAudio: ' + Boolean(data.audioBase64) + ', fallbackRequired: ' + Boolean(data.fallbackRequired) + ' }');
       const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
 
       // Record model response turn in history
@@ -187,33 +339,20 @@ Arquitetura Cognitiva & Domínio Omnisciente:
         voiceConversationHistoryRef.current = voiceConversationHistoryRef.current.slice(-20);
       }
 
-      if (data.audioBase64) {
-        await playNeuralAudio(data.audioBase64, reply);
+      if (data.audioBase64 && !data.fallbackRequired) {
+        await playNeuralAudio(data.audioBase64, reply, false);
       } else {
-        isBotSpeakingRef.current = true;
-        setVoiceState('speaking');
-        setVoiceTranscript(`🔊 JARVIS: ${reply}`);
-        setTimeout(() => {
-          isBotSpeakingRef.current = false;
-          setVoiceState('listening');
-          setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
-        }, 3000);
+        speakNaturalVoiceFallback(reply);
       }
     } catch (err) {
       if (err.name === 'AbortError') {
-        console.log('Voice dispatch aborted via barge-in.');
+        console.log('[VOICE_DEBUG] Voice dispatch aborted via barge-in.');
         return;
       }
+      console.warn('[VOICE_DEBUG] Voice conversation fallback:', err);
       const fallbackText = 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
       voiceConversationHistoryRef.current.push({ role: 'model', text: fallbackText });
-      isBotSpeakingRef.current = true;
-      setVoiceState('speaking');
-      setVoiceTranscript(`🔊 JARVIS: ${fallbackText}`);
-      setTimeout(() => {
-        isBotSpeakingRef.current = false;
-        setVoiceState('listening');
-        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
-      }, 3000);
+      speakNaturalVoiceFallback(fallbackText);
     } finally {
       activeVoiceAbortControllerRef.current = null;
     }
@@ -221,15 +360,14 @@ Arquitetura Cognitiva & Domínio Omnisciente:
 
   // Live Voice Session Controls (ChatGPT / Gemini Live style)
   const startLiveVoiceSession = async () => {
+    console.log('[VOICE_DEBUG] Mic Started (Live Voice Session Initiated)');
     setLiveVoiceOpen(true);
     setVoiceState('listening');
     setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
 
     try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) {
-        const ctx = new AudioCtx();
-        if (ctx.state === 'suspended') await ctx.resume();
+      const ctx = await unlockAudioContext();
+      if (ctx) {
         const analyser = ctx.createAnalyser();
         analyser.fftSize = 128;
         analyser.smoothingTimeConstant = 0.82;
@@ -237,12 +375,16 @@ Arquitetura Cognitiva & Domínio Omnisciente:
         analyserRef.current = analyser;
 
         if (navigator.mediaDevices?.getUserMedia) {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(() => null);
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true }).catch(err => {
+            console.warn('[VOICE_DEBUG] Microphone permission not granted:', err);
+            return null;
+          });
           if (stream) {
             micStreamRef.current = stream;
             const source = ctx.createMediaStreamSource(stream);
             source.connect(analyser);
           }
+        }
         }
       }
 
