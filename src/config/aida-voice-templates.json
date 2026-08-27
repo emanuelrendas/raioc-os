@@ -5,10 +5,26 @@
     "title": "Off-Plan Escrow Ringfencing Protection (UAE Law No. 8 of 2007)",
     "statutory_reference": "UAE Law No. 8 of 2007 (Escrow Guarantee)",
     "estimated_duration_seconds": 50,
-    "language": "pt",
+    "language": "en",
+    "default_locale": "en",
+    "supported_locales": ["en", "pt"],
     "category": "OFF_PLAN_RISK",
     "tone": "fiduciary_executive",
-    "text": "Compreendo perfeitamente a sua reserva quanto ao risco de execução em ativos em planta... No entanto, no quadro regulatório do Dubai, a alocação de capital opera sob um princípio de custódia estrita. Ao abrigo da Lei número oito de dois mil e sete, cada dirham investido é obrigatoriamente depositado numa conta Escrow segregada, monitorizada diretamente pelo Dubai Land Department e pela RERA. O promotor não tem acesso discricionário aos seus fundos. As tranches financeiras só são libertadas após engenheiros independentes do governo auditarem fisicamente o local e certificarem a conclusão de cada marco de obra. Adicionalmente, cinco por cento do valor total permanece retido em garantia durante doze meses após a entrega. O risco de capital não depende da promessa do promotor... assenta num mecanismo fiduciário regulado pelo Estado."
+    "text": "I completely understand your reservation regarding execution risk in off-plan assets... However, within Dubai's statutory framework, capital deployment operates under strict fiduciary custody. Under UAE Law Number Eight of Two Thousand and Seven, every dirham invested is mandatorily deposited into a segregated Escrow trust account, monitored directly by the Dubai Land Department and RERA. The developer has zero discretionary access to your funds. Financial tranches are only disbursed after independent government auditors physically inspect the construction site and certify completion of each milestone. Furthermore, five percent of total capital remains retained in escrow for twelve months post-handover as a defect liability shield. Capital security does not rely on developer promises... it is anchored in sovereign statutory ringfencing.",
+    "locales": {
+      "en": {
+        "title": "Off-Plan Escrow Ringfencing Protection (UAE Law No. 8 of 2007)",
+        "language": "en",
+        "estimated_duration_seconds": 50,
+        "text": "I completely understand your reservation regarding execution risk in off-plan assets... However, within Dubai's statutory framework, capital deployment operates under strict fiduciary custody. Under UAE Law Number Eight of Two Thousand and Seven, every dirham invested is mandatorily deposited into a segregated Escrow trust account, monitored directly by the Dubai Land Department and RERA. The developer has zero discretionary access to your funds. Financial tranches are only disbursed after independent government auditors physically inspect the construction site and certify completion of each milestone. Furthermore, five percent of total capital remains retained in escrow for twelve months post-handover as a defect liability shield. Capital security does not rely on developer promises... it is anchored in sovereign statutory ringfencing."
+      },
+      "pt": {
+        "title": "Proteção e Blindagem Fiduciária de Conta Escrow em Planta (Lei do Dubai n.º 8 de 2007)",
+        "language": "pt",
+        "estimated_duration_seconds": 50,
+        "text": "Compreendo perfeitamente a sua reserva quanto ao risco de execução em ativos em planta... No entanto, no quadro regulatório do Dubai, a alocação de capital opera sob um princípio de custódia estrita. Ao abrigo da Lei número oito de dois mil e sete, cada dirham investido é obrigatoriamente depositado numa conta Escrow segregada, monitorizada diretamente pelo Dubai Land Department e pela RERA. O promotor não tem acesso discricionário aos seus fundos. As tranches financeiras só são libertadas após engenheiros independentes do governo auditarem fisicamente o local e certificarem a conclusão de cada marco de obra. Adicionalmente, cinco por cento do valor total permanece retido em garantia durante doze meses após a entrega. O risco de capital não depende da promessa do promotor... assenta num mecanismo fiduciário regulado pelo Estado."
+      }
+    }
   },
   "OBJ_STRUCTURAL_CIVIL_880": {
     "template_id": "OBJ_STRUCTURAL_CIVIL_880",
@@ -16,10 +32,26 @@
     "title": "Decennial Liability & Structural Warranty (UAE Civil Code Article 880)",
     "statutory_reference": "UAE Civil Code Article 880 (Decennial Liability)",
     "estimated_duration_seconds": 50,
-    "language": "pt",
+    "language": "en",
+    "default_locale": "en",
+    "supported_locales": ["en", "pt"],
     "category": "STRUCTURAL_INTEGRITY",
     "tone": "fiduciary_executive",
-    "text": "A integridade física e o padrão construtivo do ativo são considerações não negociáveis, sobretudo em mandatos de preservação patrimonial... Neste ponto, o enquadramento estatutário dos Emirados oferece uma das proteções jurídicas mais rigorosas a nível internacional. O Artigo oitocentos e oitenta do Código Civil dos Emirados Árabes Unidos estabelece a Responsabilidade Decenal obrigatória. Isto determina que o promotor, o arquiteto e o empreiteiro principal respondem solidariamente por qualquer vício estrutural grave durante dez anos a partir da data de entrega. Esta garantia é matéria de ordem pública — não pode ser reduzida nem anulada por qualquer cláusula contratual privada. A solidez da sua alocação fica assim juridicamente blindada durante uma década."
+    "text": "Physical asset integrity and construction standards are non-negotiable principles, particularly in sovereign wealth preservation mandates... In this regard, the UAE statutory framework provides one of the most stringent legal protections globally. Article Eight Hundred and Eighty of the UAE Civil Code establishes mandatory Decennial Liability. This legally obligates the master developer, supervising architect, and main contractor jointly and severally for any major structural defect for ten full years from the handover date. This warranty is a matter of public order — it cannot be contracted out, limited, or waived by any private agreement. The physical integrity of your capital allocation is thus legally ringfenced for a decade.",
+    "locales": {
+      "en": {
+        "title": "Decennial Liability & Structural Warranty (UAE Civil Code Article 880)",
+        "language": "en",
+        "estimated_duration_seconds": 50,
+        "text": "Physical asset integrity and construction standards are non-negotiable principles, particularly in sovereign wealth preservation mandates... In this regard, the UAE statutory framework provides one of the most stringent legal protections globally. Article Eight Hundred and Eighty of the UAE Civil Code establishes mandatory Decennial Liability. This legally obligates the master developer, supervising architect, and main contractor jointly and severally for any major structural defect for ten full years from the handover date. This warranty is a matter of public order — it cannot be contracted out, limited, or waived by any private agreement. The physical integrity of your capital allocation is thus legally ringfenced for a decade."
+      },
+      "pt": {
+        "title": "Responsabilidade Decenal e Garantia Estrutural Obrigatória (Artigo 880.º do Código Civil dos EAU)",
+        "language": "pt",
+        "estimated_duration_seconds": 50,
+        "text": "A integridade física e o padrão construtivo do ativo são considerações não negociáveis, sobretudo em mandatos de preservação patrimonial... Neste ponto, o enquadramento estatutário dos Emirados oferece uma das proteções jurídicas mais rigorosas a nível internacional. O Artigo oitocentos e oitenta do Código Civil dos Emirados Árabes Unidos estabelece a Responsabilidade Decenal obrigatória. Isto determina que o promotor, o arquiteto e o empreiteiro principal respondem solidariamente por qualquer vício estrutural grave durante dez anos a partir da data de entrega. Esta garantia é matéria de ordem pública — não pode ser reduzida nem anulada por qualquer cláusula contratual privada. A solidez da sua alocação fica assim juridicamente blindada durante uma década."
+      }
+    }
   },
   "OBJ_GOLDEN_VISA_RES65": {
     "template_id": "OBJ_GOLDEN_VISA_RES65",
@@ -27,9 +59,25 @@
     "title": "Golden Visa 10-Year Residency Threshold (Cabinet Resolution No. 65 of 2022)",
     "statutory_reference": "UAE Cabinet Resolution No. 65 of 2022 (Golden Visa)",
     "estimated_duration_seconds": 55,
-    "language": "pt",
+    "language": "en",
+    "default_locale": "en",
+    "supported_locales": ["en", "pt"],
     "category": "GOLDEN_VISA",
     "tone": "fiduciary_executive",
-    "text": "A relação entre preservação de liquidez e obtenção de residência estatutária é um dos eixos mais eficientes da estruturação de património no Dubai... Ao abrigo da Resolução de Gabinete número sessenta e cinco de dois mil e vinte e dois, o limiar de dois milhões de dirhams para o Golden Visa de dez anos aplica-se ao valor contratual do ativo, incluindo aquisições em planta. Isto significa que não necessita de imobilizar dois milhões de dirhams a pronto pagamento de imediato. Ao estruturar a compra através de um plano de pagamento faseado do promotor, o registo do contrato inicial no DLD permite iniciar o processo do visto de longa duração para si e para o seu agregado familiar. A sua liquidez excedentária permanece a render nos seus próprios instrumentos financeiros, enquanto assegura uma âncora soberana no Dubai."
+    "text": "The relationship between liquidity optimization and sovereign residency acquisition is one of the most efficient pillars of wealth structuring in Dubai... Under UAE Cabinet Resolution Number Sixty-Five of Two Thousand and Twenty-Two, the two million dirham threshold for the ten-year Golden Visa applies to the total purchase contract value, including off-plan acquisitions. This means you are not required to deploy the full two million dirhams upfront in cash. By securing the acquisition through a structured milestone payment plan, initial DLD Oqood registration unlocks long-term residency qualification for you and your direct family office. Your excess liquidity remains active across higher-yielding market instruments while securing an unassailable sovereign anchor in Dubai.",
+    "locales": {
+      "en": {
+        "title": "Golden Visa 10-Year Residency Threshold (Cabinet Resolution No. 65 of 2022)",
+        "language": "en",
+        "estimated_duration_seconds": 55,
+        "text": "The relationship between liquidity optimization and sovereign residency acquisition is one of the most efficient pillars of wealth structuring in Dubai... Under UAE Cabinet Resolution Number Sixty-Five of Two Thousand and Twenty-Two, the two million dirham threshold for the ten-year Golden Visa applies to the total purchase contract value, including off-plan acquisitions. This means you are not required to deploy the full two million dirhams upfront in cash. By securing the acquisition through a structured milestone payment plan, initial DLD Oqood registration unlocks long-term residency qualification for you and your direct family office. Your excess liquidity remains active across higher-yielding market instruments while securing an unassailable sovereign anchor in Dubai."
+      },
+      "pt": {
+        "title": "Limiar de Obtenção de Golden Visa de 10 Anos (Resolução de Gabinete n.º 65 de 2022)",
+        "language": "pt",
+        "estimated_duration_seconds": 55,
+        "text": "A relação entre preservação de liquidez e obtenção de residência estatutária é um dos eixos mais eficientes da estruturação de património no Dubai... Ao abrigo da Resolução de Gabinete número sessenta e cinco de dois mil e vinte e dois, o limiar de dois milhões de dirhams para o Golden Visa de dez anos aplica-se ao valor contratual do ativo, incluindo aquisições em planta. Isto significa que não necessita de imobilizar dois milhões de dirhams a pronto pagamento de imediato. Ao estruturar a compra através de um plano de pagamento faseado do promotor, o registo do contrato inicial no DLD permite iniciar o processo do visto de longa duração para si e para o seu agregado familiar. A sua liquidez excedentária permanece a render nos seus próprios instrumentos financeiros, enquanto assegura uma âncora soberana no Dubai."
+      }
+    }
   }
 }

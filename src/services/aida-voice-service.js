@@ -48,23 +48,38 @@ export function computeSha256(payload) {
 }
 
 /**
- * Retrieve a fiduciary template by ID
+ * Retrieve a fiduciary template by ID and locale
  * @param {string} templateId
+ * @param {string} [locale='en'] - 'en' (primary) or 'pt' (secondary)
  * @returns {Object|null}
  */
-export function getFiduciaryTemplate(templateId) {
+export function getFiduciaryTemplate(templateId, locale = 'en') {
   if (!templateId) return null;
   const templates = Object.keys(FIDUCIARY_TEMPLATES).length > 0 ? FIDUCIARY_TEMPLATES : loadTemplates();
-  return templates[templateId] || null;
+  const raw = templates[templateId];
+  if (!raw) return null;
+
+  const targetLocale = (locale || 'en').toLowerCase();
+  const localeData = raw.locales?.[targetLocale] || raw.locales?.en || raw.locales?.pt || {};
+
+  return {
+    ...raw,
+    locale: targetLocale,
+    language: localeData.language || raw.language || (targetLocale === 'pt' ? 'pt' : 'en'),
+    title: localeData.title || raw.title,
+    text: localeData.text || raw.text,
+    estimated_duration_seconds: localeData.estimated_duration_seconds || raw.estimated_duration_seconds,
+  };
 }
 
 /**
- * List all available fiduciary templates
+ * List all available fiduciary templates for a given locale
+ * @param {string} [locale='en']
  * @returns {Array<Object>}
  */
-export function listFiduciaryTemplates() {
+export function listFiduciaryTemplates(locale = 'en') {
   const templates = Object.keys(FIDUCIARY_TEMPLATES).length > 0 ? FIDUCIARY_TEMPLATES : loadTemplates();
-  return Object.values(templates);
+  return Object.keys(templates).map((id) => getFiduciaryTemplate(id, locale));
 }
 
 /**
@@ -87,6 +102,7 @@ export class AidaVoiceService {
    * 
    * @param {Object} params
    * @param {string} params.templateId - One of the canonical template IDs (e.g. 'OBJ_OFFPLAN_ESCROW_LAW8')
+   * @param {string} [params.locale='en'] - Multi-locale identifier ('en' or 'pt')
    * @param {string} [params.investorId] - Optional investor UUID or identifier
    * @param {string} [params.correlationId] - Distributed correlation identifier
    * @param {string} [params.recipient] - Recipient name fallback
@@ -101,6 +117,7 @@ export class AidaVoiceService {
     const startTime = Date.now();
     const {
       templateId,
+      locale = 'en',
       investorId = null,
       correlationId = `corr_aida_${Date.now()}_${randomUUID().substring(0, 8)}`,
       recipient,
@@ -111,15 +128,15 @@ export class AidaVoiceService {
       publishEvent = true,
     } = params;
 
-    // 1. Template Validation
-    const template = getFiduciaryTemplate(templateId);
+    // 1. Template Validation & Locale Resolution
+    const template = getFiduciaryTemplate(templateId, locale);
     if (!template) {
       const validTemplates = Object.keys(FIDUCIARY_TEMPLATES).length > 0
         ? Object.keys(FIDUCIARY_TEMPLATES).join(', ')
         : Object.keys(loadTemplates()).join(', ');
       const err = new Error(`Invalid or missing fiduciary templateId: "${templateId}". Supported templates: ${validTemplates}`);
       err.code = 'INVALID_TEMPLATE_ID';
-      logger.error('AIDA_VOICE_SERVICE', err.message, { templateId, correlationId });
+      logger.error('AIDA_VOICE_SERVICE', err.message, { templateId, correlationId, locale });
       throw err;
     }
 
@@ -144,7 +161,7 @@ export class AidaVoiceService {
     // Construct simulated high-fidelity executive audio payload
     const base64AudioHeader = Buffer.from(scriptText).toString('base64');
     const audioBase64 = `data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//OEAAAAAAAAAAAAAAAAAAAAAAAASW5mbwAAAA8AAAAVAAACaAA...${base64AudioHeader.substring(0, 80)}`;
-    const audioUrl = `https://assets.emanuelrendas.com/audio/fiduciary/${template.anchor.toLowerCase()}_${audioSha256.substring(0, 12)}.mp3`;
+    const audioUrl = `https://assets.emanuelrendas.com/audio/fiduciary/${template.anchor.toLowerCase()}_${(template.locale || 'en')}_${audioSha256.substring(0, 12)}.mp3`;
 
     // 4. Formulate CloudEvent v1.1 Data Payload
     const eventData = {
@@ -156,7 +173,8 @@ export class AidaVoiceService {
       recipient_name: effectiveRecipient,
       budget_aed: effectiveBudget,
       channel: channel.toUpperCase(),
-      language: template.language || 'pt',
+      locale: template.locale || locale || 'en',
+      language: template.language || (locale === 'pt' ? 'pt' : 'en'),
       text: scriptText,
       audio_duration_seconds: durationSeconds,
       audio_sha256: audioSha256,
@@ -209,9 +227,10 @@ export class AidaVoiceService {
       }
     }
 
-    logger.info('AIDA_VOICE_SERVICE', `Synthesized fiduciary voice note [${template.template_id}] (${durationSeconds}s) for ${effectiveRecipient}`, {
+    logger.info('AIDA_VOICE_SERVICE', `Synthesized fiduciary voice note [${template.template_id}] (${durationSeconds}s, ${template.locale || 'en'}) for ${effectiveRecipient}`, {
       templateId: template.template_id,
       anchor: template.anchor,
+      locale: template.locale || locale,
       audioSha256,
       payloadSha256,
       correlationId,
@@ -225,7 +244,8 @@ export class AidaVoiceService {
       title: template.title || template.template_id,
       statutoryReference: template.statutory_reference,
       text: scriptText,
-      language: template.language || 'pt',
+      locale: template.locale || locale || 'en',
+      language: template.language || (locale === 'pt' ? 'pt' : 'en'),
       estimatedDurationSeconds: template.estimated_duration_seconds,
       audioDurationSeconds: durationSeconds,
       audioSha256,

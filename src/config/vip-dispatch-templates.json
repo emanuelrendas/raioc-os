@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "schema": "RAIOC_VIP_DISPATCH_V1",
+  "default_locale": "en",
+  "supported_locales": ["en", "pt"],
+  "timezones": {
+    "GST": {
+      "city": "Dubai",
+      "offset": "UTC+4",
+      "label": "GST (Gulf Standard Time · Dubai)",
+      "operational_hours": "10:00 – 19:00 GST"
+    },
+    "BST": {
+      "city": "London",
+      "offset": "UTC+1",
+      "label": "BST (British Summer Time · London)",
+      "operational_hours": "07:00 – 16:00 BST"
+    },
+    "EST": {
+      "city": "New York",
+      "offset": "UTC-5",
+      "label": "EST (Eastern Standard Time · New York)",
+      "operational_hours": "06:00 – 11:00 EST"
+    }
+  },
+  "templates": {
+    "VIP_POST_APPROVAL_DISPATCH": {
+      "template_id": "VIP_POST_APPROVAL_DISPATCH",
+      "category": "EXECUTIVE_HITL_DISPATCH",
+      "priority": "CRITICAL",
+      "locales": {
+        "en": {
+          "header": "🏛 PRIVATE EXECUTIVE DISPATCH · EMANUEL RENDAS ADVISORY",
+          "subject": "Executive Clearance Granted: Sovereign Mandate {{mandateId}} ({{corridorName}})",
+          "greeting": "Dear {{investorName}},",
+          "approval_notice": "Your sovereign wealth allocation mandate has been personally reviewed and granted Executive Clearance by Emanuel Rendas.",
+          "mandate_details": [
+            "• Mandate Reference: {{mandateId}}",
+            "• Allocated Sovereign Corridor: {{corridorName}} ({{corridorKey}})",
+            "• Capital Deployment: AED {{allocationAed}} (~USD {{allocationUsd}})",
+            "• Ownership Custody Structure: {{ownershipVehicle}}",
+            "• Canonical Brief ID: {{briefId}}",
+            "• Cryptographic Document Digest: `{{documentSha256}}`"
+          ],
+          "statutory_shield": "All capital deployments are strictly ringfenced under Dubai Law No. 8 of 2007 (Escrow Guarantee) and protected by mandatory 10-year Decennial Structural Liability (UAE Civil Code Art. 880).",
+          "briefing_windows": "Private Executive Briefing Windows (Direct Office of Emanuel Rendas):\n• Dubai (GST, UTC+4): 10:00 – 19:00 GST\n• London (BST, UTC+1): 07:00 – 16:00 BST\n• New York (EST, UTC-5): 06:00 – 11:00 EST",
+          "closing": "Our private advisory desk is standing by to coordinate your institutional execution schedule.",
+          "signature": "Emanuel Rendas — Private Real Estate Advisory\nDubai International Financial Centre (DIFC) · Dubai, United Arab Emirates"
+        },
+        "pt": {
+          "header": "🏛 DESPACHO EXECUTIVO VIP · EMANUEL RENDAS ADVISORY",
+          "subject": "Aprovação Executiva Concedida: Mandato Soberano {{mandateId}} ({{corridorName}})",
+          "greeting": "Prezado(a) {{investorName}},",
+          "approval_notice": "O seu mandato soberano de alocação de capital foi pessoalmente auditado e obteve Aprovação Executiva por Emanuel Rendas.",
+          "mandate_details": [
+            "• Referência do Mandato: {{mandateId}}",
+            "• Corredor Soberano Alocado: {{corridorName}} ({{corridorKey}})",
+            "• Alocação de Capital: AED {{allocationAed}} (~USD {{allocationUsd}})",
+            "• Estrutura de Custódia & Titularidade: {{ownershipVehicle}}",
+            "• Identificador Canónico do Brief: {{briefId}}",
+            "• Digest Criptográfico do Documento: `{{documentSha256}}`"
+          ],
+          "statutory_shield": "Todas as alocações estão integralmente blindadas sob a Lei do Dubai n.º 8 de 2007 (Garantia de Escrow Segregada) e protegidas por Garantia Decenal Estrutural de 10 Anos (Artigo 880.º do Código Civil dos EAU).",
+          "briefing_windows": "Janelas para Sessão Privada de Briefing Executivo (Gabinete Direto de Emanuel Rendas):\n• Dubai (GST, UTC+4): 10:00 – 19:00 GST\n• Londres (BST, UTC+1): 07:00 – 16:00 BST\n• Nova Iorque (EST, UTC-5): 06:00 – 11:00 EST",
+          "closing": "A nossa mesa consultiva privada permanece à disposição para coordenar o seu calendário de execução institucional.",
+          "signature": "Emanuel Rendas — Private Real Estate Advisory\nDubai International Financial Centre (DIFC) · Dubai, Emirados Árabes Unidos"
+        }
+      }
+    }
+  }
+}

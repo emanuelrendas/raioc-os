@@ -1,7 +1,8 @@
 /**
  * RAIOC OS - Private Investment Brief Generator Service
  * Integrates ATLAS Market Engineering and LEX Statutory Underwriting
- * to generate canonical One-Pager Private Investment Briefs with CloudEvents v1.1 publishing.
+ * to generate canonical One-Pager Private Investment Briefs with CloudEvents v1.1 publishing
+ * and multi-locale i18n support ('en' primary, 'pt' secondary).
  */
 
 import { createHash, randomUUID } from 'node:crypto';
@@ -32,6 +33,7 @@ export function computeDocumentSha256(content) {
  * @param {string} [params.corridorKey] - Corridor ID ('PALM_JEBEL_ALI', 'DUBAI_SOUTH_DWC')
  * @param {number} [params.allocationAed] - Capital allocation amount in AED
  * @param {string} [params.ownershipVehicle] - Ownership structure ('SPV_DIFC_ADGM', 'INDIVIDUAL_DIRECT')
+ * @param {string} [params.locale='en'] - 'en' (primary) or 'pt' (secondary)
  * @param {string} [params.correlationId] - Distributed correlation ID
  * @param {string} [params.traceparent] - Optional W3C traceparent
  * @param {boolean} [params.publishEvent=true] - Whether to broadcast CloudEvent to enterpriseEventBus
@@ -44,11 +46,13 @@ export async function generatePrivateBrief(params = {}) {
     corridorKey = 'PALM_JEBEL_ALI',
     allocationAed = 25000000,
     ownershipVehicle = 'SPV_DIFC_ADGM',
+    locale = 'en',
     correlationId = `corr_brief_${Date.now()}_${randomUUID().substring(0, 8)}`,
     traceparent = null,
     publishEvent = true,
   } = params;
 
+  const targetLocale = (locale || 'en').toLowerCase() === 'pt' ? 'pt' : 'en';
   const briefId = `PIB-${Date.now()}-${randomUUID().substring(0, 6).toUpperCase()}`;
   const price = Number(allocationAed) || 25000000;
 
@@ -75,6 +79,7 @@ export async function generatePrivateBrief(params = {}) {
     macroThesis: corridor.macro_thesis,
     allocationAed: price,
     ownershipVehicle,
+    locale: targetLocale,
     unitSizeSqft: opalResult.inputs.unitSizeSqft,
     financialMetrics: {
       capRate: opalResult.financialMetrics.capRate,
@@ -113,6 +118,7 @@ export async function generatePrivateBrief(params = {}) {
     strategy: corridor.strategy,
     allocationAed: price,
     ownershipVehicle,
+    locale: targetLocale,
     documentMarkdown,
     documentSha256,
     statutoryValidation: {
@@ -148,6 +154,7 @@ export async function generatePrivateBrief(params = {}) {
       strategy: corridor.strategy,
       allocation_aed: price,
       ownership_vehicle: ownershipVehicle,
+      locale: targetLocale,
       document_sha256: documentSha256,
       statutory_validations: briefOutput.statutoryValidation,
       financial_summary: briefOutput.financialSummary,
@@ -166,9 +173,10 @@ export async function generatePrivateBrief(params = {}) {
     );
 
     briefOutput.cloudEvent = cloudEvent;
-    logger.info('BRIEF_GENERATOR', `Private Investment Brief [${briefId}] generated for ${investorName} (${corridor.id})`, {
+    logger.info('BRIEF_GENERATOR', `Private Investment Brief [${briefId}] generated for ${investorName} (${corridor.id}, ${targetLocale})`, {
       mandateId,
       allocationAed: price,
+      locale: targetLocale,
       documentSha256: documentSha256.substring(0, 12) + '...',
       eventId: cloudEvent?.id,
     });
