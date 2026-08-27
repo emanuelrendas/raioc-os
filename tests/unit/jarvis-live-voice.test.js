@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert';
-import { cognitiveRouter, JARVIS_LIVE_STREAMING_VOICE_PROMPT, cleanSpokenText } from '../../src/core/cognitive-router.js';
+import { cognitiveRouter, JARVIS_OMNISCIENT_SYSTEM_PROMPT, JARVIS_LIVE_STREAMING_VOICE_PROMPT, cleanSpokenText } from '../../src/core/cognitive-router.js';
 import { voiceAi } from '../../src/core/voice-ai.js';
 import { handleVoiceConversationRequest } from '../../src/api/routes/voice-routes.js';
 import { routeApiRequest } from '../../src/api/server.js';
@@ -28,10 +28,14 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.strictEqual(cleaned, 'JARVIS Live Voice: Palm Jebel Ali 110km is 100% protected!');
   });
 
-  it('2. Prompt Validation: JARVIS_LIVE_STREAMING_VOICE_PROMPT enforces 1-2 sentences and no markdown', () => {
-    assert.ok(JARVIS_LIVE_STREAMING_VOICE_PROMPT, 'Prompt should exist');
-    assert.ok(JARVIS_LIVE_STREAMING_VOICE_PROMPT.includes('1 ou 2 frases'), 'Should enforce 1-2 sentences');
-    assert.ok(JARVIS_LIVE_STREAMING_VOICE_PROMPT.includes('Quiet Luxury'), 'Should enforce Quiet Luxury posture');
+  it('2. Prompt Validation: JARVIS_OMNISCIENT_SYSTEM_PROMPT is omniscient, open and enforces clean voice mode', () => {
+    assert.ok(JARVIS_OMNISCIENT_SYSTEM_PROMPT, 'Omniscient system prompt should exist');
+    assert.ok(JARVIS_OMNISCIENT_SYSTEM_PROMPT.includes('Copiloto Omnisciente'), 'Should include omniscient copilot identity');
+    assert.ok(JARVIS_OMNISCIENT_SYSTEM_PROMPT.includes('Quiet Luxury'), 'Should enforce Quiet Luxury posture');
+    assert.ok(JARVIS_OMNISCIENT_SYSTEM_PROMPT.includes('12 agentes'), 'Should reference the 12-agent fleet');
+    assert.ok(JARVIS_OMNISCIENT_SYSTEM_PROMPT.includes('Dubai Law No. 8/2007'), 'Should include Escrow Law 8');
+    assert.ok(JARVIS_OMNISCIENT_SYSTEM_PROMPT.includes('UAE Civil Code Art. 880'), 'Should include Decennial Guarantee Art 880');
+    assert.ok(JARVIS_LIVE_STREAMING_VOICE_PROMPT, 'Live streaming voice prompt alias should exist');
   });
 
   // ──────────────────────────────────────────────────────────────────────────

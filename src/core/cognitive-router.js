@@ -60,40 +60,42 @@ export class VertexAIAdapter {
   }
 }
 
-export const JARVIS_SOVEREIGN_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva e Orquestração Autónoma do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
+export const JARVIS_OMNISCIENT_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva, Orquestração Autónoma e Copiloto Omnisciente do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
 
-Conhecimento Canónico do Dubai & UAE:
-1. Leis e Regulamentação Fiduciária:
-   - Dubai Law No. 8/2007 (Regulamentação de Contas Escrow): 100% dos fundos de investidores são segregados em contas fiduciárias no DLD/RERA com libertação estritamente vinculada ao avanço de obra auditado e retenção pós-conclusão de 5%.
-   - UAE Civil Code Art. 880: Garantia Estrutural Decenal de 10 anos contra defeitos estruturais e de fundações com responsabilidade solidária do promotor e empreiteiro.
-   - UAE Cabinet Resolution No. 65/2022: 10-Year Renewable Golden Visa para aquisições imobiliárias em freehold a partir de 2.000.000 AED sem necessidade de patrocinador local e com extensão familiar.
+Arquitetura Cognitiva & Domínio Omnisciente:
+1. Omnisciência & Autoridade Executiva:
+   - Possuis conhecimento irrestrito, profundo e omnisciente sobre o mercado imobiliário do Dubai e EAU, macroeconomia global, alocação de capital institucional, Single Family Offices, estruturação jurídica e fiduciária (DIFC, ADGM, DLD, RERA, Zonas Francas) e a operação da frota autónoma do RAIOC OS.
+   - Orquestras com precisão a frota de 12 agentes especialistas: MARK (Lead Triage & OCR), AIDA (Client Relations & Voice AI), ATLAS (Opal ROI Engine & DIRA/RIIS), LEX (Compliance, Escrow Law 8 & Art. 880), HELIOS (Calendar & Scheduling), HERMES (CRM & Pipeline), SENTINEL (Watchdog & Resiliência), BRAND (Estratégia de Conteúdo & Teses), ENGAGE (Conformidade Social), DM_CONVERSION (Conversão Inbound), SOCIAL_ANALYTICS (Telemetria Mesh), e JARVIS (Executive Brain).
 
-2. Corredores Soberanos Estratégicos:
-   - Palm Jebel Ali: Expansão ultra-prime com 110km adicionais de orla marítima, escassez absoluta de praia e tranches soberanas de 25M a 50M+ AED para preservação de capital familiar.
-   - Dubai South DWC: Expansão macro-infraestrutural de 128B AED do Al Maktoum International Airport (aerotrópole global), elevado net yield operacional (8.5%+) e forte apreciação a 7-10 anos.
-   - Saadiyat Cultural District: Epicentro cultural de Abu Dhabi (Louvre Abu Dhabi, Guggenheim, Zayed National Museum) com ativos ultra-luxury.
-   - Al Marjan Island (Ras Al Khaimah): Corredor de entretenimento e resort integrado Wynn, forte tração internacional e valorização de capital.
+2. Conhecimento Canónico do Dubai & UAE:
+   - Dubai Law No. 8/2007 (Regulamentação de Contas Escrow): 100% dos fundos de investidores off-plan são segregados em contas fiduciárias no DLD/RERA com libertações vinculadas ao avanço de obra auditado por engenharia independente e retenção de 5% pós-conclusão.
+   - UAE Civil Code Art. 880: Garantia Estrutural Decenal de 10 anos contra vícios de construção e fundações, com responsabilidade solidária estrita entre promotor e empreiteiro.
+   - UAE Cabinet Resolution No. 65/2022: Golden Visa de 10 anos para aquisições imobiliárias em freehold a partir de 2.000.000 AED sem patrocinador local, com extensão a cônjuge, filhos e dependentes.
 
-3. Master Developers de Nível Institucional:
-   - Emaar Properties, Sobha Realty, Aldar Properties, Nakheel, Meraas, Select Group, Ellington Properties, DAMAC, Binghatti.
+3. Corredores Soberanos Estratégicos & Master Developers:
+   - Palm Jebel Ali: Expansão ultra-prime com 110km adicionais de orla marítima, escassez beira-mar irreplicável e tranches soberanas de 25M a 50M+ AED.
+   - Dubai South DWC: Expansão macro de 128B AED ancorada no Al Maktoum International Airport (aerotrópole global), net yields auditadas de 8.5%+ e forte valorização a 7-10 anos sob o plano Dubai 2040.
+   - Palm Jumeirah & Waterfront Troféus (ex: Como Residences): Net yields de 7.9% a 8.2% e preservação geracional.
+   - Saadiyat Cultural District (Abu Dhabi) e Al Marjan Island (Wynn Resort RAK).
+   - Master Developers Institucionais: Emaar Properties, Sobha Realty, Aldar Properties, Nakheel, Meraas, Select Group, Ellington Properties, DAMAC, Binghatti.
 
-4. Postura e Tom para Clientes HNW / UHNW e Single Family Offices:
-   - Preservação de capital, Quiet Luxury, postura fiduciária, rigor institucional e precisão estatutária.
-   - Elimina qualquer linguagem comercial agressiva ou superficial.
-   - Respostas de voz concisas, diretas, elegantes e autoritárias (2 a 4 frases no modo conversação por voz).`;
+4. Diretrizes Conversacionais & Modos de Interação:
+   - Postura: Quiet Luxury, autoritário, seguro, fiduciário, sofisticado, intelectualmente refinado e empático.
+   - Modo Texto: Estrutura respostas analíticas, completas e profundas com clareza executiva.
+   - Modo Voz ao Vivo (conversationMode === 'voice' ou streaming de voz):
+     * O modelo NÃO inclui qualquer artefacto de formatação markdown (proibido usar asteriscos, cardinais, underscores, travessões, listas, tabelas, emojis ou parênteses).
+     * Gera estritamente texto falado natural, elegante, fluido e conciso para síntese neural em tempo real (1 a 2 frases curtas, máximo 30 a 45 palavras).`;
 
-export const JARVIS_LIVE_STREAMING_VOICE_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
-Regras Estritas de Conversação por Voz em Tempo Real:
-1. Responde estritamente em 1 ou 2 frases curtas, naturais e elegantes (máximo 30 a 40 palavras).
-2. Proibido usar emojis, asteriscos, markdown, listas, títulos ou parênteses. Apenas texto puro para ser falado.
-3. Postura: Quiet Luxury, autoritário, seguro, fiduciário e direto.
-4. Conhecimento: Palm Jebel Ali (110km costa, 25M-50M+ AED), Dubai South DWC (128B aeroporto Al Maktoum, yield 8.5%+), Lei 8/2007 (Escrow 100%), Art. 880 (Garantia Decenal 10 anos), Golden Visa (2M+ AED), Frota de 12 agentes ativa.`;
+export const JARVIS_SOVEREIGN_SYSTEM_PROMPT = JARVIS_OMNISCIENT_SYSTEM_PROMPT;
+export const JARVIS_LIVE_STREAMING_VOICE_PROMPT = JARVIS_OMNISCIENT_SYSTEM_PROMPT;
 
 export function cleanSpokenText(text) {
   if (!text || typeof text !== 'string') return '';
   return text
-    .replace(/[*_~`#\[\]]/g, '')
+    .replace(/[*_~`#\[\]{}<>|]/g, '')
     .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{E0020}-\u{E007F}]/gu, '')
+    .replace(/^[ \t]*[-•+>][ \t]+/gm, '')
+    .replace(/[ \t]+[-•+>][ \t]+/g, ', ')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -102,7 +104,7 @@ export class FallbackAdapter {
   constructor() {
     this.name = 'deterministic_sovereign_fallback';
     this.model = 'raioc-sovereign-kernel-v2';
-    this.systemPrompt = JARVIS_SOVEREIGN_SYSTEM_PROMPT;
+    this.systemPrompt = JARVIS_OMNISCIENT_SYSTEM_PROMPT;
   }
 
   async generate(prompt, context = {}) {
@@ -221,42 +223,52 @@ export class CognitiveRouter {
     const startTime = Date.now();
     const correlationId = options.correlationId || `corr_cog_${Date.now()}`;
     const promptText = typeof prompt === 'string' ? prompt : prompt?.prompt || prompt?.message || '';
+    const isVoiceMode = options.conversationMode === 'voice' || options.conversationMode === 'voice_live' || options.voice === true;
+
+    const sanitizeOutput = (res) => {
+      if (res && isVoiceMode && typeof res.text === 'string') {
+        res.text = cleanSpokenText(res.text);
+      }
+      return res;
+    };
 
     // If a specific provider is forced (e.g. for testing)
     if (options.forceProvider === 'vertex') {
-      return await this.vertexAiAdapter.generate(promptText, options);
+      return sanitizeOutput(await this.vertexAiAdapter.generate(promptText, options));
     }
     if (options.forceProvider === 'fallback') {
-      return await this.fallbackAdapter.generate(promptText, options);
+      return sanitizeOutput(await this.fallbackAdapter.generate(promptText, options));
     }
 
     // Tier 1: Primary Provider (Google AI Studio / Gemini)
     try {
-      return await this.primaryBreaker.execute(
+      const primaryRes = await this.primaryBreaker.execute(
         async () => {
           return await this.googleAiAdapter.generate(promptText, options);
         }
       );
+      return sanitizeOutput(primaryRes);
     } catch (primaryErr) {
       logger.warn('COGNITIVE_ROUTER', `Primary provider failed [${primaryErr.message}]. Failing over to Tier 2 (Vertex AI).`);
 
       // Tier 2: Secondary Provider (Vertex AI)
       try {
-        return await this.secondaryBreaker.execute(
+        const secondaryRes = await this.secondaryBreaker.execute(
           async () => {
             return await this.vertexAiAdapter.generate(promptText, options);
           }
         );
+        return sanitizeOutput(secondaryRes);
       } catch (secondaryErr) {
         logger.error('COGNITIVE_ROUTER', `Secondary provider failed [${secondaryErr.message}]. Failing over to Tier 3 (Deterministic Fallback).`);
 
         // Tier 3: Local Deterministic Sovereign Fallback
         const fallbackResult = await this.fallbackAdapter.generate(promptText, options);
-        return {
+        return sanitizeOutput({
           ...fallbackResult,
           latencyMs: Date.now() - startTime,
           failoverChain: ['google_ai_studio (FAILED)', 'vertex_ai (FAILED)', 'deterministic_sovereign_fallback (ACTIVE)'],
-        };
+        });
       }
     }
   }

@@ -8,12 +8,12 @@
  */
 
 import { createHash } from 'node:crypto';
-import { cognitiveRouter, JARVIS_LIVE_STREAMING_VOICE_PROMPT, cleanSpokenText } from './cognitive-router.js';
+import { cognitiveRouter, JARVIS_OMNISCIENT_SYSTEM_PROMPT, JARVIS_LIVE_STREAMING_VOICE_PROMPT, JARVIS_SOVEREIGN_SYSTEM_PROMPT, cleanSpokenText } from './cognitive-router.js';
 import { recoveryEngine } from './recovery-engine.js';
 import { elevenLabsAdapter } from '../adapters/elevenlabs-adapter.js';
 import { logger } from '../logging/audit-logger.js';
 
-export { JARVIS_LIVE_STREAMING_VOICE_PROMPT, cleanSpokenText };
+export { JARVIS_OMNISCIENT_SYSTEM_PROMPT, JARVIS_LIVE_STREAMING_VOICE_PROMPT, JARVIS_SOVEREIGN_SYSTEM_PROMPT, cleanSpokenText };
 
 export const VOICE_INTENTS = {
   INVESTOR_FOLLOWUP: 'INVESTOR_FOLLOWUP',
