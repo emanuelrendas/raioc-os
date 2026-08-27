@@ -44,6 +44,7 @@ export class SupabaseClient {
       runtime_tool_telemetry: new Map(),
       runtime_system_metrics: [],
       enterprise_events: [],
+      enterprise_events_dlq: [],
       enterprise_memory_adr: new Map(),
       executive_approvals: [],
       interaction_logs: [],
@@ -2891,6 +2892,61 @@ export class SupabaseClient {
       return { id, status };
     } catch {
       return { id, status };
+    }
+  }
+
+  async insertEnterpriseEventDlq(record) {
+    const dlqRecord = {
+      id: record.id || `dlq_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+      event_id: record.event_id || record.id,
+      event_type: record.event_type || record.type,
+      source: record.source || 'raioc://os/event-bus',
+      payload: record.payload || record.data || {},
+      reason: record.reason || record.dlq_reason || 'Max retries exhausted',
+      retry_count: record.retry_count || 0,
+      moved_to_dlq_at: record.moved_to_dlq_at || new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    };
+    if (this.isMock) {
+      if (!this.mockStore.enterprise_events_dlq) {
+        this.mockStore.enterprise_events_dlq = [];
+      }
+      this.mockStore.enterprise_events_dlq.unshift(dlqRecord);
+      return dlqRecord;
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/enterprise_events_dlq`, {
+        method: 'POST',
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=representation',
+        },
+        body: JSON.stringify(dlqRecord),
+      });
+      if (res.ok) {
+        const rows = await res.json();
+        return rows[0] || dlqRecord;
+      }
+      return dlqRecord;
+    } catch {
+      return dlqRecord;
+    }
+  }
+
+  async fetchDlqEvents(limit = 50) {
+    if (this.isMock) {
+      return (this.mockStore.enterprise_events_dlq || []).slice(0, Number(limit) || 50);
+    }
+    try {
+      const res = await fetch(`${this.url}/rest/v1/enterprise_events_dlq?order=created_at.desc&limit=${limit}`, {
+        headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
+      });
+      if (res.ok) return await res.json();
+      return [];
+    } catch {
+      return [];
     }
   }
 

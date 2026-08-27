@@ -16,6 +16,11 @@ import { memoryRssMonitor } from '../monitoring/memory-rss-monitor.js';
 import { startApiServer } from '../api/server.js';
 import { logger } from '../logging/audit-logger.js';
 import { isServerlessRuntime } from '../config/env.js';
+import { validateProductionEnv } from '../config/env-validator.js';
+import { reclaimStuckProcessingEvents } from '../core/recovery-engine.js';
+import { enterpriseEventBus } from '../core/event-bus.js';
+import { agentDirectory } from '../agents/agent-directory.js';
+import { supabase } from '../db/supabase-client.js';
 
 let daemonState = {
   isRunning: false,
@@ -25,6 +30,7 @@ let daemonState = {
   activeServices: [],
   httpServer: null,
   signalListenersRegistered: false,
+  recoverySummary: null,
 };
 
 /**
@@ -34,7 +40,9 @@ let daemonState = {
  * @param {number} [options.jarvisIntervalMs=30000] - JARVIS executive tick interval
  * @param {number} [options.sentinelIntervalMs=60000] - Sentinel mesh probe interval
  * @param {number} [options.memoryCheckIntervalMs=15000] - Memory monitor probe interval
+ * @param {number} [options.staleThresholdSeconds=300] - In-flight event stale reclamation threshold
  * @param {boolean} [options.startHttp=true] - Whether to start the HTTP API / Health server
+ * @param {boolean} [options.strictEnv=false] - Whether to enforce production strict validation
  * @returns {Promise<Object>} Daemon runtime status
  */
 export async function startDaemon(options = {}) {
@@ -42,6 +50,9 @@ export async function startDaemon(options = {}) {
     logger.warn('DAEMON', 'Persistent daemon is already running');
     return getDaemonStatus();
   }
+
+  // 0. Validate Environment with Fail-Closed rules
+  validateProductionEnv({ strict: options.strictEnv || false });
 
   // Enforce persistent daemon runtime mode
   process.env.RUNTIME_MODE = 'persistent_daemon';
@@ -51,9 +62,30 @@ export async function startDaemon(options = {}) {
   const jarvisIntervalMs = options.jarvisIntervalMs || 30000;
   const sentinelIntervalMs = options.sentinelIntervalMs || 60000;
   const memoryCheckIntervalMs = options.memoryCheckIntervalMs || 15000;
+  const staleThresholdSeconds = options.staleThresholdSeconds || 300;
   const startHttp = options.startHttp !== false;
 
   logger.info('DAEMON', '🚀 Initializing RAIOC OS Persistent Always-On Daemon Runtime...');
+
+  // 0a. Hydrate State & Registries from Supabase
+  try {
+    if (typeof agentDirectory?.hydrateFromSupabase === 'function') {
+      await agentDirectory.hydrateFromSupabase();
+    }
+    await supabase.fetchApprovals?.('ALL');
+    logger.info('DAEMON', '✅ Registries & state hydrated from Supabase');
+  } catch (err) {
+    logger.warn('DAEMON', `Registry hydration warning: ${err.message}`);
+  }
+
+  // 0b. Reclaim Stuck In-Flight Events (>300s) & Sweep to DLQ
+  let recoverySummary = { reclaimedCount: 0, dlqCount: 0 };
+  try {
+    recoverySummary = await reclaimStuckProcessingEvents(staleThresholdSeconds);
+    logger.info('DAEMON', `✅ Event recovery completed: ${recoverySummary.reclaimedCount} reclaimed, ${recoverySummary.dlqCount} in DLQ`);
+  } catch (err) {
+    logger.error('DAEMON', `Event recovery failed: ${err.message}`);
+  }
 
   const activeServices = [];
 
@@ -114,9 +146,29 @@ export async function startDaemon(options = {}) {
     startedAt: new Date().toISOString(),
     stoppedAt: null,
     activeServices,
+    recoverySummary,
   };
 
-  // 6. Register Process Signal Handlers for Graceful Shutdown
+  // 6. Dispatch CloudEvent raioc.system.daemon.recovered.v1
+  try {
+    enterpriseEventBus.publishEvent(
+      'raioc.system.daemon.recovered.v1',
+      'raioc://workers/daemon-entrypoint',
+      {
+        daemonStartedAt: daemonState.startedAt,
+        recoverySummary,
+        activeServices,
+        runtimeMode: 'persistent_daemon',
+      },
+      {
+        correlationId: `corr_daemon_boot_${Date.now()}`,
+      }
+    );
+  } catch (err) {
+    logger.warn('DAEMON', `Failed to dispatch daemon recovery CloudEvent: ${err.message}`);
+  }
+
+  // 7. Register Process Signal Handlers for Graceful Shutdown
   registerSignalHandlers();
 
   logger.info('DAEMON', '🟢 RAIOC OS Always-On Persistent Daemon fully operational', {
@@ -207,6 +259,7 @@ export function getDaemonStatus() {
     startedAt: daemonState.startedAt,
     stoppedAt: daemonState.stoppedAt,
     activeServices: [...daemonState.activeServices],
+    recoverySummary: daemonState.recoverySummary,
   };
 }
 
