@@ -11,7 +11,7 @@ export class GeminiAdapter {
   constructor(options = {}) {
     this.apiKey = options.apiKey || process.env.GEMINI_API_KEY || process.env.GOOGLE_AI_KEY || process.env.GOOGLE_API_KEY || config.gemini?.apiKey || '';
     this.model = options.model || process.env.GEMINI_MODEL || 'gemini-3.6-flash';
-    this.timeoutMs = options.timeoutMs || 8000;
+    this.timeoutMs = options.timeoutMs || 15000;
     this.systemInstruction = options.systemInstruction || 
       'You are JARVIS, the Chief Intelligence System for Emanuel Rendas Private Advisory in Dubai. Respond precisely using IKL data, verified yields, and statutory Escrow frameworks (Law 8 of 2007).';
   }
