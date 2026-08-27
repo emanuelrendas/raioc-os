@@ -39,6 +39,14 @@ export default function MissionControlDashboard() {
   const speechRecognizerRef = React.useRef(null);
   const silenceTimerRef = React.useRef(null);
   const accumulatedTextRef = React.useRef('');
+  const activeVoiceAbortControllerRef = React.useRef(null);
+
+  const JARVIS_VOICE_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva e Orquestração Autónoma do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
+Conhecimento Canónico:
+1. Leis Fiduciárias: Dubai Law No. 8/2007 (Escrow Account 100% segregada no DLD/RERA), UAE Civil Code Art. 880 (Garantia Decenal Estrutural de 10 anos), UAE Cabinet Res. 65/2022 (Golden Visa de 10 anos >= 2M AED freehold).
+2. Corredores Soberanos: Palm Jebel Ali (110km costa, escassez de orla marítima, tranches 25M-50M+ AED), Dubai South DWC (128B aerotrópole Al Maktoum, net yield 8.5%+), Saadiyat Cultural District (Louvre, Guggenheim), Al Marjan Island Wynn.
+3. Master Developers: Emaar, Sobha, Aldar, Nakheel, Meraas, Select Group, Ellington, DAMAC, Binghatti.
+4. Tom HNW / Family Office: Quiet Luxury, postura fiduciária, rigor institucional, sem jargão comercial vazio. Respostas de voz concisas, diretas e naturais (2 a 4 frases).`;
 
   // World Clocks State
   const [clocks, setClocks] = useState({ dxb: '--:--', lon: '--:--', lis: '--:--', nyc: '--:--' });
@@ -164,6 +172,11 @@ export default function MissionControlDashboard() {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
+    if (activeVoiceAbortControllerRef.current) {
+      activeVoiceAbortControllerRef.current.abort();
+    }
+    activeVoiceAbortControllerRef.current = new AbortController();
+
     setVoiceState('thinking');
     setVoiceTranscript(`🧠 A processar mandato: "${text}"...`);
 
@@ -175,14 +188,25 @@ export default function MissionControlDashboard() {
           'Authorization': `Bearer ${internalSecret}`,
           'X-RAIOC-Secret': internalSecret,
         },
-        body: JSON.stringify({ prompt: text, conversationMode: 'voice' }),
+        body: JSON.stringify({ 
+          prompt: text, 
+          conversationMode: 'voice',
+          systemInstruction: JARVIS_VOICE_SYSTEM_PROMPT
+        }),
+        signal: activeVoiceAbortControllerRef.current.signal,
       });
 
       const data = await res.json();
       const reply = data.text || data.response || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
       speakBotResponse(reply);
     } catch (err) {
+      if (err.name === 'AbortError') {
+        console.log('Voice dispatch aborted via barge-in.');
+        return;
+      }
       speakBotResponse('JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.');
+    } finally {
+      activeVoiceAbortControllerRef.current = null;
     }
   };
 
@@ -277,6 +301,10 @@ export default function MissionControlDashboard() {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
     }
+    if (activeVoiceAbortControllerRef.current) {
+      activeVoiceAbortControllerRef.current.abort();
+      activeVoiceAbortControllerRef.current = null;
+    }
     accumulatedTextRef.current = '';
 
     if (window.speechSynthesis) window.speechSynthesis.cancel();
@@ -304,6 +332,10 @@ export default function MissionControlDashboard() {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
       silenceTimerRef.current = null;
+    }
+    if (activeVoiceAbortControllerRef.current) {
+      activeVoiceAbortControllerRef.current.abort();
+      activeVoiceAbortControllerRef.current = null;
     }
     if (isBotSpeakingRef.current) {
       if (window.speechSynthesis) window.speechSynthesis.cancel();

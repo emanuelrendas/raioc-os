@@ -1631,6 +1631,14 @@
     let silenceTimer = null;
     let accumulatedTranscript = '';
     let simFrequencyData = new Uint8Array(64);
+    let activeVoiceAbortController = null;
+
+    const JARVIS_VOICE_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva e Orquestração Autónoma do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
+Conhecimento Canónico:
+1. Leis Fiduciárias: Dubai Law No. 8/2007 (Escrow Account 100% segregada no DLD/RERA), UAE Civil Code Art. 880 (Garantia Decenal Estrutural de 10 anos), UAE Cabinet Res. 65/2022 (Golden Visa de 10 anos >= 2M AED freehold).
+2. Corredores Soberanos: Palm Jebel Ali (110km costa, escassez de orla marítima, tranches 25M-50M+ AED), Dubai South DWC (128B aerotrópole Al Maktoum, net yield 8.5%+), Saadiyat Cultural District (Louvre, Guggenheim), Al Marjan Island Wynn.
+3. Master Developers: Emaar, Sobha, Aldar, Nakheel, Meraas, Select Group, Ellington, DAMAC, Binghatti.
+4. Tom HNW / Family Office: Quiet Luxury, postura fiduciária, rigor institucional, sem jargão comercial vazio. Respostas de voz concisas, diretas e naturais (2 a 4 frases).`;
 
     async function openLiveVoiceSession() {
       voiceSessionActive = true;
@@ -1746,6 +1754,10 @@
         clearTimeout(silenceTimer);
         silenceTimer = null;
       }
+      if (activeVoiceAbortController) {
+        activeVoiceAbortController.abort();
+        activeVoiceAbortController = null;
+      }
       accumulatedTranscript = '';
 
       const modal = document.getElementById('live-voice-modal');
@@ -1841,11 +1853,15 @@
       processVoiceDirective(text);
     }
 
-    // Barge-in (Interrupção imediata quando o utilizador começa a falar)
+    // Barge-in (Interrupção imediata via AbortController quando o utilizador começa a falar)
     function handleBargeIn() {
       if (silenceTimer) {
         clearTimeout(silenceTimer);
         silenceTimer = null;
+      }
+      if (activeVoiceAbortController) {
+        activeVoiceAbortController.abort();
+        activeVoiceAbortController = null;
       }
       if (isBotSpeaking) {
         if (window.speechSynthesis) {
@@ -1862,6 +1878,11 @@
         clearTimeout(silenceTimer);
         silenceTimer = null;
       }
+      if (activeVoiceAbortController) {
+        activeVoiceAbortController.abort();
+      }
+      activeVoiceAbortController = new AbortController();
+
       setVoiceState('thinking');
       setTranscriptCaption('🧠 A processar mandato: "' + text + '"...');
 
@@ -1873,7 +1894,12 @@
             'Authorization': 'Bearer raioc_sovereign_auth_2026_x99',
             'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99'
           },
-          body: JSON.stringify({ prompt: text, conversationMode: 'voice' })
+          body: JSON.stringify({ 
+            prompt: text, 
+            conversationMode: 'voice',
+            systemInstruction: JARVIS_VOICE_SYSTEM_PROMPT
+          }),
+          signal: activeVoiceAbortController.signal
         });
 
         const data = await res.json();
@@ -1881,8 +1907,14 @@
 
         speakBotResponse(reply);
       } catch (err) {
+        if (err.name === 'AbortError') {
+          console.log('Voice dispatch aborted via barge-in.');
+          return;
+        }
         console.warn('Cognitive dispatch fallback:', err);
         speakBotResponse('JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.');
+      } finally {
+        activeVoiceAbortController = null;
       }
     }
 
