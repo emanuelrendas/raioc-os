@@ -82,6 +82,22 @@ Conhecimento Canónico do Dubai & UAE:
    - Elimina qualquer linguagem comercial agressiva ou superficial.
    - Respostas de voz concisas, diretas, elegantes e autoritárias (2 a 4 frases no modo conversação por voz).`;
 
+export const JARVIS_LIVE_STREAMING_VOICE_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
+Regras Estritas de Conversação por Voz em Tempo Real:
+1. Responde estritamente em 1 ou 2 frases curtas, naturais e elegantes (máximo 30 a 40 palavras).
+2. Proibido usar emojis, asteriscos, markdown, listas, títulos ou parênteses. Apenas texto puro para ser falado.
+3. Postura: Quiet Luxury, autoritário, seguro, fiduciário e direto.
+4. Conhecimento: Palm Jebel Ali (110km costa, 25M-50M+ AED), Dubai South DWC (128B aeroporto Al Maktoum, yield 8.5%+), Lei 8/2007 (Escrow 100%), Art. 880 (Garantia Decenal 10 anos), Golden Visa (2M+ AED), Frota de 12 agentes ativa.`;
+
+export function cleanSpokenText(text) {
+  if (!text || typeof text !== 'string') return '';
+  return text
+    .replace(/[*_~`#\[\]]/g, '')
+    .replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}\u{FE00}-\u{FE0F}\u{1F000}-\u{1F02F}\u{E0020}-\u{E007F}]/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export class FallbackAdapter {
   constructor() {
     this.name = 'deterministic_sovereign_fallback';
@@ -91,54 +107,87 @@ export class FallbackAdapter {
 
   async generate(prompt, context = {}) {
     const sanitized = (prompt || '').toLowerCase();
-    const isVoiceMode = context.conversationMode === 'voice' || context.voice === true;
+    const isLiveVoice = context.conversationMode === 'voice_live' || context.liveVoice === true || context.maxOutputTokens <= 60 || context.max_tokens <= 60;
+    const isVoiceMode = isLiveVoice || context.conversationMode === 'voice' || context.voice === true;
 
     let responseText = '';
 
-    if (sanitized.includes('palm jebel ali') || sanitized.includes('jebel ali')) {
-      responseText = isVoiceMode
+    if (sanitized.includes('fleet') || sanitized.includes('frota') || sanitized.includes('agentes') || sanitized.includes('status da frota') || sanitized.includes('12 agentes')) {
+      responseText = isLiveVoice
+        ? 'A frota de 12 agentes do RAIOC OS está cem por cento operacional com monitorização em tempo real e prontidão fiduciária.'
+        : isVoiceMode
+        ? 'A frota de 12 agentes do RAIOC OS está cem por cento operacional com monitorização em tempo real.'
+        : 'A frota soberana de 12 agentes especialistas do RAIOC OS opera com telemetria unificada, resiliência fail-closed e sincronização Contas Escrow / DLD.';
+    } else if (sanitized.includes('palm jebel ali') || sanitized.includes('jebel ali')) {
+      responseText = isLiveVoice
+        ? 'Palm Jebel Ali acrescenta 110 quilómetros de costa a Dubai, criando escassez real de lotes beira-mar sob proteção da Lei 8 de 2007.'
+        : isVoiceMode
         ? 'Palm Jebel Ali acrescenta 110 quilómetros de costa a Dubai, criando escassez real de lotes beira-mar com tickets de 25 a 50 milhões de dirhams. A estrutura Nakheel é 100% protegida por Escrow da Lei 8 e garantia decenal do Artigo 880.'
         : 'Palm Jebel Ali representa o principal vetor de preservação de capital ultra-prime no Dubai, duplicando a orla costeira com 110 km adicionais. As tranches de 25M a 50M+ AED beneficiam de contas Escrow segregadas (Lei nº 8/2007) e garantia decenal estrutural (Art. 880 do Código Civil dos EAU).';
     } else if (sanitized.includes('dubai south') || sanitized.includes('dwc') || sanitized.includes('aerotrópole') || sanitized.includes('aeroporto') || sanitized.includes('al maktoum')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'Dubai South e o aeroporto Al Maktoum representam uma expansão de 128 mil milhões de dirhams gerando yields líquidas acima de 8.5%.'
+        : isVoiceMode
         ? 'Dubai South e o aeroporto Al Maktoum representam uma expansão de 128 mil milhões de dirhams para criar a maior aerotrópole do mundo. Os ativos aqui geram yields líquidas superiores a 8.5% com forte valorização do solo a 7 a 10 anos.'
         : 'Dubai South (DWC) é a aerotrópole global ancorada no novo mega-aeroporto Al Maktoum de 128B AED. O corredor combina yields líquidas auditadas entre 8.4% e 9.2% com valorização de longo prazo impulsionada pelo plano diretor Dubai 2040.';
     } else if (sanitized.includes('saadiyat') || sanitized.includes('cultural') || sanitized.includes('louvre') || sanitized.includes('guggenheim')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'Saadiyat Cultural District em Abu Dhabi reúne o Louvre e o Guggenheim num enclave irreplicável de Quiet Luxury e preservação patrimonial.'
+        : isVoiceMode
         ? 'Saadiyat Cultural District em Abu Dhabi reúne o Louvre, o Guggenheim e o Museu Nacional Zayed num enclave irreplicável de Quiet Luxury. É o corredor soberano de maior prestígio cultural e valor patrimonial da região.'
         : 'Saadiyat Cultural District estabelece o epicentro de alta cultura e ultra-luxo dos Emirados, ladeado pelo Louvre Abu Dhabi e Guggenheim. Destina-se a Family Offices com foco em ativos troféu e valorização cultural perene.';
     } else if (sanitized.includes('wynn') || sanitized.includes('marjan') || sanitized.includes('ras al khaimah') || sanitized.includes('rak')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'Al Marjan Island em Ras Al Khaimah está ancorada no resort integrado Wynn de 4 mil milhões de dólares com forte tração institucional.'
+        : isVoiceMode
         ? 'Al Marjan Island em Ras Al Khaimah está ancorada no resort integrado Wynn de 4 mil milhões de dólares com licença de entretenimento. O corredor regista forte influxo de capital institucional e valorização acelerada de lotes hoteleiros e residenciais.'
         : 'Al Marjan Island (RAK) lidera o novo corredor de hospitalidade e entretenimento integrado ancorado no complexo Wynn. A procura internacional tem acelerado a valorização de ativos branded com yields operacionais de duplo dígito.';
     } else if (sanitized.includes('como') || sanitized.includes('como residences') || sanitized.includes('palm jumeirah') || sanitized.includes('yield')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'Como Residences na Palm Jumeirah atinge yield líquida de 8.1% com proteção total de conta Escrow e elegibilidade ao Golden Visa.'
+        : isVoiceMode
         ? 'Como Residences em Palm Jumeirah atinge yields líquidas auditadas de 7.9% a 8.2% com forte perfil de preservação de capital. O ativo é totalmente blindado pela Lei nº 8 de 2007 e qualifica para o Golden Visa de 10 anos.'
         : 'Como Residences na Palm Jumeirah representa um padrão troféu de waterfront living. Apresenta net yields auditadas entre 7.9% e 8.2% p.a., pagamento vinculado ao avanço DLD e total enquadramento no regime de Golden Visa sob a Resolução 65/2022.';
     } else if (sanitized.includes('garantia') || sanitized.includes('decenal') || sanitized.includes('art 880') || sanitized.includes('artigo 880') || sanitized.includes('estrutural')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'O Artigo 880 do Código Civil assegura garantia decenal estrutural obrigatória de 10 anos com responsabilidade solidária do promotor.'
+        : isVoiceMode
         ? 'O Artigo 880 do Código Civil dos EAU estabelece uma garantia decenal obrigatória de 10 anos para a solidez estrutural e fundações dos edifícios. O promotor e os engenheiros respondem solidariamente perante o proprietário.'
         : 'O Artigo 880 do Código Civil dos Emirados Árabes Unidos consagra a responsabilidade decenal objetiva: promotor e empreiteiro garantem a integridade das fundações e estrutura durante 10 anos após a entrega do título.';
     } else if (sanitized.includes('escrow') || sanitized.includes('lei 8') || sanitized.includes('segurança') || sanitized.includes('fundo') || sanitized.includes('rera') || sanitized.includes('dld')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'A Lei 8 de 2007 garante que 100% dos fundos de investidores ficam retidos em contas Escrow segregadas no DLD.'
+        : isVoiceMode
         ? 'Sob a Lei nº 8 de 2007 do Dubai, 100% do seu capital é retido numa conta fiduciária do DLD e libertado apenas conforme o avanço de obra auditado. Existe ainda uma retenção obrigatória de 5% pós-conclusão.'
         : 'A Lei nº 8 de 2007 impõe segregação bancária total de fundos off-plan em contas Escrow monitorizadas pelo DLD/RERA. As libertações exigem certificação técnica presencial de engenharia, salvaguardando integralmente o investidor.';
     } else if (sanitized.includes('golden visa') || sanitized.includes('visa') || sanitized.includes('visto') || sanitized.includes('res') || sanitized.includes('65/2022') || sanitized.includes('2m') || sanitized.includes('2 milh')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'Investimentos imobiliários a partir de 2 milhões de dirhams em freehold garantem o Golden Visa de 10 anos renovável.'
+        : isVoiceMode
         ? 'Aquisições imobiliárias em freehold iguais ou superiores a 2 milhões de dirhams conferem direito ao Golden Visa de 10 anos sem necessidade de fiador local. O visto é renovável e estende-se a cônjuge, filhos e pessoal doméstico.'
         : 'A Resolução do Conselho de Ministros nº 65/2022 garante o Golden Visa de 10 anos para investimentos imobiliários a partir de 2.000.000 AED em regime freehold, com direito a residência soberana contínua e 100% de posse estrangeira.';
     } else if (sanitized.includes('developer') || sanitized.includes('emaar') || sanitized.includes('sobha') || sanitized.includes('aldar') || sanitized.includes('nakheel') || sanitized.includes('damac') || sanitized.includes('meraas') || sanitized.includes('select group') || sanitized.includes('ellington') || sanitized.includes('binghatti')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'Os Master Developers como Emaar, Sobha, Aldar e Nakheel garantem solidez de balanço e cumprimento rigoroso de prazos.'
+        : isVoiceMode
         ? 'Os Master Developers governamentais e institucionais como Emaar, Sobha, Aldar, Nakheel, Meraas, Select Group e Ellington garantem elevados padrões de construção, cumprimento de prazos e sólida liquidez no mercado secundário.'
         : 'O ecossistema imobiliário de primeira linha do Dubai é liderado por promotores com balanços sólidos e histórico comprovado: Emaar, Sobha Realty, Aldar, Nakheel, Meraas, Select Group e Ellington Properties, garantindo entrega atempada e valor residual.';
     } else if (sanitized.includes('nhr') || sanitized.includes('portugal') || sanitized.includes('portugu')) {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'O Dubai proporciona um escudo cambial atrelado ao dólar e zero imposto sobre mais-valias imobiliárias para investidores portugueses.'
+        : isVoiceMode
         ? 'Portugal NHR & Family Office Advisory: Para investidores e Family Offices portugueses, o Dubai oferece um escudo cambial atrelado ao dólar, zero imposto sobre mais-valias imobiliárias e arbitragem fiscal fiduciária em comparação com o encerramento do regime RNH.'
         : 'Portugal NHR & Family Office Advisory: Capital allocation into Dubai prime freehold assets provides a 100% statutory currency hedge (USD pegged AED) and 0% capital gains tax arbitrage under UAE Cabinet Resolution No. 65 of 2022.';
     } else {
-      responseText = isVoiceMode
+      responseText = isLiveVoice
+        ? 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos para apoiar o seu mandato.'
+        : isVoiceMode
         ? 'JARVIS operacional. Analiso os corredores Palm Jebel Ali, Dubai South DWC e Palm Jumeirah com modelos de yield auditados e conformidade estrita com a Lei 8 de 2007 e Garantia Decenal.'
         : 'JARVIS Executive Intelligence: Diretiva acolhida. Os motores analíticos do RAIOC OS cruzam dados do DLD, modelos de yield Mollak e matrizes de proteção estatutária para assessoria privada de alto património.';
+    }
+
+    if (isLiveVoice) {
+      responseText = cleanSpokenText(responseText);
     }
 
     return {

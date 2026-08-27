@@ -120,52 +120,6 @@ Conhecimento Canónico:
     }
   };
 
-  // Speak synthesized response
-  const speakBotResponse = (replyText) => {
-    isBotSpeakingRef.current = true;
-    setVoiceState('speaking');
-    setVoiceTranscript(`🔊 JARVIS: ${replyText}`);
-
-    if (typeof window !== 'undefined' && window.speechSynthesis) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(replyText);
-      utterance.rate = 1.05;
-      utterance.pitch = 1.0;
-
-      const voices = window.speechSynthesis.getVoices();
-      const ptVoice = voices.find(v => (v.lang && (v.lang.includes('pt') || v.lang.includes('PT'))));
-      if (ptVoice) utterance.voice = ptVoice;
-
-      utterance.onstart = () => {
-        isBotSpeakingRef.current = true;
-        setVoiceState('speaking');
-      };
-
-      utterance.onend = () => {
-        isBotSpeakingRef.current = false;
-        setVoiceState('listening');
-        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
-        if (speechRecognizerRef.current) {
-          try { speechRecognizerRef.current.start(); } catch (err) {}
-        }
-      };
-
-      utterance.onerror = () => {
-        isBotSpeakingRef.current = false;
-        setVoiceState('listening');
-        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
-      };
-
-      window.speechSynthesis.speak(utterance);
-    } else {
-      setTimeout(() => {
-        isBotSpeakingRef.current = false;
-        setVoiceState('listening');
-        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
-      }, 4000);
-    }
-  };
-
   // Process voice directive to backend
   const processVoiceDirective = async (text) => {
     if (silenceTimerRef.current) {
@@ -175,13 +129,17 @@ Conhecimento Canónico:
     if (activeVoiceAbortControllerRef.current) {
       activeVoiceAbortControllerRef.current.abort();
     }
+    if (activeAudioSourceRef.current) {
+      try { activeAudioSourceRef.current.stop(); } catch (e) {}
+      activeAudioSourceRef.current = null;
+    }
     activeVoiceAbortControllerRef.current = new AbortController();
 
     setVoiceState('thinking');
     setVoiceTranscript(`🧠 A processar mandato: "${text}"...`);
 
     try {
-      const res = await fetch('/api/v1/cognitive/dispatch', {
+      const res = await fetch('/api/v1/voice/conversation', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -189,22 +147,40 @@ Conhecimento Canónico:
           'X-RAIOC-Secret': internalSecret,
         },
         body: JSON.stringify({ 
-          prompt: text, 
-          conversationMode: 'voice',
-          systemInstruction: JARVIS_VOICE_SYSTEM_PROMPT
+          message: text,
+          locale: 'pt'
         }),
         signal: activeVoiceAbortControllerRef.current.signal,
       });
 
       const data = await res.json();
-      const reply = data.text || data.response || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
-      speakBotResponse(reply);
+      const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+
+      if (data.audioBase64) {
+        await playNeuralAudio(data.audioBase64, reply);
+      } else {
+        isBotSpeakingRef.current = true;
+        setVoiceState('speaking');
+        setVoiceTranscript(`🔊 JARVIS: ${reply}`);
+        setTimeout(() => {
+          isBotSpeakingRef.current = false;
+          setVoiceState('listening');
+          setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+        }, 3000);
+      }
     } catch (err) {
       if (err.name === 'AbortError') {
         console.log('Voice dispatch aborted via barge-in.');
         return;
       }
-      speakBotResponse('JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.');
+      isBotSpeakingRef.current = true;
+      setVoiceState('speaking');
+      setVoiceTranscript('🔊 JARVIS: JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.');
+      setTimeout(() => {
+        isBotSpeakingRef.current = false;
+        setVoiceState('listening');
+        setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');
+      }, 3000);
     } finally {
       activeVoiceAbortControllerRef.current = null;
     }
@@ -270,7 +246,7 @@ Conhecimento Canónico:
             accumulatedTextRef.current = currentText;
             setVoiceTranscript(`🗣️ ${currentText}`);
 
-            // Reset Silence Detection (1.2s pause)
+            // Reset Silence Detection (800ms pause)
             if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
             silenceTimerRef.current = setTimeout(() => {
               if (accumulatedTextRef.current && accumulatedTextRef.current.length > 2) {
@@ -278,7 +254,7 @@ Conhecimento Canónico:
                 accumulatedTextRef.current = '';
                 processVoiceDirective(textToSend);
               }
-            }, 1200);
+            }, 800);
           }
         };
 
@@ -305,9 +281,12 @@ Conhecimento Canónico:
       activeVoiceAbortControllerRef.current.abort();
       activeVoiceAbortControllerRef.current = null;
     }
+    if (activeAudioSourceRef.current) {
+      try { activeAudioSourceRef.current.stop(); } catch (e) {}
+      activeAudioSourceRef.current = null;
+    }
     accumulatedTextRef.current = '';
 
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
     isBotSpeakingRef.current = false;
 
     if (speechRecognizerRef.current) {
@@ -337,8 +316,11 @@ Conhecimento Canónico:
       activeVoiceAbortControllerRef.current.abort();
       activeVoiceAbortControllerRef.current = null;
     }
+    if (activeAudioSourceRef.current) {
+      try { activeAudioSourceRef.current.stop(); } catch (e) {}
+      activeAudioSourceRef.current = null;
+    }
     if (isBotSpeakingRef.current) {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
       isBotSpeakingRef.current = false;
       setVoiceState('listening');
       setVoiceTranscript('🎙️ Pode falar agora... (A escutar)');

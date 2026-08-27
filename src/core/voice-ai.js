@@ -8,9 +8,12 @@
  */
 
 import { createHash } from 'node:crypto';
-import { cognitiveRouter } from './cognitive-router.js';
+import { cognitiveRouter, JARVIS_LIVE_STREAMING_VOICE_PROMPT, cleanSpokenText } from './cognitive-router.js';
 import { recoveryEngine } from './recovery-engine.js';
+import { elevenLabsAdapter } from '../adapters/elevenlabs-adapter.js';
 import { logger } from '../logging/audit-logger.js';
+
+export { JARVIS_LIVE_STREAMING_VOICE_PROMPT, cleanSpokenText };
 
 export const VOICE_INTENTS = {
   INVESTOR_FOLLOWUP: 'INVESTOR_FOLLOWUP',
@@ -18,6 +21,7 @@ export const VOICE_INTENTS = {
   PREMIUM_OUTREACH: 'PREMIUM_OUTREACH',
   CALL_SUPPORT: 'CALL_SUPPORT',
   STATUS_UPDATE: 'STATUS_UPDATE',
+  LIVE_CONVERSATION: 'LIVE_CONVERSATION',
 };
 
 export const OBJECTION_CATEGORIES = {
@@ -212,6 +216,62 @@ Spoken Script:`;
     }
 
     return this.packageVoiceResult(script, intent, params, 'deterministic_sovereign_voice', startTime);
+  }
+
+  /**
+   * Generates low-latency live conversational spoken response (<200ms) with ElevenLabs neural audio
+   * @param {Object} params - { message, history, locale, voiceId, correlationId }
+   * @returns {Promise<Object>}
+   */
+  async synthesizeLiveConversation(params = {}) {
+    const startTime = Date.now();
+    const correlationId = params.correlationId || `corr_live_voice_${Date.now()}`;
+    const userMessage = params.message || params.prompt || '';
+    const locale = params.locale || 'pt';
+    const voiceId = params.voiceId || process.env.ELEVENLABS_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+
+    // 1. Generate ultra-short spoken text (1-2 sentences) via Cognitive Router with max_tokens: 50
+    const cogResult = await cognitiveRouter.dispatch(userMessage, {
+      conversationMode: 'voice_live',
+      systemInstruction: JARVIS_LIVE_STREAMING_VOICE_PROMPT,
+      maxOutputTokens: 50,
+      max_tokens: 50,
+      temperature: 0.2,
+      correlationId,
+      history: params.history || [],
+    });
+
+    const rawText = cogResult.text || 'JARVIS operacional. A frota de 12 agentes e os modelos fiduciários estão ativos.';
+    const text = cleanSpokenText(rawText);
+
+    // 2. Synthesize neural audio via ElevenLabs
+    const speechResult = await elevenLabsAdapter.generateSpeech({
+      text,
+      voiceId,
+      modelId: 'eleven_turbo_v2_5',
+      voiceSettings: {
+        stability: 0.50,
+        similarity_boost: 0.80,
+        style: 0.15,
+        speed: 0.96,
+      },
+      locale,
+    });
+
+    const latencyMs = Date.now() - startTime;
+
+    return {
+      success: true,
+      text,
+      audioBase64: speechResult.audioBase64,
+      mimeType: 'audio/mpeg',
+      latencyMs,
+      provider: 'elevenlabs',
+      model: speechResult.modelId || 'eleven_turbo_v2_5',
+      voiceId: speechResult.voiceId,
+      audioSha256: speechResult.audioSha256,
+      durationSeconds: speechResult.durationSeconds,
+    };
   }
 }
 

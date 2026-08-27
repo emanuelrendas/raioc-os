@@ -31,6 +31,7 @@ import { handleTelegramWebhookRequest } from './v1/channels/telegram.js';
 import { handleWhatsAppWebhookRequest } from './v1/channels/whatsapp.js';
 import { handleDocumentIntakeRequest } from './v1/intake/document.js';
 import { handleVoiceCommunicationRequest } from './v1/communication/voice.js';
+import { handleVoiceConversationRequest } from './routes/voice-routes.js';
 import { argosMarketIntelligence } from '../core/argos-market-intelligence.js';
 import { corridorProjectionEngine } from './analytics/corridor-projections.js';
 import { cognitiveRouter } from '../core/cognitive-router.js';
@@ -168,6 +169,10 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     // 5a. AIDA Voice AI Communication (/api/v1/communication/voice, /api/communication/voice)
     else if (url.startsWith('/api/v1/communication/voice') || url.startsWith('/api/communication/voice')) {
       response = await handleVoiceCommunicationRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 5b. JARVIS Live Voice Realtime Conversation (/api/v1/voice/conversation, /api/voice/conversation)
+    else if (url.startsWith('/api/v1/voice/conversation') || url.startsWith('/api/voice/conversation') || url === '/api/v1/voice' || url === '/api/voice') {
+      response = await handleVoiceConversationRequest(url, method, body, effectiveQuery, headers);
     }
     else if (url === '/api/intake' || url.startsWith('/api/intake/')) {
       response = await handleIntakeRequest(method, body);

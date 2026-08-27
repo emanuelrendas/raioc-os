@@ -1632,13 +1632,91 @@
     let accumulatedTranscript = '';
     let simFrequencyData = new Uint8Array(64);
     let activeVoiceAbortController = null;
+    let activeAudioSource = null;
 
     const JARVIS_VOICE_SYSTEM_PROMPT = `Tu és o JARVIS, o Cérebro de Inteligência Executiva e Orquestração Autónoma do RAIOC OS para Emanuel Rendas Private Advisory no Dubai.
 Conhecimento Canónico:
 1. Leis Fiduciárias: Dubai Law No. 8/2007 (Escrow Account 100% segregada no DLD/RERA), UAE Civil Code Art. 880 (Garantia Decenal Estrutural de 10 anos), UAE Cabinet Res. 65/2022 (Golden Visa de 10 anos >= 2M AED freehold).
 2. Corredores Soberanos: Palm Jebel Ali (110km costa, escassez de orla marítima, tranches 25M-50M+ AED), Dubai South DWC (128B aerotrópole Al Maktoum, net yield 8.5%+), Saadiyat Cultural District (Louvre, Guggenheim), Al Marjan Island Wynn.
 3. Master Developers: Emaar, Sobha, Aldar, Nakheel, Meraas, Select Group, Ellington, DAMAC, Binghatti.
-4. Tom HNW / Family Office: Quiet Luxury, postura fiduciária, rigor institucional, sem jargão comercial vazio. Respostas de voz concisas, diretas e naturais (2 a 4 frases).`;
+4. Tom HNW / Family Office: Quiet Luxury, postura fiduciária, rigor institucional, sem jargão comercial vazio. Respostas de voz concisas, diretas e naturais (1 a 2 frases no streaming de voz).`;
+
+    function base64ToArrayBuffer(base64) {
+      if (!base64) return new ArrayBuffer(0);
+      const cleanBase64 = base64.includes(',') ? base64.split(',')[1] : base64;
+      const binaryString = window.atob(cleanBase64);
+      const len = binaryString.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      return bytes.buffer;
+    }
+
+    async function playNeuralAudio(audioBase64, text) {
+      if (!voiceSessionActive || !audioBase64) return;
+
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (e) {}
+        activeAudioSource = null;
+      }
+
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!audioContext && AudioCtx) {
+          audioContext = new AudioCtx();
+        }
+        if (audioContext && audioContext.state === 'suspended') {
+          await audioContext.resume();
+        }
+
+        if (!audioContext) {
+          throw new Error('Web Audio API not supported');
+        }
+
+        const arrayBuffer = base64ToArrayBuffer(audioBase64);
+        const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+        const source = audioContext.createBufferSource();
+        source.buffer = audioBuffer;
+
+        if (analyserNode) {
+          source.connect(analyserNode);
+        }
+        source.connect(audioContext.destination);
+
+        isBotSpeaking = true;
+        setVoiceState('speaking');
+        setTranscriptCaption('🔊 JARVIS: ' + text);
+
+        source.onended = () => {
+          isBotSpeaking = false;
+          activeAudioSource = null;
+          if (voiceSessionActive) {
+            setVoiceState('listening');
+            setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
+            if (speechRecognizer && !isMicMuted) {
+              try { speechRecognizer.start(); } catch (err) {}
+            }
+          }
+        };
+
+        source.start(0);
+        activeAudioSource = source;
+      } catch (err) {
+        console.warn('Neural audio playback fallback:', err);
+        isBotSpeaking = true;
+        setVoiceState('speaking');
+        setTranscriptCaption('🔊 JARVIS: ' + text);
+        setTimeout(() => {
+          isBotSpeaking = false;
+          if (voiceSessionActive) {
+            setVoiceState('listening');
+            setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
+          }
+        }, 3000);
+      }
+    }
 
     async function openLiveVoiceSession() {
       voiceSessionActive = true;
@@ -1674,7 +1752,7 @@ Conhecimento Canónico:
           }
         }
 
-        // Initialize Speech Recognition
+        // Initialize Speech Recognition with 800ms VAD
         const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRec) {
           speechRecognizer = new SpeechRec();
@@ -1709,7 +1787,7 @@ Conhecimento Canónico:
               accumulatedTranscript = currentText;
               setTranscriptCaption('🗣️ ' + currentText);
 
-              // Reset Silence Detection timer (1.2s pause fires dispatch)
+              // Reset Silence Detection timer (800ms pause fires ultra-low latency dispatch)
               if (silenceTimer) clearTimeout(silenceTimer);
               silenceTimer = setTimeout(() => {
                 if (accumulatedTranscript && accumulatedTranscript.length > 2 && voiceState === 'listening') {
@@ -1717,7 +1795,7 @@ Conhecimento Canónico:
                   accumulatedTranscript = '';
                   processVoiceDirective(toProcess);
                 }
-              }, 1200);
+              }, 800);
             }
           };
 
@@ -1758,15 +1836,15 @@ Conhecimento Canónico:
         activeVoiceAbortController.abort();
         activeVoiceAbortController = null;
       }
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (e) {}
+        activeAudioSource = null;
+      }
       accumulatedTranscript = '';
 
       const modal = document.getElementById('live-voice-modal');
       if (modal) modal.classList.add('hidden');
 
-      // Stop speech synth & recognition
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-      }
       isBotSpeaking = false;
 
       if (speechRecognizer) {
@@ -1853,7 +1931,7 @@ Conhecimento Canónico:
       processVoiceDirective(text);
     }
 
-    // Barge-in (Interrupção imediata via AbortController quando o utilizador começa a falar)
+    // Barge-in (Interrupção imediata de áudio e rede quando o utilizador começa a falar)
     function handleBargeIn() {
       if (silenceTimer) {
         clearTimeout(silenceTimer);
@@ -1863,10 +1941,11 @@ Conhecimento Canónico:
         activeVoiceAbortController.abort();
         activeVoiceAbortController = null;
       }
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (e) {}
+        activeAudioSource = null;
+      }
       if (isBotSpeaking) {
-        if (window.speechSynthesis) {
-          window.speechSynthesis.cancel();
-        }
         isBotSpeaking = false;
         setVoiceState('listening');
         setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
@@ -1881,13 +1960,17 @@ Conhecimento Canónico:
       if (activeVoiceAbortController) {
         activeVoiceAbortController.abort();
       }
+      if (activeAudioSource) {
+        try { activeAudioSource.stop(); } catch (e) {}
+        activeAudioSource = null;
+      }
       activeVoiceAbortController = new AbortController();
 
       setVoiceState('thinking');
       setTranscriptCaption('🧠 A processar mandato: "' + text + '"...');
 
       try {
-        const res = await fetch('/api/v1/cognitive/dispatch', {
+        const res = await fetch('/api/v1/voice/conversation', {
           method: 'POST',
           headers: { 
             'Content-Type': 'application/json',
@@ -1895,81 +1978,48 @@ Conhecimento Canónico:
             'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99'
           },
           body: JSON.stringify({ 
-            prompt: text, 
-            conversationMode: 'voice',
-            systemInstruction: JARVIS_VOICE_SYSTEM_PROMPT
+            message: text,
+            locale: 'pt'
           }),
           signal: activeVoiceAbortController.signal
         });
 
         const data = await res.json();
-        const reply = data.text || data.response || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
+        const reply = data.text || 'JARVIS operacional. Mandato processado com conformidade fiduciária e garantia estatutária.';
 
-        speakBotResponse(reply);
+        if (data.audioBase64) {
+          await playNeuralAudio(data.audioBase64, reply);
+        } else {
+          isBotSpeaking = true;
+          setVoiceState('speaking');
+          setTranscriptCaption('🔊 JARVIS: ' + reply);
+          setTimeout(() => {
+            isBotSpeaking = false;
+            if (voiceSessionActive) {
+              setVoiceState('listening');
+              setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
+            }
+          }, 3000);
+        }
       } catch (err) {
         if (err.name === 'AbortError') {
           console.log('Voice dispatch aborted via barge-in.');
           return;
         }
-        console.warn('Cognitive dispatch fallback:', err);
-        speakBotResponse('JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.');
-      } finally {
-        activeVoiceAbortController = null;
-      }
-    }
-
-    function speakBotResponse(replyText) {
-      if (!voiceSessionActive) return;
-
-      isBotSpeaking = true;
-      setVoiceState('speaking');
-      setTranscriptCaption('🔊 JARVIS: ' + replyText);
-
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(replyText);
-        utterance.rate = 1.05;
-        utterance.pitch = 1.0;
-
-        // Pick natural voice
-        const voices = window.speechSynthesis.getVoices();
-        const ptVoice = voices.find(v => (v.lang && (v.lang.includes('pt') || v.lang.includes('PT'))));
-        if (ptVoice) utterance.voice = ptVoice;
-
-        utterance.onstart = () => {
-          isBotSpeaking = true;
-          setVoiceState('speaking');
-        };
-
-        utterance.onend = () => {
-          isBotSpeaking = false;
-          if (voiceSessionActive) {
-            setVoiceState('listening');
-            setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
-            if (speechRecognizer) {
-              try { speechRecognizer.start(); } catch (err) {}
-            }
-          }
-        };
-
-        utterance.onerror = () => {
-          isBotSpeaking = false;
-          if (voiceSessionActive) {
-            setVoiceState('listening');
-            setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
-          }
-        };
-
-        window.speechSynthesis.speak(utterance);
-      } else {
-        // Fallback timer if speech synthesis is absent
+        console.warn('Voice conversation fallback:', err);
+        const fallbackText = 'JARVIS operacional. O motor ATLAS e a frota de 12 agentes estão ativos com proteção Escrow e Garantia Decenal.';
+        isBotSpeaking = true;
+        setVoiceState('speaking');
+        setTranscriptCaption('🔊 JARVIS: ' + fallbackText);
         setTimeout(() => {
           isBotSpeaking = false;
           if (voiceSessionActive) {
             setVoiceState('listening');
             setTranscriptCaption('🎙️ Pode falar agora... (A escutar)');
           }
-        }, 4000);
+        }, 3000);
+      } finally {
+        activeVoiceAbortController = null;
       }
     }
 
