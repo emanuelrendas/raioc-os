@@ -107,6 +107,13 @@ export async function handleAssessmentSubmission(payload = {}, options = {}) {
       target_asset: payload.target_asset || (numericBudget >= 20000000 ? 'Palm Jebel Ali Corridor' : numericBudget >= 10000000 ? 'Como Residences' : 'Rosehill Dubai Hills'),
       notes: `Inbound Private Wealth Mandate via Website. Horizon: ${payload.horizon || 'Immediate'}. Focus: ${leadRecord.strategic_focus}.`,
       tags: [segment, 'WEBSITE_INTAKE', numericBudget >= 2000000 ? 'GOLDEN_VISA' : 'ENTRY_ALLOCATION'],
+      metadata: {
+        owner: 'Emanuel Rendas',
+        purpose: 'Private Wealth Assessment & Qualification',
+        risk_tier: 'Tier 1',
+        audit_trail: 'public.interaction_logs',
+        intake_source: 'assessment_pipeline',
+      },
     });
 
     // 6. Log interaction in interaction_logs
