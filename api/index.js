@@ -190,12 +190,15 @@ export default async function handler(req, res) {
     return typeof res.json === 'function' ? res.json(apiResponse.body) : res.end(JSON.stringify(apiResponse.body));
   }
 
-  // 4. Static Website Pages & Assets Delivery (Disk-First Source of Truth)
+  // 4. Static Pages & Assets Delivery
+  // ARCHITECTURE: Decision B (locked) — site-pages.js is the canonical production source of truth.
+  // Root .html files are authoring-only and are NOT consulted for HTML page serving.
+  // Assets (CSS, JS, images, fonts) are served from disk as before.
   const urlExt = path.extname(url).toLowerCase();
   const isAssetRequest = urlExt && urlExt !== '.html';
 
-  // 4-pre. Asset-First Exit: CSS, JS, images, fonts must resolve before any HTML page lookup
-  // This prevents non-HTML files (e.g. site.css) from being accidentally served as text/html.
+  // 4-pre. Asset-First Exit: CSS, JS, images, fonts resolve from disk before any page lookup.
+  // Assets are NOT in the bundle — they must be read from disk.
   if (isAssetRequest) {
     try {
       const candidateAssetPaths = [
@@ -232,44 +235,28 @@ export default async function handler(req, res) {
         }
       }
     } catch (_) {}
-    // Asset not found — return 404 without falling through to HTML resolution
+    // Asset not found — fail closed, no HTML fallback
     res.setHeader('Content-Type', 'application/json');
     res.status(404);
     return res.end(JSON.stringify({ error: 'Asset not found', path: url }));
   }
 
+  // 4a. HTML Page Serving — Bundle-Primary (Decision B, canonical)
+  // site-pages.js is the sole production source. No filesystem read for HTML.
+  // To update a page: edit .html → run tools/sync-site-pages.mjs → commit both → deploy.
   const cleanPath = url.replace(/^\//, '').replace(/\.html$/, '') || 'index';
+  const pageHtml = sitePages?.[cleanPath];
 
-  // 4a. Check Disk for Canonical HTML Page (Source of Truth)
-  const candidateHtmlPaths = [
-    path.resolve(`${cleanPath}.html`),
-    path.resolve(`public/${cleanPath}.html`),
-  ];
-
-  for (const p of candidateHtmlPaths) {
-    try {
-      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
-        const pageHtml = fs.readFileSync(p, 'utf8');
-        res.setHeader('Content-Type', 'text/html; charset=utf-8');
-        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
-        res.status(200);
-        return typeof res.send === 'function' ? res.send(pageHtml) : res.end(pageHtml);
-      }
-    } catch (_) {}
-  }
-
-  // 4b. Bundled Fallback (If Disk Read Fails or Running in Bundled Serverless)
-  if (sitePages && sitePages[cleanPath]) {
-    const pageHtml = sitePages[cleanPath];
+  if (pageHtml) {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
     res.status(200);
     return typeof res.send === 'function' ? res.send(pageHtml) : res.end(pageHtml);
   }
 
-  // 404 Fallback
+  // 4b. Page not in bundle — fail closed (404), no silent disk fallback
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.status(404);
-  const fallback404 = (sitePages && sitePages.index) ? sitePages.index : '<h1>404 - Page Not Found</h1>';
+  const fallback404 = sitePages?.index ?? '<h1>404 - Page Not Found</h1>';
   return typeof res.send === 'function' ? res.send(fallback404) : res.end(fallback404);
 }

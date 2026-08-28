@@ -96,46 +96,74 @@ describe('MISSION-004: site-pages.js bundle is synchronized with disk HTML', () 
   });
 });
 
-// ─── Test Suite 2: Disk-First Resolution Live Edit Verification ────────────────
-describe('MISSION-004: Disk-first HTML resolution — canary injection test', () => {
-  test('editing about.html on disk immediately reflects in handler response', async (t) => {
+// ─── Test Suite 2: Bundle-Primary Resolution (Decision B) ─────────────────────
+describe('MISSION-004: Bundle is primary — sitePages is the sole HTML source in production', () => {
+  test('handler serves content from sitePages bundle, not from disk', async (t) => {
     if (skipIfNoHandler) {
-      t.skip('Handler could not be imported (missing env vars) — skipping live resolution test');
+      t.skip('Handler import failed — skipping');
       return;
     }
 
-    const aboutPath = path.join(ROOT, 'about.html');
-    assert.ok(fs.existsSync(aboutPath), 'about.html must exist on disk');
+    const { sitePages } = await import('../src/site/site-pages.js');
 
-    const originalContent = fs.readFileSync(aboutPath, 'utf8');
-    const canaryToken = `MISSION004-CANARY-${Date.now()}`;
+    // Verify the bundle contains the about page
+    assert.ok(
+      typeof sitePages['about'] === 'string' && sitePages['about'].length > 100,
+      'sitePages["about"] must be a non-trivial HTML string'
+    );
 
-    try {
-      // Inject canary token into about.html
-      const injected = originalContent.replace('</body>', `<!-- ${canaryToken} --></body>`);
-      fs.writeFileSync(aboutPath, injected, 'utf8');
+    // Request /about — response must match the bundle content exactly
+    const req = {
+      url: '/about',
+      method: 'GET',
+      headers: {},
+      query: {},
+      body: {},
+    };
+    const res = makeMockRes();
+    await handler(req, res);
 
-      const req = {
-        url: '/about',
-        method: 'GET',
-        headers: {},
-        query: {},
-        body: {},
-      };
-      const res = makeMockRes();
-      await handler(req, res);
+    assert.strictEqual(res.statusCode, 200, 'GET /about must return 200');
+    assert.ok(
+      typeof res._body === 'string',
+      'Response body must be a string'
+    );
+    // Bundle content must be what was served (Decision B: bundle is canonical)
+    const bodyNorm = res._body.trim().replace(/\r\n/g, '\n');
+    const bundleNorm = sitePages['about'].trim().replace(/\r\n/g, '\n');
+    assert.strictEqual(
+      bodyNorm,
+      bundleNorm,
+      'Handler response must match sitePages["about"] exactly — bundle is canonical (Decision B)'
+    );
+  });
 
-      assert.strictEqual(res.statusCode, 200, 'Handler must return 200 for /about');
-      assert.ok(
-        typeof res._body === 'string' && res._body.includes(canaryToken),
-        `Handler response must contain canary token "${canaryToken}" — disk-first resolution must be active`
-      );
-    } finally {
-      // Always restore original content
-      fs.writeFileSync(aboutPath, originalContent, 'utf8');
+  test('page absent from bundle returns 404 — fail closed, no disk fallback', async (t) => {
+    if (skipIfNoHandler) {
+      t.skip('Handler import failed — skipping');
+      return;
     }
+
+    // Request a page key that is guaranteed not in the bundle
+    const req = {
+      url: '/definitely-not-a-page-in-the-bundle-xyz',
+      method: 'GET',
+      headers: {},
+      query: {},
+      body: {},
+    };
+    const res = makeMockRes();
+    await handler(req, res);
+
+    // Must be 404 — no silent disk fallback allowed (Decision B)
+    assert.strictEqual(
+      res.statusCode,
+      404,
+      'Pages not in the bundle must return 404 — no silent disk fallback (Decision B)'
+    );
   });
 });
+
 
 // ─── Test Suite 3: Canonical Public Page Serving ───────────────────────────────
 describe('MISSION-004: All canonical public pages serve 200 with HTML', () => {
