@@ -1,5 +1,5 @@
 /**
- * RAIOC OS - Supabase Database Client & Adapter Layer (Sprint 3)
+ * RAIOC OS - Supabase Database Client & Adapter Layer (Sprint 3 & Security Hardened)
  * Handles leads, assessments, queue operations, briefs, and operational tables for monitoring & Realtime.
  */
 
@@ -7,23 +7,32 @@ import { createHash } from 'node:crypto';
 import { config } from '../config/env.js';
 import { logger } from '../logging/audit-logger.js';
 
+export class PersistenceError extends Error {
+  constructor(operation, message) {
+    super(`Persistence error during '${operation}': ${message}`);
+    this.name = 'PersistenceError';
+    this.operation = operation;
+  }
+}
+
 export class SupabaseClient {
   constructor(options = {}) {
+    this.explicitMock = options.useMock === true;
     this.url = options.url || config.supabase.url;
-    this.key = options.key || config.supabase.serviceKey || config.supabase.anonKey;
+    this.key = options.key || config.supabase.serviceKey; // Removed anonKey fallback for service writes
     
     // Strict production check: If running in production without explicit mock override, fail-closed
     this.isStrictProduction = (process.env.NODE_ENV === 'production' || config.env === 'production') &&
-      options.useMock !== true &&
+      !this.explicitMock &&
       process.env.SUPABASE_MOCK_FALLBACK !== 'true';
 
     if (this.isStrictProduction && (!this.url || !this.key)) {
-      const errMsg = 'FATAL: Supabase URL and serviceKey/anonKey are required in production environment (Fail-Closed enforced). Silent in-memory fallback is disabled.';
+      const errMsg = 'FATAL: Supabase URL and serviceKey are required in production environment (Fail-Closed enforced). Silent in-memory fallback is disabled.';
       logger.error('SUPABASE', errMsg);
-      throw new Error(errMsg);
+      throw new PersistenceError('init', errMsg);
     }
 
-    this.isMock = !this.url || !this.key || options.useMock === true;
+    this.isMock = this.explicitMock || !this.url || !this.key;
 
     // In-memory mock storage for hermetic tests and local fallback
     this.mockStore = {

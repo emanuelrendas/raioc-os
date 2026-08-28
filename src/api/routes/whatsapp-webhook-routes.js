@@ -189,14 +189,12 @@ export async function handleWhatsAppWebhookRequest(url, method = 'GET', body = {
     const validTokens = [
       process.env.META_VERIFY_TOKEN,
       process.env.WHATSAPP_VERIFY_TOKEN,
-      'raioc_sovereign_auth_2026_x99',
       config.whatsappBusiness?.verifyToken,
-      'raioc_meta_verify_token',
-      'raioc_meta_verify_token_2026',
-      'raioc_wa_verify_token',
     ].filter(Boolean);
 
-    if (mode === 'subscribe' && validTokens.includes(token)) {
+    const isTokenValid = validTokens.some((t) => secretsManager.constantTimeCompare(token, t));
+
+    if (mode === 'subscribe' && isTokenValid) {
       logger.info('WHATSAPP_WEBHOOK', 'Meta WhatsApp webhook subscription verified successfully (Handshake 200)');
       return {
         status: 200,
@@ -232,27 +230,24 @@ export async function handleWhatsAppWebhookRequest(url, method = 'GET', body = {
   const appSecret = process.env.META_WHATSAPP_APP_SECRET ||
                     process.env.META_APP_SECRET ||
                     process.env.WHATSAPP_APP_SECRET ||
-                    config.whatsappBusiness?.appSecret ||
-                    'wa_sec_secret_key_888';
+                    config.whatsappBusiness?.appSecret;
 
-  const isProd = process.env.NODE_ENV === 'production';
-
-  if (signatureHeader) {
-    const isValidSignature = webhookVerifier.verifyWhatsAppSignature(body, signatureHeader, appSecret);
-    if (!isValidSignature) {
-      logger.warn('WHATSAPP_WEBHOOK', 'Rejected Meta WhatsApp webhook: Invalid HMAC-SHA256 signature (401 Unauthorized)');
-      return {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-        body: { success: false, error: 'Unauthorized: Invalid WhatsApp signature' },
-      };
-    }
-  } else if (isProd) {
-    logger.warn('WHATSAPP_WEBHOOK', 'Rejected Meta WhatsApp webhook: Missing HMAC-SHA256 signature in production (401 Unauthorized)');
+  if (!signatureHeader || !appSecret) {
+    logger.warn('WHATSAPP_WEBHOOK', 'Rejected Meta WhatsApp webhook: Missing HMAC-SHA256 signature or app secret (Fail-Closed 401)');
     return {
       status: 401,
       headers: { 'Content-Type': 'application/json' },
-      body: { success: false, error: 'Unauthorized: Missing WhatsApp signature in production' },
+      body: { success: false, error: 'Unauthorized: Missing WhatsApp signature or app secret' },
+    };
+  }
+
+  const isValidSignature = webhookVerifier.verifyWhatsAppSignature(body, signatureHeader, appSecret);
+  if (!isValidSignature) {
+    logger.warn('WHATSAPP_WEBHOOK', 'Rejected Meta WhatsApp webhook: Invalid HMAC-SHA256 signature (401 Unauthorized)');
+    return {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: { success: false, error: 'Unauthorized: Invalid WhatsApp signature' },
     };
   }
 

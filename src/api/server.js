@@ -1,5 +1,5 @@
 /**
- * RAIOC OS - Web API Router & HTTP Dispatcher (Sprint 3)
+ * RAIOC OS - Web API Router & HTTP Dispatcher (Sprint 3 & Security Hardened)
  * Dispatches inbound requests, serves the Executive Command Center, and manages SSE Realtime streams.
  */
 
@@ -49,6 +49,7 @@ import { agentDirectory } from '../agents/agent-directory.js';
 import { jarvis } from '../agents/specialists/jarvis-orchestrator.js';
 import { sentinelMeshMonitor } from '../core/sentinel-mesh-monitor.js';
 import { distributedScheduler } from '../core/distributed-scheduler.js';
+import { authMiddleware, Roles } from '../security/auth-middleware.js';
 import { logger } from '../logging/audit-logger.js';
 
 export async function routeApiRequest(reqPath, method = 'GET', body = {}, query = {}, headers = {}) {
@@ -91,12 +92,21 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 0b. Executive Mission Control UI (/admin/mission-control, /mission-control, /api/mission-control/ui)
     else if ((url === '/admin/mission-control' || url === '/mission-control' || url === '/api/mission-control/ui') && method === 'GET') {
-      const html = renderMissionControlHtml();
-      response = {
-        status: 200,
-        headers: { 'Content-Type': 'text/html; charset=utf-8' },
-        body: html,
-      };
+      const auth = authMiddleware.authenticateRequest(effectiveHeaders, [Roles.ADMIN, Roles.AGENT]);
+      if (!auth.authenticated) {
+        response = {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+          body: { success: false, error: 'Unauthorized: Mission Control requires authentication', details: auth.error },
+        };
+      } else {
+        const html = renderMissionControlHtml();
+        response = {
+          status: 200,
+          headers: { 'Content-Type': 'text/html; charset=utf-8' },
+          body: html,
+        };
+      }
     }
     // 0c. Liveness & Resource Healthcheck (/healthz, /api/healthz)
     else if (url === '/healthz' || url === '/api/healthz') {
@@ -125,9 +135,26 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
         },
       };
     }
-    // 1. Dashboard UI, Executive Telemetry & Chat (/dashboard, /api/chat, /api/dashboard/*, /api/executive/*, /api/telemetry/*, /health, /api/health, /api/test-email)
-    else if (url === '/dashboard' || url === '/api/test-email' || url === '/api/chat' || url.startsWith('/api/chat') || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive') || url === '/health' || url === '/api/health') {
-      response = await handleTelemetryRequest(url, { headers, query: effectiveQuery, body });
+    // 1. Dashboard UI, Executive Telemetry & Chat (/dashboard, /api/chat, /api/dashboard/*, /api/executive/*, /api/telemetry/*)
+    else if (url === '/dashboard' || url === '/api/chat' || url.startsWith('/api/chat') || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive')) {
+      const auth = authMiddleware.authenticateRequest(effectiveHeaders, [Roles.ADMIN, Roles.AGENT]);
+      if (!auth.authenticated) {
+        response = {
+          status: 401,
+          headers: { 'Content-Type': 'application/json' },
+          body: {
+            success: false,
+            error: 'Unauthorized: Authentication required for executive/telemetry resources',
+            details: auth.error,
+          },
+        };
+      } else {
+        response = await handleTelemetryRequest(url, { headers: effectiveHeaders, query: effectiveQuery, body });
+      }
+    }
+    // 1b. Public Health Endpoint (/health, /api/health)
+    else if (url === '/health' || url === '/api/health') {
+      response = await handleTelemetryRequest(url, { headers: effectiveHeaders, query: effectiveQuery, body });
     }
     // 2a. ARGOS DLD Transaction Ingestion & Whale Alerts (/api/v1/market/dld-sync, /api/market/dld-sync)
     else if (url.startsWith('/api/v1/market/dld-sync') || url.startsWith('/api/market/dld-sync')) {
@@ -178,70 +205,59 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       response = await handleIntakeRequest(method, body);
     }
     // 6. IKL Endpoints
-    else if (url.startsWith('/api/ikl')) {
-      response = await handleIklRequest(url, effectiveQuery);
+    else if (url.startsWith('/api/v1/ikl') || url.startsWith('/api/ikl')) {
+      response = await handleIklRequest(url, method, body, effectiveQuery);
     }
-    // 7. Calculator Endpoints
-    else if (url.startsWith('/api/calculators')) {
-      response = await handleCalculatorRequest(url, body);
+    // 7. Property Calculators
+    else if (url.startsWith('/api/v1/calculators') || url.startsWith('/api/calculators')) {
+      response = await handleCalculatorRequest(url, method, body);
     }
-    // 8. AI Tools Endpoints (Google Opal, Mixboard, Flow, Gemini Advisor) - Canonical /api/v1 and Legacy /api
-    else if (url.startsWith('/api/v1/opal') || url.startsWith('/api/opal') || url.startsWith('/api/v1/mixboard') || url.startsWith('/api/mixboard') || url.startsWith('/api/v1/flow') || url.startsWith('/api/flow') || url.startsWith('/api/v1/ai') || url.startsWith('/api/ai')) {
-      response = await handleAiToolsRequest(url, method, body, effectiveQuery, headers);
+    // 8. Lead Assessment Submissions (DIRA)
+    else if (url.startsWith('/api/v1/assessment') || url.startsWith('/api/assessment')) {
+      response = await handleAssessmentSubmission(body, effectiveQuery);
     }
-    // 8a. Cognitive Multi-Tier Router (/api/v1/cognitive/dispatch, /api/cognitive/dispatch)
-    else if (url.startsWith('/api/v1/cognitive/dispatch') || url.startsWith('/api/cognitive/dispatch') || url === '/api/v1/cognitive' || url === '/api/cognitive') {
-      const prompt = body.prompt || body.message || body.context || effectiveQuery.prompt || '';
-      const cogRes = await cognitiveRouter.dispatch(prompt, { ...effectiveQuery, ...body, correlationId });
-      response = { status: 200, body: { success: true, ...cogRes } };
+    // 9. Lead Submissions & Capture
+    else if (url.startsWith('/api/v1/leads') || url.startsWith('/api/leads') || url.startsWith('/api/lead')) {
+      response = await handleLeadSubmission(body, method, effectiveQuery);
     }
-    // 8a. Mission Control V1 Consolidated State (/api/v1/mission-control/v1-state, /api/mission-control/v1-state)
-    else if (url.startsWith('/api/v1/mission-control/v1-state') || url.startsWith('/api/mission-control/v1-state')) {
-      response = await handleMissionControlV1State(url, method, body, effectiveQuery, headers);
-    }
-    // 8b. Mission Control Fleet Telemetry (/api/v1/mission-control/fleet, /api/mission-control/fleet)
-    else if (url.startsWith('/api/v1/mission-control/fleet') || url.startsWith('/api/mission-control/fleet')) {
-      response = await handleFleetRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8c. Mission Control Executive Approvals (/api/v1/approvals/*, /api/approvals/*, /api/v1/mission-control/approvals, /api/mission-control/approvals)
-    else if (url.startsWith('/api/v1/approvals') || url.startsWith('/api/approvals') || url.startsWith('/api/v1/mission-control/approvals') || url.startsWith('/api/mission-control/approvals')) {
-      response = await handleApprovalsRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8d. Mission Control Ingestion Stream (/api/v1/mission-control/interactions, /api/mission-control/interactions)
-    else if (url.startsWith('/api/v1/mission-control/interactions') || url.startsWith('/api/mission-control/interactions')) {
-      response = await handleInteractionsRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8e. Enterprise Core Registries (/api/v1/core/agents, /api/v1/core/tools, /api/v1/core/workflows)
-    else if (url.startsWith('/api/v1/core/agents') || url.startsWith('/api/core/agents') || url.startsWith('/api/v1/core/tools') || url.startsWith('/api/core/tools') || url.startsWith('/api/v1/core/workflows') || url.startsWith('/api/core/workflows')) {
-      response = await handleRegistryRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8f. Enterprise Knowledge Graph (/api/v1/core/knowledge, /api/core/knowledge)
-    else if (url.startsWith('/api/v1/core/knowledge') || url.startsWith('/api/core/knowledge')) {
-      response = await handleKnowledgeRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8g. Runtime Telemetry Split (/api/v1/runtime/telemetry/*, /api/v1/runtime/health-matrix, /api/runtime/*)
-    else if (url.startsWith('/api/v1/runtime') || url.startsWith('/api/runtime')) {
-      response = await handleRuntimeTelemetryRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8h. CloudEvents v1.1 Store & Recovery (/api/v1/events/*, /api/events/*)
-    else if (url.startsWith('/api/v1/events') || url.startsWith('/api/events')) {
-      response = await handleEventsRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 8i. Architectural Decision Records (/api/v1/memory/adr, /api/memory/adr)
-    else if (url.startsWith('/api/v1/memory/adr') || url.startsWith('/api/memory/adr')) {
-      response = await handleMemoryAdrRequest(url, method, body, effectiveQuery, headers);
-    }
-    // 9. Assessment Submission
-    else if (url.startsWith('/api/assessment') || url.startsWith('/api/dira')) {
-      response = await handleAssessmentSubmission(body);
-    }
-    // 10. Lead Submission
-    else if (url.startsWith('/api/lead') || url.startsWith('/api/brief')) {
-      response = await handleLeadSubmission(body);
-    }
-    // 10b. CRM & Ingestion Pipeline (/api/v1/crm, /api/crm)
+    // 9a. CRM Sync & Direct Webhook Relay
     else if (url.startsWith('/api/v1/crm') || url.startsWith('/api/crm')) {
       response = await handleCrmRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 9b. AI Reasoning Tools & Multimodal Engine (Opal, Mixboard, Flow, Pitch Deck)
+    else if (url.startsWith('/api/v1/tools') || url.startsWith('/api/tools')) {
+      response = await handleAiToolsRequest(url, method, body, effectiveQuery, headers);
+    }
+    // 10. Mission Control APIs (Fleet, Approvals, Interactions, State)
+    else if (url.startsWith('/api/v1/mission-control/fleet') || url.startsWith('/api/mission-control/fleet')) {
+      response = await handleFleetRequest(method, body, effectiveHeaders);
+    }
+    else if (url.startsWith('/api/v1/mission-control/approvals') || url.startsWith('/api/mission-control/approvals')) {
+      response = await handleApprovalsRequest(method, body, effectiveHeaders);
+    }
+    else if (url.startsWith('/api/v1/mission-control/interactions') || url.startsWith('/api/mission-control/interactions')) {
+      response = await handleInteractionsRequest(effectiveQuery, effectiveHeaders);
+    }
+    else if (url.startsWith('/api/v1/mission-control/state') || url.startsWith('/api/mission-control/state')) {
+      response = await handleMissionControlV1State(effectiveHeaders);
+    }
+    // 10b. Core Registries & Enterprise Knowledge Graph
+    else if (url.startsWith('/api/v1/core/registries') || url.startsWith('/api/core/registries')) {
+      response = await handleRegistryRequest(url, method, body, effectiveHeaders);
+    }
+    else if (url.startsWith('/api/v1/core/knowledge') || url.startsWith('/api/core/knowledge')) {
+      response = await handleKnowledgeRequest(url, method, body, effectiveHeaders);
+    }
+    // 10c. Runtime Telemetry Registry & ADR Catalog
+    else if (url.startsWith('/api/v1/runtime/telemetry') || url.startsWith('/api/runtime/telemetry')) {
+      response = await handleRuntimeTelemetryRequest(url, method, body, effectiveHeaders);
+    }
+    else if (url.startsWith('/api/v1/memory/adr') || url.startsWith('/api/memory/adr')) {
+      response = await handleMemoryAdrRequest(url, method, body, effectiveHeaders);
+    }
+    // 10d. Enterprise Event Router
+    else if (url.startsWith('/api/v1/events') || url.startsWith('/api/events')) {
+      response = await handleEventsRequest(url, method, body, effectiveHeaders);
     }
     // 11. Webhook Endpoints (n8n & WhatsApp)
     else if (url.startsWith('/api/v1/webhooks') || url.startsWith('/api/webhooks')) {
@@ -314,6 +330,13 @@ export function startApiServer(port = 3000) {
 
     // --- Realtime SSE Stream Endpoint ---
     if (parsedUrl.pathname === '/api/dashboard/stream' || parsedUrl.pathname === '/api/realtime') {
+      const auth = authMiddleware.authenticateRequest(req.headers, [Roles.ADMIN, Roles.AGENT]);
+      if (!auth.authenticated) {
+        res.writeHead(401, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Unauthorized: Authentication required for realtime SSE stream' }));
+        return;
+      }
+
       res.writeHead(200, {
         'Content-Type': 'text/event-stream',
         'Cache-Control': 'no-cache',
@@ -392,4 +415,3 @@ if (process.argv[1] && (process.argv[1].endsWith('server.js') || process.argv[1]
   const port = process.env.PORT || 3000;
   startApiServer(port);
 }
-

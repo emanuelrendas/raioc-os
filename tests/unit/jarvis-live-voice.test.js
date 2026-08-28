@@ -6,10 +6,14 @@ import { handleVoiceConversationRequest } from '../../src/api/routes/voice-route
 import { routeApiRequest } from '../../src/api/server.js';
 
 describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suite (RAIOC-VOICE-SPEC-2026-LIVE)', () => {
+  const TEST_SECRET = 'sec_test_voice_token_2026';
+  process.env.RAIOC_INTERNAL_SECRET = TEST_SECRET;
+  process.env.INTERNAL_SERVICE_KEY = TEST_SECRET;
+
   const authHeaders = {
     'content-type': 'application/json',
-    'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-    'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+    'authorization': `Bearer ${TEST_SECRET}`,
+    'x-raioc-secret': TEST_SECRET,
   };
 
   const PROHIBITED_CHARS_REGEX = /[*_~`#\[\]\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F018}-\u{1F270}]/gu;
@@ -204,35 +208,35 @@ describe('🎙️ JARVIS Live Voice Engine & Ultra-Low Latency Conversation Suit
     assert.strictEqual(buf[1] & 0xfe, 0xfa, 'Must have MPEG-1 Layer 3 sync');
   });
 
-  it('14. Session / Local Cookie Auth: Accepts requests from Mission Control session context', async () => {
+  it('14. Cryptographic Session Cookie Auth: Accepts requests with valid HMAC signed session token', async () => {
+    const { secretsManager } = await import('../../src/config/secrets-manager.js');
+    const secret = process.env.RAIOC_INTERNAL_SECRET || process.env.INTERNAL_SERVICE_KEY || 'sec_test_voice_token_2026';
+    const signedToken = secretsManager.signSession({ sub: 'operator', role: 'ADMIN' }, secret);
+
     const res = await handleVoiceConversationRequest('/api/v1/voice/conversation', 'POST', {
       message: 'Verificar status da infraestrutura',
     }, {}, {
-      cookie: 'raioc_session=authenticated_operator_session_token',
-      referer: 'http://localhost:3000/admin/mission-control',
+      cookie: `raioc_session=${signedToken}`,
     });
 
-    assert.strictEqual(res.status, 200, 'Should accept session cookie auth');
+    assert.strictEqual(res.status, 200, 'Should accept cryptographically signed session cookie');
     assert.strictEqual(res.body.success, true);
     assert.ok(res.body.text);
   });
 
-  // ──────────────────────────────────────────────────────────────────────────
-  // 7. Voice Engine Zero-Failure Audio Pipeline & Hardened Security
-  // ──────────────────────────────────────────────────────────────────────────
-  it('15. Session & Token Auth: Accepts valid authenticated session context', async () => {
+  it('15. Fail-Closed Security: Rejects unsigned fake session tokens and spoofed referers', async () => {
     const res = await handleVoiceConversationRequest('/api/v1/voice/conversation', 'POST', {
       message: 'Status do pipeline de áudio dual-layer',
     }, {}, {
       'content-type': 'application/json',
-      'cookie': 'raioc_session=sess_operator_valid_token_2026',
+      'cookie': 'raioc_session=sess_operator_fake_token_2026',
+      'referer': 'http://localhost:3000/admin/mission-control',
       'x-requested-with': 'RAIOC_MISSION_CONTROL_V2',
     });
 
-    assert.strictEqual(res.status, 200, 'Should accept session context auth');
-    assert.strictEqual(res.body.success, true);
-    assert.ok(res.body.text);
-    assert.ok(res.body.audioBase64);
+    assert.strictEqual(res.status, 401, 'Must reject fake session and spoofed referer with 401 (Fail-Closed)');
+    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.body.code, 'AUTH_REQUIRED');
   });
 
   it('16. Client Audio Pipeline Validation: mission-control.html contains micro-buffer unlock, 1.2s safety timer, telemetry and sanitized auth', async () => {

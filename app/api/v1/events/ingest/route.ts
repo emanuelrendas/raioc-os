@@ -13,7 +13,7 @@ import { createClient } from '@supabase/supabase-js';
 // Initialize Sovereign Supabase Client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || 'https://tovfnshstqxmwwlllthj.supabase.co';
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_KEY || '';
-const internalSecret = process.env.RAIOC_INTERNAL_SECRET || 'raioc_sovereign_auth_2026_x99';
+const internalSecret = process.env.RAIOC_INTERNAL_SECRET || process.env.INTERNAL_SERVICE_KEY || '';
 
 const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: { persistSession: false },
@@ -43,10 +43,11 @@ export async function POST(req: NextRequest) {
     const customSecret = req.headers.get('x-raioc-secret') || req.headers.get('x-telegram-bot-api-secret-token');
     const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
 
-    const isAuthorized =
-      bearerToken === internalSecret ||
-      customSecret === internalSecret ||
-      process.env.NODE_ENV === 'development';
+    const isAuthorized = Boolean(
+      internalSecret &&
+      ((bearerToken && crypto.timingSafeEqual(Buffer.from(bearerToken), Buffer.from(internalSecret))) ||
+       (customSecret && crypto.timingSafeEqual(Buffer.from(customSecret), Buffer.from(internalSecret))))
+    );
 
     if (!isAuthorized) {
       return NextResponse.json(

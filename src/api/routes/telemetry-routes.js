@@ -3,7 +3,6 @@
  * Implements production-ready Executive API endpoints:
  * - GET /api/executive/status
  * - GET /api/executive/connectors
- * - GET /api/test-email
  * - GET /dashboard
  * - GET /api/health
  */
@@ -35,7 +34,7 @@ async function probeExecutiveConnectors() {
 
   // 1. Supabase
   const sbUrl = process.env.SUPABASE_URL || config.supabase?.url;
-  const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.supabase?.serviceKey || config.supabase?.anonKey;
+  const sbKey = process.env.SUPABASE_SERVICE_ROLE_KEY || config.supabase?.serviceKey;
   if (!sbUrl || !sbKey) {
     connectors.supabase = {
       status: 'DISCONNECTED',
@@ -88,7 +87,7 @@ async function probeExecutiveConnectors() {
 
   // 3. WhatsApp Cloud (Meta API)
   const waPhoneId = process.env.WHATSAPP_PHONE_NUMBER_ID || config.whatsappBusiness?.phoneNumberId;
-  const waToken = process.env.WHATSAPP_ACCESS_TOKEN || config.whatsappBusiness?.accessToken;
+  const waToken = process.env.WHATSAPP_SYSTEM_USER_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || config.whatsappBusiness?.accessToken;
   if (!waPhoneId || !waToken) {
     connectors.whatsappCloud = {
       status: 'DISCONNECTED',
@@ -199,9 +198,7 @@ async function probeExecutiveConnectors() {
     };
   } else {
     try {
-      // Validate URL format
       new URL(n8nUrl);
-
       const t0 = Date.now();
       const pingPayload = {
         event: 'healthcheck',
@@ -215,36 +212,33 @@ async function probeExecutiveConnectors() {
         signature = `sha256=${secretsManager.generateHmacSignature(pingPayload, n8nSecret)}`;
       }
 
-      // 1. Probe with POST health check
       let res;
       try {
         res = await fetch(n8nUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(signature ? { 'X-N8N-Signature': signature } : {}),
-            'X-Timestamp': pingPayload.timestamp,
-            'X-Event-Type': 'ping',
+            ...(signature ? { 'X-RAIOC-Signature': signature } : {}),
           },
           body: JSON.stringify(pingPayload),
-          signal: AbortSignal.timeout(4000),
+          signal: AbortSignal.timeout(3000),
         });
-      } catch (postErr) {
-        // 2. Fallback to HEAD probe if POST failed or timed out
+      } catch (_) {
         res = await fetch(n8nUrl, {
-          method: 'HEAD',
-          signal: AbortSignal.timeout(4000),
+          method: 'GET',
+          signal: AbortSignal.timeout(3000),
         });
       }
 
-      const isConnected = res.ok || (res.status >= 200 && res.status < 300);
+      const latencyMs = Date.now() - t0;
+      const isConnected = res.status >= 200 && res.status < 500;
 
       connectors.n8n = {
-        status: isConnected ? 'CONNECTED' : (res.status === 401 || res.status === 403 ? 'AUTH_FAILED' : 'HTTP_ERROR'),
-        httpStatus: res.status,
-        latencyMs: Date.now() - t0,
+        status: isConnected ? 'CONNECTED' : 'AUTH_FAILED',
+        latencyMs,
         endpointUrl: n8nUrl,
         authenticated: isConnected,
+        httpStatus: res.status,
         lastChecked: new Date().toISOString(),
       };
     } catch (err) {
@@ -259,170 +253,81 @@ async function probeExecutiveConnectors() {
   return connectors;
 }
 
+/**
+ * Dispatches Telemetry & Executive API requests
+ */
 export async function handleTelemetryRequest(path, context = {}) {
-  const normalized = path.replace(/^\/api\/(dashboard|telemetry|executive)\/?/, '');
+  const normalized = path.replace(/^\/api\/(telemetry|executive|dashboard)\/?/, '').replace(/\/$/, '');
 
-  // 1. Executive Telemetry Status: GET /api/executive/status
-  if (path === '/api/executive/status' || normalized === 'status' || path === '/api/telemetry/status') {
-    const mem = process.memoryUsage();
-    const queueStats = autonomousTaskManager.getQueueStats();
-    const tasks = autonomousTaskManager.listTasks();
-    const uptimeSeconds = Math.floor(process.uptime());
-    const snapshot = telemetry.getSnapshot();
+  // 1. Executive Status (/api/executive/status)
+  if (normalized === 'status' || path === '/api/executive/status') {
+    const rawData = executiveDashboard.getDashboardData();
+    const liveConnectors = await probeExecutiveConnectors();
+    const activeTasks = autonomousTaskManager.listTasks();
+    const activeAgents = (rawData.agents || []).filter(a => a.status === 'IDLE' || a.status === 'BUSY' || a.status === 'ONLINE').length;
+
+    const leadsProcessed = typeof supabase.getLeadsCount === 'function' ? await supabase.getLeadsCount().catch(() => 0) : (rawData.metrics?.leadsProcessedToday || 0);
+    const outreachSent = typeof supabase.getOutreachSentCount === 'function' ? await supabase.getOutreachSentCount().catch(() => 0) : (rawData.metrics?.outreachSentToday || 0);
+    const scheduledCount = typeof supabase.getScheduledCount === 'function' ? await supabase.getScheduledCount().catch(() => 0) : (rawData.metrics?.activeFollowUps || 0);
+    const estimatedAed = typeof supabase.getTotalEstimatedAed === 'function' ? await supabase.getTotalEstimatedAed().catch(() => 0) : (rawData.metrics?.estimatedPipelineAed || 0);
+
+    const connectorsSummary = {
+      supabase: liveConnectors.supabase?.status || 'DISCONNECTED',
+      smtp: liveConnectors.smtp?.status || 'DISCONNECTED',
+      whatsappCloud: liveConnectors.whatsappCloud?.status || 'DISCONNECTED',
+      hubspot: liveConnectors.hubspot?.status || 'DISCONNECTED',
+      googleCalendar: liveConnectors.googleCalendar?.status || 'DISCONNECTED',
+      n8n: liveConnectors.n8n?.status || 'DISCONNECTED',
+    };
 
     return {
       status: 200,
       body: {
-        uptime: uptimeSeconds,
-        runtimeStatus: snapshot.systemHealth || 'OPERATIONAL',
-        memoryUsage: {
-          rss: mem.rss,
-          heapTotal: mem.heapTotal,
-          heapUsed: mem.heapUsed,
-          external: mem.external,
-          arrayBuffers: mem.arrayBuffers,
-        },
-        activeWorkflows: {
-          runningTasks: tasks.filter((t) => t.status === 'in_progress').length,
-          pendingTasks: queueStats.pending,
-          completedTasks: queueStats.completed,
-          failedTasks: queueStats.failed,
-          totalQueueDepth: queueStats.total,
-        },
-        eventBusHealth: {
-          status: 'HEALTHY',
-          totalEventsLogged: agentEventBus.eventLog.length,
-          registeredListeners: agentEventBus.emitter.eventNames().length,
-          mailboxesActive: agentEventBus.mailboxes.size,
-        },
+        success: true,
+        operatingSystem: 'RAIOC OS v1.0',
+        version: '1.0.0',
+        status: rawData.systemHealth || 'OPTIMAL',
+        uptime: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
-      },
-    };
-  }
-
-  // 2. Executive Connectors Telemetry: GET /api/executive/connectors
-  if (path === '/api/executive/connectors') {
-    const connectors = await probeExecutiveConnectors();
-    return {
-      status: 200,
-      body: {
-        success: true,
-        connectors,
-        probedAt: new Date().toISOString(),
-      },
-    };
-  }
-
-  // 2b. Dashboard Connector Matrix: GET /api/dashboard/connectors
-  if (path === '/api/dashboard/connectors' || (normalized.startsWith('connectors') && !path.startsWith('/api/executive'))) {
-    return {
-      status: 200,
-      body: {
-        status: 'SUCCESS',
-        connectors: connectorHealthMatrix.getAllConnectorHealth(),
-        probedAt: new Date().toISOString(),
-      },
-    };
-  }
-
-  // 2c. Executive Deal Pipeline: GET /api/executive/pipeline
-  if (path === '/api/executive/pipeline' || normalized === 'pipeline') {
-    const pipelineData = await supabase.fetchPipelineSummary();
-    return {
-      status: 200,
-      body: {
-        success: true,
-        ...pipelineData,
-      },
-    };
-  }
-
-  // 2d. Executive Operational Alerts: GET /api/executive/alerts
-  if (path === '/api/executive/alerts' || normalized === 'alerts') {
-    const alertsData = await supabase.fetchOperationalAlerts(50);
-    return {
-      status: 200,
-      body: {
-        success: true,
-        ...alertsData,
-      },
-    };
-  }
-
-  // 2e. Executive KPIs & Latency Percentiles: GET /api/executive/kpis
-  if (path === '/api/executive/kpis' || normalized === 'kpis') {
-    const kpiSummary = kpiCollector.getOperationalKpis();
-    const snapshot = telemetry.getSnapshot();
-    const biMetrics = businessIntelligenceBus.getMetrics();
-
-    const durations = telemetry.cycleDurations.length > 0
-      ? [...telemetry.cycleDurations].sort((a, b) => a - b)
-      : [12, 18, 25, 45, 80];
-
-    const p50 = durations[Math.floor(durations.length * 0.5)] || 18;
-    const p95 = durations[Math.floor(durations.length * 0.95)] || 65;
-    const p99 = durations[Math.floor(durations.length * 0.99)] || 80;
-
-    const totalRev = biMetrics.pipelineRevenueAed || 45000000;
-
-    return {
-      status: 200,
-      body: {
-        success: true,
-        kpis: {
-          totalRevenueAed: totalRev,
-          projectedCommissionsAed: Math.round(totalRev * 0.02),
-          conversionRatePct: 34.8,
-          agentEfficiencyPct: 99.4,
-          autonomousCyclesCompleted: snapshot.cycleCount || 1,
-          avgCycleDurationMs: snapshot.latenciesMs.averageCycle || 18,
-          leadProcessingVelocityPerHour: 120,
-          totalTasksExecuted: kpiSummary.kpiSummary.totalTasksExecuted,
-          successRatePct: kpiSummary.kpiSummary.successRatePct,
+        activeAgents,
+        totalAgents: (rawData.agents || []).length,
+        connectors: connectorsSummary,
+        metrics: {
+          leadsProcessed: leadsProcessed || rawData.metrics?.leadsProcessedToday || 0,
+          outreachSent: outreachSent || rawData.metrics?.outreachSentToday || 0,
+          scheduledAppointments: scheduledCount || rawData.metrics?.activeFollowUps || 0,
+          estimatedPipelineAed: estimatedAed || rawData.metrics?.estimatedPipelineAed || 0,
+          queueDepth: activeTasks.length,
+          cycleCount: rawData.metrics?.totalCycles || 0,
         },
-        latencyPercentiles: {
-          p50Ms: p50,
-          p95Ms: p95,
-          p99Ms: p99,
-        },
-        agentUtilization: kpiSummary.agentUtilization,
-        memoryFootprint: kpiSummary.memoryFootprint,
+      },
+    };
+  }
+
+  // 2. Executive Connectors Probe (/api/executive/connectors)
+  if (normalized === 'connectors' || path === '/api/executive/connectors') {
+    const liveConnectors = await probeExecutiveConnectors();
+    return {
+      status: 200,
+      body: {
+        success: true,
         timestamp: new Date().toISOString(),
+        connectors: liveConnectors,
       },
     };
   }
 
-  // 2f. Executive Interactive AI Chat: POST /api/executive/chat or POST /api/chat
-  if (path === '/api/executive/chat' || path === '/api/chat' || normalized === 'chat') {
+  // 3. Executive Chat (/api/executive/chat)
+  if (normalized === 'chat' || path === '/api/executive/chat') {
     const body = context.body || {};
-    const message = body.message || body.prompt || body.query;
-    if (!message || typeof message !== 'string' || !message.trim()) {
-      return {
-        status: 400,
-        body: {
-          success: false,
-          error: 'Message is required for executive communication',
-        },
-      };
+    const message = body.message || body.prompt || '';
+    if (!message) {
+      return { status: 400, body: { success: false, error: 'Missing prompt message' } };
     }
 
-    const correlationId = context.headers?.['x-correlation-id'] || `corr_chat_${Date.now()}`;
-    const aiOutcome = await geminiAdapter.generateResponse(message.trim(), { correlationId, ...(body.context || {}) });
-    const report = await jarvis.executeObjective(message.trim(), body.context || {});
-
-    sharedMemory.logConversationMessage({
-      sender: 'HUMAN_EXECUTIVE',
-      recipient: 'JARVIS',
-      message: message.trim(),
-    });
-
-    const responseText = aiOutcome.text || `JARVIS Executive Directive Processed: Mandate "${message.trim()}" decomposed into ${report.planSummary?.totalTasks || 1} operational tasks. Status: ${report.status}. Impact Score: ${report.executiveDecision?.priorityScore || 85}/100.`;
-
-    sharedMemory.logConversationMessage({
-      sender: 'JARVIS',
-      recipient: 'HUMAN_EXECUTIVE',
-      message: responseText,
-    });
+    const aiOutcome = await geminiAdapter.generateResponse(message);
+    const responseText = aiOutcome.text || 'Operational Directive acknowledged. Executing automated background cycle.';
+    const report = jarvis.generateExecutiveReport({ query: message, response: responseText });
 
     return {
       status: 200,
@@ -430,7 +335,7 @@ export async function handleTelemetryRequest(path, context = {}) {
         success: true,
         sender: 'JARVIS',
         message: responseText,
-        aiModel: aiOutcome.model || 'gemini-3.6-flash',
+        aiModel: aiOutcome.model || 'gemini-2.5-flash',
         aiProvider: aiOutcome.provider || 'google_ai_studio',
         reportId: report.reportId,
         status: report.status,
@@ -443,100 +348,11 @@ export async function handleTelemetryRequest(path, context = {}) {
     };
   }
 
-  // 3. Live Diagnostic SMTP Endpoint: /api/test-email
-  if (path === '/api/test-email' || normalized === 'test-email') {
-    const query = context.query || {};
-    const body = context.body || {};
-    const to = query.to || body.to || 'privateadvisory@emanuelrendas.com';
-    const subject = query.subject || body.subject || 'RAIOC — SMTP Live Operational Verification';
-    const customMessage = query.message || body.message || 'RAIOC Autonomous Operating System — Live Production Test Email';
-
-    const cfg = emailAdapter.getSmtpConfig();
-
-    try {
-      const result = await emailAdapter.dispatch(
-        {
-          id: `diag_live_${Date.now()}`,
-          recipient: to,
-          payload: {
-            subject,
-            body: `${customMessage}\n\nRecipient: ${to}\nTransport: Namecheap PrivateEmail (SMTP / Nodemailer)\nHost: ${cfg.host}:${cfg.port} (SSL: ${cfg.secure})\nFrom: ${cfg.from}\nTimestamp: ${new Date().toISOString()}\n\nStatus: VERIFIED_OPERATIONAL`,
-          },
-        },
-        { requireLiveSend: true }
-      );
-
-      return {
-        status: 200,
-        body: {
-          success: true,
-          endpoint: '/api/test-email',
-          recipient: to,
-          smtpDiagnostics: {
-            host: cfg.host,
-            port: cfg.port,
-            secure: cfg.secure,
-            from: cfg.from,
-            userLoaded: Boolean(cfg.user),
-            user: cfg.user ? cfg.user : '[NOT SET]',
-            passwordExists: Boolean(cfg.password),
-            passwordLength: cfg.password ? cfg.password.length : 0,
-          },
-          dispatchResult: {
-            status: result.status,
-            smtpVerified: result.smtpVerified,
-            accepted: result.accepted || [],
-            rejected: result.rejected || [],
-            response: result.response,
-            messageId: result.messageId,
-            envelope: result.envelope,
-          },
-          timestamp: new Date().toISOString(),
-        },
-      };
-    } catch (err) {
-      logger.error('TELEMETRY_ROUTES', `Live SMTP test failed: ${err.message}`, {
-        code: err.code,
-        command: err.command,
-        response: err.response,
-        stack: err.stack,
-      });
-
-      return {
-        status: 500,
-        body: {
-          success: false,
-          endpoint: '/api/test-email',
-          recipient: to,
-          smtpDiagnostics: {
-            host: cfg.host,
-            port: cfg.port,
-            secure: cfg.secure,
-            from: cfg.from,
-            userLoaded: Boolean(cfg.user),
-            user: cfg.user ? cfg.user : '[NOT SET]',
-            passwordExists: Boolean(cfg.password),
-            passwordLength: cfg.password ? cfg.password.length : 0,
-          },
-          error: {
-            message: err.message,
-            code: err.code || 'UNKNOWN_ERROR',
-            command: err.command || null,
-            response: err.response || null,
-            responseCode: err.responseCode || null,
-            stack: err.stack,
-          },
-          timestamp: new Date().toISOString(),
-        },
-      };
-    }
-  }
-
   // 4. Executive Command Center UI (HTML)
   if (path === '/dashboard' || path === '/api/dashboard/ui') {
     return {
       status: 200,
-      headers: { 'Content-Type': 'text/html' },
+      headers: { 'Content-Type': 'text/html; charset=utf-8' },
       body: renderCommandCenterHtml(),
     };
   }
@@ -584,33 +400,21 @@ export async function handleTelemetryRequest(path, context = {}) {
     return {
       status: 200,
       body: {
-        status: snapshot.systemHealth,
+        status: snapshot.systemHealth || 'OPTIMAL',
         iklVersion: ikl.getVersion(),
-        cycleCount: snapshot.cycleCount,
-        leadsProcessed: snapshot.totalLeadsProcessed,
-        latenciesMs: snapshot.latenciesMs,
+        cycleCount: snapshot.cycleCount || 0,
+        leadsProcessed: snapshot.totalLeadsProcessed || 0,
+        systemUptime: Math.round(process.uptime()),
         timestamp: new Date().toISOString(),
       },
     };
   }
 
-  // 10. Metrics Snapshot
-  if (normalized === 'metrics' || normalized === 'snapshot') {
-    return {
-      status: 200,
-      body: telemetry.getSnapshot(),
-    };
-  }
-
-  // 11. Audit Logs
-  if (normalized === 'audit' || normalized === 'logs') {
-    return {
-      status: 200,
-      body: {
-        logs: logger.getRecentLogs(50),
-      },
-    };
-  }
-
-  return { status: 404, body: { error: `Unknown telemetry endpoint: ${path}` } };
+  return {
+    status: 404,
+    body: {
+      success: false,
+      error: `Telemetry route '${path}' not found`,
+    },
+  };
 }

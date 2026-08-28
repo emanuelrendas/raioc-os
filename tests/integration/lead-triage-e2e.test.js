@@ -7,6 +7,10 @@
 
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
+
+const VALID_SECRET = 'sec_test_sovereign_auth_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 import crypto from 'node:crypto';
 import handler from '../../api/index.js';
 import { supabase } from '../../src/db/supabase-client.js';
@@ -159,8 +163,8 @@ test('LEAD TRIAGE E2E: Mandate 1 - Lord Alistair Sterling (25M AED, Palm Jumeira
     body: cloudEventPayload,
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
+      'x-raioc-secret': VALID_SECRET,
       'traceparent': traceparent,
       'x-correlation-id': correlationId,
     },
@@ -206,8 +210,8 @@ test('LEAD TRIAGE E2E: Mandate 2 - Dr. Afonso Henriques (30M AED, Dubai Creek Ha
     body: cloudEventPayload,
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
+      'x-raioc-secret': VALID_SECRET,
       'traceparent': traceparent,
       'x-correlation-id': correlationId,
     },
@@ -251,8 +255,8 @@ test('LEAD TRIAGE E2E: Mandate 3 - Baroness Victoria Vance (45M AED, DIFC)', asy
     body: cloudEventPayload,
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
+      'x-raioc-secret': VALID_SECRET,
       'traceparent': traceparent,
       'x-correlation-id': correlationId,
     },
@@ -294,8 +298,8 @@ test('LEAD TRIAGE E2E: Mandate 4 - Zhang Wei (60M AED, Palm Jebel Ali)', async (
     body: cloudEventPayload,
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
+      'x-raioc-secret': VALID_SECRET,
       'traceparent': traceparent,
       'x-correlation-id': correlationId,
     },
@@ -337,8 +341,8 @@ test('LEAD TRIAGE E2E: Mandate 5 - Sheikh Tariq Al-Mansoor (80M AED, Dubai Hills
     body: cloudEventPayload,
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-      'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
+      'x-raioc-secret': VALID_SECRET,
       'traceparent': traceparent,
       'x-correlation-id': correlationId,
     },
@@ -378,8 +382,8 @@ test('LEAD TRIAGE E2E: Consolidated Multi-Agent Pipeline & Audit Telemetry Verif
       },
       headers: {
         'host': 'api.emanuelrendas.com',
-        'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-        'x-raioc-secret': 'raioc_sovereign_auth_2026_x99',
+        'authorization': `Bearer ${VALID_SECRET}`,
+        'x-raioc-secret': VALID_SECRET,
         'traceparent': traceparent,
         'x-correlation-id': correlationId,
       },

@@ -1,8 +1,8 @@
 /**
- * Vercel Serverless Entrypoint - RAIOC OS
+ * Vercel Serverless Entrypoint - RAIOC OS (Security Hardened)
  * Explicitly protects root '/' to serve index.html (public website),
- * '/dashboard' to serve the Executive Command Center,
- * and '/api/*' to route through the unified API router.
+ * requires authentication for '/dashboard', '/admin/mission-control', and '/api/executive/*',
+ * and routes through the unified API router.
  */
 
 import fs from 'node:fs';
@@ -13,6 +13,7 @@ import { renderExecutiveBriefHtml } from '../src/site/brief-viewer-html.js';
 import { renderMissionControlHtml } from '../src/site/mission-control-html.js';
 import { supabase } from '../src/db/supabase-client.js';
 import { sitePages } from '../src/site/site-pages.js';
+import { authMiddleware, Roles } from '../src/security/auth-middleware.js';
 
 export const config = {
   api: {
@@ -74,6 +75,13 @@ export default async function handler(req, res) {
   url = url.split('?')[0]; // strip query string for route matching
   url = url.replace(/^\/api\/api\//, '/api/');
 
+  // Blocked / Deleted test endpoint: /api/test-email
+  if (url === '/api/test-email' || url === '/test-email') {
+    res.setHeader('Content-Type', 'application/json');
+    res.status(404);
+    return res.json ? res.json({ error: 'Endpoint deleted or disabled' }) : res.end(JSON.stringify({ error: 'Endpoint deleted or disabled' }));
+  }
+
   // 1. Brief Viewer (/brief/:id, /api/brief/:id, or any request with brief id)
   const isBriefRequest = url.startsWith('/brief') || url.startsWith('/api/brief') || url.includes('/brief/') || Boolean(matchedBriefId && matchedBriefId.startsWith('brief'));
   if (isBriefRequest && method === 'GET') {
@@ -92,8 +100,15 @@ export default async function handler(req, res) {
     return typeof res.send === 'function' ? res.send(briefHtml) : res.end(briefHtml);
   }
 
-  // 1b. Executive Mission Control UI (/admin/mission-control, /mission-control)
+  // 1b. Executive Mission Control UI (/admin/mission-control, /mission-control) -> PROTECTED
   if (url === '/admin/mission-control' || url === '/mission-control' || url === '/admin/mission-control.html' || url === '/mission-control.html' || url === '/api/mission-control/ui') {
+    const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN, Roles.AGENT]);
+    if (!auth.authenticated) {
+      res.setHeader('Content-Type', 'application/json');
+      res.status(401);
+      return res.json ? res.json({ success: false, error: 'Unauthorized: Mission Control requires authentication', details: auth.error }) : res.end(JSON.stringify({ success: false, error: 'Unauthorized', details: auth.error }));
+    }
+
     const mcHtml = (sitePages && sitePages['mission-control']) ? sitePages['mission-control'] : renderMissionControlHtml();
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -101,8 +116,15 @@ export default async function handler(req, res) {
     return typeof res.send === 'function' ? res.send(mcHtml) : res.end(mcHtml);
   }
 
-  // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard'
+  // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard' -> PROTECTED
   if (host.includes('dashboard') || url === '/dashboard' || url === '/dashboard/' || url === '/dashboard.html' || url === '/api/dashboard/ui') {
+    const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN, Roles.AGENT]);
+    if (!auth.authenticated) {
+      res.setHeader('Content-Type', 'application/json');
+      res.status(401);
+      return res.json ? res.json({ success: false, error: 'Unauthorized: Executive Dashboard requires authentication', details: auth.error }) : res.end(JSON.stringify({ success: false, error: 'Unauthorized', details: auth.error }));
+    }
+
     let dashHtml = (sitePages && sitePages.dashboard) ? sitePages.dashboard : '';
     if (!dashHtml) {
       try {
@@ -129,7 +151,7 @@ export default async function handler(req, res) {
     return typeof res.send === 'function' ? res.send(dashHtml) : res.end(dashHtml);
   }
 
-  // 2. API Subdomain Normalization (api.emanuelrendas.com)
+  // 2b. API Subdomain Normalization (api.emanuelrendas.com)
   if (host.startsWith('api.')) {
     if (url === '/' || url === '' || url === '/status') {
       url = '/api/executive/status';
@@ -150,94 +172,62 @@ export default async function handler(req, res) {
     }
   }
 
-  // 3. Static Web Pages & Assets on public website (www.emanuelrendas.com / emanuelrendas.com)
-  if (!host.startsWith('api.') && !host.startsWith('dashboard.')) {
-    // Hard guard: Never fall back to static pages or index.html for brief routes
-    if (url.startsWith('/brief') || url.includes('/brief/')) {
-      const briefId = url.replace(/^\/(api\/)?brief\/?/, '').split('/')[0].split('?')[0] || 'default';
-      const briefRecord = await supabase.fetchExecutiveBriefById(briefId);
-      const briefHtml = renderExecutiveBriefHtml(briefRecord || { id: briefId, companyName: 'Private Sovereign Investor' });
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
-      res.status(200);
-      return typeof res.send === 'function' ? res.send(briefHtml) : res.end(briefHtml);
-    }
+  // 3. API Route Execution via Internal Unified Router
+  if (url.startsWith('/api/') || url === '/api' || url.startsWith('/healthz')) {
+    const apiResponse = await routeApiRequest(url, method, body, query, headers);
 
-    let cleanKey = url.replace(/^\//, '').replace(/\.html$/, '').split('?')[0].toLowerCase();
-    if (cleanKey === '' || cleanKey === 'index') cleanKey = 'index';
-
-    if (sitePages && sitePages[cleanKey]) {
-      const html = sitePages[cleanKey];
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-      res.status(200);
-      return typeof res.send === 'function' ? res.send(html) : res.end(html);
-    }
-
-    // Static assets fallback
-    if (url.startsWith('/assets/') || url.endsWith('.js') || url.endsWith('.css') || url.endsWith('.jpg') || url.endsWith('.png') || url.endsWith('.svg')) {
-      try {
-        const cleanPath = url.replace(/^\//, '');
-        const candidates = [
-          path.resolve('public', cleanPath),
-          path.resolve(cleanPath),
-        ];
-        for (const p of candidates) {
-          if (fs.existsSync(p)) {
-            const fileBuf = fs.readFileSync(p);
-            let mimeType = 'text/plain';
-            if (p.endsWith('.css')) mimeType = 'text/css';
-            else if (p.endsWith('.js')) mimeType = 'application/javascript';
-            else if (p.endsWith('.jpg') || p.endsWith('.jpeg')) mimeType = 'image/jpeg';
-            else if (p.endsWith('.png')) mimeType = 'image/png';
-            else if (p.endsWith('.svg')) mimeType = 'image/svg+xml';
-            res.setHeader('Content-Type', mimeType);
-            res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-            res.status(200);
-            return typeof res.send === 'function' ? res.send(fileBuf) : res.end(fileBuf);
-          }
-        }
-      } catch {
-        // Fallback
-      }
-    }
-  }
-
-  // 4. API & Telemetry Routes
-  try {
-    const response = await routeApiRequest(url, method, body, query, headers);
-
-    if (response.headers) {
-      for (const [k, v] of Object.entries(response.headers)) {
+    if (apiResponse.headers) {
+      for (const [k, v] of Object.entries(apiResponse.headers)) {
         res.setHeader(k, v);
       }
     }
 
-    const contentType = response.headers?.['Content-Type'] || 'application/json';
-    res.status(response.status);
-
-    if (contentType.includes('text/html') || typeof response.body === 'string') {
-      res.setHeader('Content-Type', contentType);
-      if (typeof res.send === 'function') {
-        res.send(response.body);
-      } else {
-        res.end(response.body);
-      }
-    } else {
-      res.setHeader('Content-Type', 'application/json');
-      if (typeof res.json === 'function') {
-        res.json(response.body);
-      } else {
-        res.end(JSON.stringify(response.body));
-      }
+    res.status(apiResponse.status || 200);
+    const contentType = apiResponse.headers?.['Content-Type'] || 'application/json';
+    if (contentType.includes('text/html') || typeof apiResponse.body === 'string') {
+      return typeof res.send === 'function' ? res.send(apiResponse.body) : res.end(apiResponse.body);
     }
-  } catch (err) {
-    res.status(500);
-    const errPayload = { error: 'Internal Serverless Execution Error', message: err.message };
-    if (typeof res.json === 'function') {
-      res.json(errPayload);
-    } else {
-      res.end(JSON.stringify(errPayload));
-    }
+    return typeof res.json === 'function' ? res.json(apiResponse.body) : res.end(JSON.stringify(apiResponse.body));
   }
+
+  // 4. Static Website Pages Delivery (Public)
+  const cleanPath = url.replace(/^\//, '').replace(/\.html$/, '') || 'index';
+  let pageHtml = sitePages ? sitePages[cleanPath] : null;
+
+  if (pageHtml) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+    res.status(200);
+    return typeof res.send === 'function' ? res.send(pageHtml) : res.end(pageHtml);
+  }
+
+  // Static assets fallback
+  try {
+    const filePath = path.resolve(url === '/' ? 'index.html' : url.replace(/^\//, ''));
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      const ext = path.extname(filePath).toLowerCase();
+      const mimeTypes = {
+        '.html': 'text/html; charset=utf-8',
+        '.json': 'application/json',
+        '.js': 'application/javascript',
+        '.css': 'text/css',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.svg': 'image/svg+xml',
+        '.txt': 'text/plain',
+        '.xml': 'application/xml',
+      };
+      const contentType = mimeTypes[ext] || 'application/octet-stream';
+      const content = fs.readFileSync(filePath);
+      res.setHeader('Content-Type', contentType);
+      res.status(200);
+      return res.end(content);
+    }
+  } catch (_) {}
+
+  // 404 Fallback
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.status(404);
+  const fallback404 = sitePages?.index || '<h1>404 - Page Not Found</h1>';
+  return typeof res.send === 'function' ? res.send(fallback404) : res.end(fallback404);
 }

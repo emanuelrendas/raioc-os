@@ -9,6 +9,10 @@
 
 import { test, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert';
+
+const VALID_SECRET = 'sec_test_sovereign_auth_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 import crypto from 'node:crypto';
 import handler from '../../api/index.js';
 import { supabase } from '../../src/db/supabase-client.js';
@@ -101,7 +105,7 @@ test('AIDA VOICE GATEWAY: Voice outreach blocked when HITL approval is PENDING (
     },
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
     },
   }, res);
 
@@ -153,7 +157,7 @@ test('AIDA VOICE GATEWAY: Voice outreach successfully dispatched after HITL appr
     },
     headers: {
       'host': 'api.emanuelrendas.com',
-      'authorization': 'Bearer raioc_sovereign_auth_2026_x99',
+      'authorization': `Bearer ${VALID_SECRET}`,
     },
   }, res);
 

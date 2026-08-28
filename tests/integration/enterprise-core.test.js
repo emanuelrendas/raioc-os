@@ -9,7 +9,9 @@ import assert from 'node:assert';
 import { routeApiRequest } from '../../src/api/server.js';
 import { supabase } from '../../src/db/supabase-client.js';
 
-const VALID_SECRET = process.env.RAIOC_INTERNAL_SECRET || 'raioc_sovereign_auth_2026_x99';
+const VALID_SECRET = 'sec_test_enterprise_core_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 
 describe('INTEGRATION: Enterprise Core Registries & Knowledge Graph', () => {
   beforeEach(() => {

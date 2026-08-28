@@ -20,8 +20,11 @@ import { enterpriseEventBus } from '../../src/core/event-bus.js';
 import { enterpriseEventRouter } from '../../src/core/event-router.js';
 import { config } from '../../src/config/env.js';
 
-const VALID_TELEGRAM_SECRET = config.telegram?.secretToken || 'raioc_telegram_secret_2026';
-const VALID_RAIOC_SECRET = process.env.RAIOC_INTERNAL_SECRET || 'raioc_sovereign_auth_2026_x99';
+const VALID_TELEGRAM_SECRET = 'sec_test_telegram_secret_2026';
+const VALID_RAIOC_SECRET = 'sec_test_raioc_secret_2026';
+process.env.TELEGRAM_SECRET_TOKEN = VALID_TELEGRAM_SECRET;
+process.env.RAIOC_INTERNAL_SECRET = VALID_RAIOC_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_RAIOC_SECRET;
 
 describe('INTEGRATION: Telegram Channel Webhook Ingestion & Event Bus v1.1', () => {
   beforeEach(() => {

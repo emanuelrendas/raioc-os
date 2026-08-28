@@ -17,31 +17,30 @@ import { logger } from '../../../logging/audit-logger.js';
  * @param {Object} headers 
  * @returns {boolean}
  */
+import { secretsManager } from '../../../config/secrets-manager.js';
+
 function validateTelegramSecret(headers = {}) {
   const secretToken = headers['x-telegram-bot-api-secret-token'] || headers['X-Telegram-Bot-Api-Secret-Token'];
   const internalSecret = headers['x-raioc-secret'] || headers['X-RAIOC-Secret'] || headers['x-internal-secret'];
   const authHeader = headers['authorization'] || headers['Authorization'];
-  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7) : null;
+  const bearerToken = authHeader?.startsWith('Bearer ') ? authHeader.substring(7).trim() : null;
 
-  const validTelegramSecret = config.telegram?.secretToken || process.env.TELEGRAM_SECRET_TOKEN || 'raioc_telegram_secret_2026';
-  const validRaiocSecret = process.env.RAIOC_INTERNAL_SECRET || 'raioc_sovereign_auth_2026_x99';
+  const candidateTokens = [secretToken, internalSecret, bearerToken].filter(Boolean);
+  if (candidateTokens.length === 0) return false;
 
-  // 1. Direct Telegram Secret Token match
-  if (secretToken && (secretToken === validTelegramSecret || secretToken === validRaiocSecret)) {
-    return true;
-  }
+  const validSecrets = [
+    config.telegram?.secretToken,
+    process.env.TELEGRAM_SECRET_TOKEN,
+    process.env.TELEGRAM_BOT_SECRET,
+    process.env.RAIOC_INTERNAL_SECRET,
+    process.env.INTERNAL_SERVICE_KEY,
+  ].filter(Boolean);
 
-  // 2. Dev / Staging Internal Secret match
-  if (internalSecret && (internalSecret === validRaiocSecret || internalSecret === validTelegramSecret)) {
-    return true;
-  }
+  if (validSecrets.length === 0) return false;
 
-  // 3. Bearer Token match
-  if (bearerToken && (bearerToken === validRaiocSecret || bearerToken === validTelegramSecret)) {
-    return true;
-  }
-
-  return false;
+  return candidateTokens.some((candidate) =>
+    validSecrets.some((validSecret) => secretsManager.constantTimeCompare(candidate, validSecret))
+  );
 }
 
 /**

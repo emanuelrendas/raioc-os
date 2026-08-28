@@ -9,6 +9,10 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert';
+
+const VALID_SECRET = 'sec_test_sovereign_auth_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 import { handleMissionControlV1State } from '../../src/api/v1/mission-control/v1-state.js';
 import { handleApprovalsRequest } from '../../src/api/mission-control/approvals.js';
 import { sentinelMeshMonitor, CIRCUIT_STATES, MESH_STATUS } from '../../src/core/sentinel-mesh-monitor.js';
@@ -302,8 +306,8 @@ test('MISSION CONTROL V2 UI INTERACTION: 1-Click Button Payload (approval_id, de
     },
     {},
     {
-      'Authorization': 'Bearer raioc_sovereign_auth_2026_x99',
-      'X-RAIOC-Secret': 'raioc_sovereign_auth_2026_x99',
+      'Authorization': `Bearer ${VALID_SECRET}`,
+      'X-RAIOC-Secret': VALID_SECRET,
       'x-correlation-id': `corr_btn_click_${Date.now()}`,
     }
   );

@@ -18,7 +18,9 @@ import { enterpriseEventBus, EnterpriseEventBus } from '../../src/core/event-bus
 import { recoveryEngine, CircuitBreaker, CircuitState } from '../../src/core/recovery-engine.js';
 import { cognitiveRouter } from '../../src/core/cognitive-router.js';
 
-const VALID_SECRET = process.env.RAIOC_INTERNAL_SECRET || 'raioc_sovereign_auth_2026_x99';
+const VALID_SECRET = 'sec_test_sovereign_auth_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 
 describe('INTEGRATION: Sprint 2 Core Hardening & Architecture Verification', () => {
   beforeEach(() => {

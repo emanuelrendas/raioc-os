@@ -11,6 +11,15 @@ import handler from '../../api/index.js';
 import { supabase } from '../../src/db/supabase-client.js';
 import { enterpriseEventBus } from '../../src/core/event-bus.js';
 import { enterpriseEventRouter } from '../../src/core/event-router.js';
+import { secretsManager } from '../../src/config/secrets-manager.js';
+
+const WA_TEST_APP_SECRET = 'wa_sec_test_app_secret_888';
+const WA_TEST_VERIFY_TOKEN = 'raioc_wa_verify_token';
+process.env.WHATSAPP_APP_SECRET = WA_TEST_APP_SECRET;
+process.env.META_WHATSAPP_APP_SECRET = WA_TEST_APP_SECRET;
+process.env.META_APP_SECRET = WA_TEST_APP_SECRET;
+process.env.WHATSAPP_VERIFY_TOKEN = WA_TEST_VERIFY_TOKEN;
+process.env.META_VERIFY_TOKEN = WA_TEST_VERIFY_TOKEN;
 
 function createMockRes() {
   let statusCode = 200;
@@ -149,6 +158,7 @@ test('WHATSAPP PHASE 8: Ingestion Packaging & W3C Trace Propagation', async () =
     headers: {
       host: 'api.emanuelrendas.com',
       'content-type': 'application/json',
+      'x-hub-signature-256': `sha256=${secretsManager.generateHmacSignature(metaPayload, WA_TEST_APP_SECRET)}`,
       traceparent: customTraceparent,
       'x-correlation-id': customCorrelationId,
     },
@@ -196,7 +206,11 @@ test('WHATSAPP PHASE 8: Policy Routing to MARK (Investment Mandate >= 10M AED + 
     url: '/api/v1/channels/whatsapp/webhook',
     method: 'POST',
     body: metaPayload,
-    headers: { host: 'api.emanuelrendas.com' },
+    headers: {
+      host: 'api.emanuelrendas.com',
+      'content-type': 'application/json',
+      'x-hub-signature-256': `sha256=${secretsManager.generateHmacSignature(metaPayload, WA_TEST_APP_SECRET)}`,
+    },
   }, res);
 
   assert.strictEqual(res._get().status, 200);
@@ -246,7 +260,11 @@ test('WHATSAPP PHASE 8: Policy Routing to ATLAS (Yield & ROI Valuation)', async 
     url: '/api/v1/channels/whatsapp/webhook',
     method: 'POST',
     body: metaPayload,
-    headers: { host: 'api.emanuelrendas.com' },
+    headers: {
+      host: 'api.emanuelrendas.com',
+      'content-type': 'application/json',
+      'x-hub-signature-256': `sha256=${secretsManager.generateHmacSignature(metaPayload, WA_TEST_APP_SECRET)}`,
+    },
   }, res);
 
   assert.strictEqual(res._get().status, 200);
@@ -288,7 +306,11 @@ test('WHATSAPP PHASE 8: Policy Routing to JARVIS (General Inquiries)', async () 
     url: '/api/v1/channels/whatsapp/webhook',
     method: 'POST',
     body: metaPayload,
-    headers: { host: 'api.emanuelrendas.com' },
+    headers: {
+      host: 'api.emanuelrendas.com',
+      'content-type': 'application/json',
+      'x-hub-signature-256': `sha256=${secretsManager.generateHmacSignature(metaPayload, WA_TEST_APP_SECRET)}`,
+    },
   }, res);
 
   assert.strictEqual(res._get().status, 200);
@@ -305,17 +327,21 @@ test('WHATSAPP PHASE 8: Policy Routing to JARVIS (General Inquiries)', async () 
 // ══════════════════════════════════════════════════════════════════════
 
 test('WHATSAPP PHASE 8: Tool Telemetry Probe & Mission Control V1 Reflection', async () => {
-  // 1. Send WhatsApp message
+  const probePayload = {
+    sender_phone: '971501234567',
+    profile_name: 'Sheikh Khalid Al-Maktoum Office',
+    text: 'Allocating 50M AED sovereign reserve in Palm Jumeirah Como Residences.',
+  };
   const res = createMockRes();
   await handler({
     url: '/api/v1/channels/whatsapp/webhook',
     method: 'POST',
-    body: {
-      sender_phone: '971501234567',
-      profile_name: 'Sheikh Khalid Al-Maktoum Office',
-      text: 'Allocating 50M AED sovereign reserve in Palm Jumeirah Como Residences.',
+    body: probePayload,
+    headers: {
+      host: 'api.emanuelrendas.com',
+      'content-type': 'application/json',
+      'x-hub-signature-256': `sha256=${secretsManager.generateHmacSignature(probePayload, WA_TEST_APP_SECRET)}`,
     },
-    headers: { host: 'api.emanuelrendas.com' },
   }, res);
 
   assert.strictEqual(res._get().status, 200);

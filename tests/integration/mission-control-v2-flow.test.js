@@ -15,7 +15,9 @@ import { supabase } from '../../src/db/supabase-client.js';
 import { enterpriseEventBus } from '../../src/core/event-bus.js';
 import { renderMissionControlHtml } from '../../src/site/mission-control-html.js';
 
-const VALID_SECRET = process.env.RAIOC_INTERNAL_SECRET || 'raioc_sovereign_auth_2026_x99';
+const VALID_SECRET = 'sec_test_sovereign_auth_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 
 describe('INTEGRATION: Mission Control V2 Integrated Flow & HITL Governance', () => {
   beforeEach(() => {

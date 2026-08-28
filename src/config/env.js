@@ -58,7 +58,7 @@ export const config = {
   whatsappBusiness: {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || process.env.META_PHONE_NUMBER_ID || '',
     accessToken: process.env.WHATSAPP_SYSTEM_USER_TOKEN || process.env.WHATSAPP_ACCESS_TOKEN || process.env.WHATSAPP_API_KEY || process.env.META_WHATSAPP_TOKEN || '',
-    verifyToken: process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || 'raioc_sovereign_auth_2026_x99',
+    verifyToken: process.env.META_VERIFY_TOKEN || process.env.WHATSAPP_VERIFY_TOKEN || '',
     apiUrl: process.env.WHATSAPP_API_URL || '',
     enabled: process.env.WHATSAPP_ENABLED !== 'false',
   },
@@ -106,7 +106,7 @@ export const config = {
     enabled: process.env.WHATSAPP_ENABLED !== 'false',
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID || '',
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN || '',
-    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || 'raioc_wa_verify_token',
+    verifyToken: process.env.WHATSAPP_VERIFY_TOKEN || process.env.META_VERIFY_TOKEN || '',
     appSecret: process.env.WHATSAPP_APP_SECRET || '',
     defaultTemplateName: process.env.WHATSAPP_DEFAULT_TEMPLATE || 'executive_brief_dispatch',
     languageCode: process.env.WHATSAPP_LANGUAGE_CODE || 'en',
@@ -122,13 +122,13 @@ export const config = {
   n8n: {
     enabled: process.env.N8N_ENABLED !== 'false',
     webhookUrl: process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || '',
-    webhookSecret: process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || 'raioc_n8n_hmac_secret',
+    webhookSecret: process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || '',
     timeoutMs: parseInt(process.env.N8N_TIMEOUT_MS || '5000', 10),
   },
   telegram: {
     enabled: process.env.TELEGRAM_ENABLED !== 'false',
     botToken: process.env.TELEGRAM_BOT_TOKEN || '',
-    secretToken: process.env.TELEGRAM_SECRET_TOKEN || process.env.TELEGRAM_BOT_SECRET || 'raioc_telegram_secret_2026',
+    secretToken: process.env.TELEGRAM_SECRET_TOKEN || process.env.TELEGRAM_BOT_SECRET || '',
     chatId: process.env.TELEGRAM_CHAT_ID || '',
     timeoutMs: parseInt(process.env.TELEGRAM_TIMEOUT_MS || '10000', 10),
   },

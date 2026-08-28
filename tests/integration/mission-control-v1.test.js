@@ -12,6 +12,10 @@
 
 import { test, describe, beforeEach } from 'node:test';
 import assert from 'node:assert';
+
+const VALID_SECRET = 'sec_test_sovereign_auth_2026';
+process.env.RAIOC_INTERNAL_SECRET = VALID_SECRET;
+process.env.INTERNAL_SERVICE_KEY = VALID_SECRET;
 import { routeApiRequest } from '../../src/api/server.js';
 import { supabase } from '../../src/db/supabase-client.js';
 import { enterpriseEventBus } from '../../src/core/event-bus.js';
@@ -220,7 +224,7 @@ describe('INTEGRATION: Mission Control V1 24/7 Wall-Screen Dashboard', () => {
         actor: 'Emanuel Rendas (Executive)',
       },
       {},
-      { 'x-raioc-secret': 'raioc_sovereign_auth_2026_x99' }
+      { 'x-raioc-secret': VALID_SECRET }
     );
 
     assert.strictEqual(resolveRes.status, 200);

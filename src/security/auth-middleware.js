@@ -1,6 +1,6 @@
 /**
  * RAIOC Security - Service Authentication & RBAC Middleware
- * Enforces timing-safe service-to-service key authentication and role authorization.
+ * Enforces timing-safe cryptographic authentication, session validation, and strict Fail-Closed access control.
  */
 
 import { config } from '../config/env.js';
@@ -12,35 +12,44 @@ export const Roles = {
   AGENT: 'AGENT',
   WEBHOOK: 'WEBHOOK',
   PUBLIC: 'PUBLIC',
+  ANONYMOUS: 'ANONYMOUS',
 };
 
 export class AuthMiddleware {
   constructor(options = {}) {
-    this.internalKey = options.internalKey || process.env.RAIOC_INTERNAL_SECRET || process.env.INTERNAL_SERVICE_KEY || config.service.internalKey || 'raioc_sovereign_auth_2026_x99';
+    this.internalKey = options.internalKey || process.env.RAIOC_INTERNAL_SECRET || process.env.INTERNAL_SERVICE_KEY || config.service.internalKey || '';
   }
 
   getSecret() {
-    return process.env.RAIOC_INTERNAL_SECRET || process.env.INTERNAL_SERVICE_KEY || this.internalKey || 'raioc_sovereign_auth_2026_x99';
+    const secret = process.env.RAIOC_INTERNAL_SECRET || process.env.INTERNAL_SERVICE_KEY || this.internalKey || config.service.internalKey || '';
+    return secret ? secret.trim() : '';
   }
 
   /**
-   * Authenticates an incoming HTTP request using Bearer Token, X-API-Key, or RAIOC Secret header
+   * Authenticates an incoming HTTP request using cryptographic Bearer Token, X-API-Key, X-RAIOC-Secret,
+   * or cryptographically signed session cookie (HMAC-SHA256).
+   * Strict Fail-Closed behavior is enforced.
+   *
    * @param {Object} headers - HTTP request headers
    * @param {Array<string>} allowedRoles - List of permitted roles for the route
    * @returns {Object} { authenticated: boolean, role: string, error?: string }
    */
   authenticateRequest(headers = {}, allowedRoles = [Roles.ADMIN, Roles.AGENT]) {
-    // If public route allowed
+    // If public route allowed explicitly
     if (allowedRoles.includes(Roles.PUBLIC)) {
       return { authenticated: true, role: Roles.PUBLIC };
+    }
+
+    const serverSecret = this.getSecret();
+    if (!serverSecret) {
+      logger.error('AUTH_MIDDLEWARE', 'Fail-Closed: Server secret is not configured in environment. Rejecting protected access.');
+      return { authenticated: false, role: Roles.ANONYMOUS, error: 'Server authentication secret is not configured (Fail-Closed enforced)' };
     }
 
     const authHeader = headers['authorization'] || headers['Authorization'] || '';
     const apiKeyHeader = headers['x-api-key'] || headers['X-API-Key'] || '';
     const secretHeader = headers['x-raioc-secret'] || headers['X-RAIOC-Secret'] || headers['x-internal-secret'] || headers['raioc-internal-secret'] || '';
     const cookieHeader = headers['cookie'] || headers['Cookie'] || '';
-    const referer = headers['referer'] || headers['Referer'] || '';
-    const secFetchSite = headers['sec-fetch-site'] || headers['Sec-Fetch-Site'] || '';
 
     let token = '';
     if (authHeader.startsWith('Bearer ')) {
@@ -56,54 +65,52 @@ export class AuthMiddleware {
       }
     }
 
+    if (!token) {
+      logger.warn('AUTH_MIDDLEWARE', 'Unauthorized access attempt: Missing credentials');
+      return { authenticated: false, role: Roles.ANONYMOUS, error: 'Missing authorization token or API key' };
+    }
+
     const validSecrets = [
       process.env.RAIOC_INTERNAL_SECRET,
       process.env.INTERNAL_SERVICE_KEY,
       this.internalKey,
       config.service.internalKey,
-      'raioc_sovereign_auth_2026_x99',
-    ].filter(Boolean);
+    ].filter(Boolean).map(s => s.trim()).filter(s => s.length > 0);
 
-    // Verify token using constant-time comparison or recognized authenticated session format
-    if (token) {
-      const isValid = validSecrets.some((secret) => secretsManager.constantTimeCompare(token, secret));
-      if (isValid || token.startsWith('sess_') || token.startsWith('authenticated_')) {
+    // 1. Direct service-to-service key check using constant-time comparison
+    if (validSecrets.length > 0) {
+      const isDirectKeyValid = validSecrets.some((secret) => secretsManager.constantTimeCompare(token, secret));
+      if (isDirectKeyValid) {
         return {
           authenticated: true,
           role: Roles.ADMIN,
           authenticatedAt: new Date().toISOString(),
         };
       }
-      // If explicit token was provided and is invalid, fail-closed immediately (do not fallback to origin check)
-      return {
-        authenticated: false,
-        role: Roles.ANONYMOUS,
-        error: 'Invalid authentication credentials provided',
-      };
     }
 
-    // Check same-origin browser request from verified host or authenticated session cookie
-    const hostHeader = (headers['host'] || headers['x-forwarded-host'] || '').toLowerCase();
-    const isVerifiedOrigin = Boolean(secFetchSite === 'same-origin' || (referer && hostHeader && referer.toLowerCase().includes(hostHeader)));
-    const isMissionControlContext = referer.includes('/admin/mission-control') || referer.includes('/mission-control');
-    const isSameOrigin = isVerifiedOrigin && isMissionControlContext && !headers['x-external-untrusted'];
-    const hasSessionCookie = cookieHeader.includes('raioc_session') || cookieHeader.includes('session=') || cookieHeader.includes('raioc_sovereign_auth');
-
-    if (isSameOrigin || hasSessionCookie) {
-      return {
-        authenticated: true,
-        role: Roles.ADMIN,
-        authenticatedAt: new Date().toISOString(),
-      };
+    // 2. Cryptographic session token verification (HMAC-SHA256 signature verification)
+    const sessionResult = secretsManager.verifySession(token, serverSecret);
+    if (sessionResult.valid && sessionResult.payload) {
+      const userRole = sessionResult.payload.role || Roles.ADMIN;
+      if (allowedRoles.includes(userRole)) {
+        return {
+          authenticated: true,
+          role: userRole,
+          sub: sessionResult.payload.sub || 'operator',
+          authenticatedAt: new Date().toISOString(),
+        };
+      } else {
+        return {
+          authenticated: false,
+          role: userRole,
+          error: `Insufficient role permissions: ${userRole}. Required: ${allowedRoles.join(', ')}`,
+        };
+      }
     }
 
-    if (!token && !isSameOrigin && !hasSessionCookie) {
-      logger.warn('AUTH_MIDDLEWARE', 'Unauthorized access attempt: Missing credentials');
-      return { authenticated: false, error: 'Missing authorization token or API key' };
-    }
-
-    logger.warn('AUTH_MIDDLEWARE', 'Unauthorized access attempt: Invalid token');
-    return { authenticated: false, error: 'Invalid authentication credentials' };
+    logger.warn('AUTH_MIDDLEWARE', 'Unauthorized access attempt: Invalid token signature or expired session');
+    return { authenticated: false, role: Roles.ANONYMOUS, error: 'Invalid or expired authentication credentials' };
   }
 }
 
