@@ -1,0 +1,59 @@
+# RAIOC OS — GitHub Actions CI Gate
+# MISSION-005: Reproducible Build & CI Gate
+#
+# Trigger: every push and pull request targeting main
+# Gate: install (frozen lock) → build (sync-site-pages) → test:ci (frozen mission suites)
+#
+# test:ci covers:
+#   - MISSION-002: security-mission2-hardening.test.js  (auth, deleted endpoints)
+#   - MISSION-003: schema-provenance-mission3.test.js   (write-path schema)
+#   - MISSION-004: frontend-source-of-truth-mission4.test.js + vercel-entrypoint.test.js
+#
+# Explicitly excluded from CI:
+#   - test:smoke  (requires live Supabase/SMTP secrets — never run in CI)
+#   - specialist-agents.test.js, whatsapp-business.test.js
+#     (pre-existing failures documented before MISSION-005; not in scope to fix here)
+#
+# Owner: Emanuel Rendas (Principal Advisor)
+# Risk Tier: Tier 1 — Mandatory gate before main branch changes reach production
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    name: Build & Test Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (from .nvmrc)
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies (frozen lockfile)
+        run: npm ci
+
+      - name: Build — sync site-pages.js bundle (MISSION-004 Decision B gate)
+        run: npm run build
+
+      - name: Test — frozen mission suites (credential-free)
+        run: npm run test:ci
+
+      - name: Report
+        if: always()
+        run: |
+          echo "================================"
+          echo "RAIOC OS CI Gate Summary"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "================================"
