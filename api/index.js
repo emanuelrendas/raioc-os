@@ -190,44 +190,86 @@ export default async function handler(req, res) {
     return typeof res.json === 'function' ? res.json(apiResponse.body) : res.end(JSON.stringify(apiResponse.body));
   }
 
-  // 4. Static Website Pages Delivery (Public)
-  const cleanPath = url.replace(/^\//, '').replace(/\.html$/, '') || 'index';
-  let pageHtml = sitePages ? sitePages[cleanPath] : null;
+  // 4. Static Website Pages & Assets Delivery (Disk-First Source of Truth)
+  const urlExt = path.extname(url).toLowerCase();
+  const isAssetRequest = urlExt && urlExt !== '.html';
 
-  if (pageHtml) {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-    res.status(200);
-    return typeof res.send === 'function' ? res.send(pageHtml) : res.end(pageHtml);
-  }
-
-  // Static assets fallback
-  try {
-    const filePath = path.resolve(url === '/' ? 'index.html' : url.replace(/^\//, ''));
-    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-      const ext = path.extname(filePath).toLowerCase();
+  // 4-pre. Asset-First Exit: CSS, JS, images, fonts must resolve before any HTML page lookup
+  // This prevents non-HTML files (e.g. site.css) from being accidentally served as text/html.
+  if (isAssetRequest) {
+    try {
+      const candidateAssetPaths = [
+        path.resolve(url.replace(/^\//, '')),
+        path.resolve(`public/${url.replace(/^\//, '')}`),
+      ];
       const mimeTypes = {
         '.html': 'text/html; charset=utf-8',
         '.json': 'application/json',
         '.js': 'application/javascript',
-        '.css': 'text/css',
+        '.css': 'text/css; charset=utf-8',
         '.png': 'image/png',
         '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.webp': 'image/webp',
         '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+        '.ttf': 'font/ttf',
         '.txt': 'text/plain',
         '.xml': 'application/xml',
+        '.pdf': 'application/pdf',
       };
-      const contentType = mimeTypes[ext] || 'application/octet-stream';
-      const content = fs.readFileSync(filePath);
-      res.setHeader('Content-Type', contentType);
-      res.status(200);
-      return res.end(content);
-    }
-  } catch (_) {}
+      for (const filePath of candidateAssetPaths) {
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+          const contentType = mimeTypes[urlExt] || 'application/octet-stream';
+          const content = fs.readFileSync(filePath);
+          res.setHeader('Content-Type', contentType);
+          res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+          res.status(200);
+          return res.end(content);
+        }
+      }
+    } catch (_) {}
+    // Asset not found — return 404 without falling through to HTML resolution
+    res.setHeader('Content-Type', 'application/json');
+    res.status(404);
+    return res.end(JSON.stringify({ error: 'Asset not found', path: url }));
+  }
+
+  const cleanPath = url.replace(/^\//, '').replace(/\.html$/, '') || 'index';
+
+  // 4a. Check Disk for Canonical HTML Page (Source of Truth)
+  const candidateHtmlPaths = [
+    path.resolve(`${cleanPath}.html`),
+    path.resolve(`public/${cleanPath}.html`),
+  ];
+
+  for (const p of candidateHtmlPaths) {
+    try {
+      if (fs.existsSync(p) && fs.statSync(p).isFile()) {
+        const pageHtml = fs.readFileSync(p, 'utf8');
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
+        res.status(200);
+        return typeof res.send === 'function' ? res.send(pageHtml) : res.end(pageHtml);
+      }
+    } catch (_) {}
+  }
+
+  // 4b. Bundled Fallback (If Disk Read Fails or Running in Bundled Serverless)
+  if (sitePages && sitePages[cleanPath]) {
+    const pageHtml = sitePages[cleanPath];
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'public, max-age=60, s-maxage=300');
+    res.status(200);
+    return typeof res.send === 'function' ? res.send(pageHtml) : res.end(pageHtml);
+  }
 
   // 404 Fallback
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.status(404);
-  const fallback404 = sitePages?.index || '<h1>404 - Page Not Found</h1>';
+  const fallback404 = (sitePages && sitePages.index) ? sitePages.index : '<h1>404 - Page Not Found</h1>';
   return typeof res.send === 'function' ? res.send(fallback404) : res.end(fallback404);
 }
