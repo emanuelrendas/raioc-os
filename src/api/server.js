@@ -91,22 +91,15 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       };
     }
     // 0b. Executive Mission Control UI (/admin/mission-control, /mission-control, /api/mission-control/ui)
+    // HTML shell only, served unauthenticated so a normal browser can load the
+    // page. Its data endpoints stay authenticated in branch 1 below.
     else if ((url === '/admin/mission-control' || url === '/mission-control' || url === '/api/mission-control/ui') && method === 'GET') {
-      const auth = authMiddleware.authenticateRequest(effectiveHeaders, [Roles.ADMIN, Roles.AGENT]);
-      if (!auth.authenticated) {
-        response = {
-          status: 401,
-          headers: { 'Content-Type': 'application/json' },
-          body: { success: false, error: 'Unauthorized: Mission Control requires authentication', details: auth.error },
-        };
-      } else {
-        const html = renderMissionControlHtml();
-        response = {
-          status: 200,
-          headers: { 'Content-Type': 'text/html; charset=utf-8' },
-          body: html,
-        };
-      }
+      const html = renderMissionControlHtml();
+      response = {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8' },
+        body: html,
+      };
     }
     // 0c. Liveness & Resource Healthcheck (/healthz, /api/healthz)
     else if (url === '/healthz' || url === '/api/healthz') {
@@ -135,8 +128,16 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
         },
       };
     }
-    // 1. Dashboard UI, Executive Telemetry & Chat (/dashboard, /api/chat, /api/dashboard/*, /api/executive/*, /api/telemetry/*)
-    else if (url === '/dashboard' || url === '/api/chat' || url.startsWith('/api/chat') || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive')) {
+    // 0d. Executive Dashboard UI (/dashboard)
+    // Split out of branch 1 below: this is the HTML shell only, served
+    // unauthenticated so a normal browser can load the page. The gate on the
+    // API paths it calls (/api/chat, /api/dashboard/*, /api/telemetry/*,
+    // /api/executive/*) is unchanged and still applies in branch 1.
+    else if (url === '/dashboard' && method === 'GET') {
+      response = await handleTelemetryRequest(url, { headers: effectiveHeaders, query: effectiveQuery, body });
+    }
+    // 1. Executive Telemetry & Chat API (/api/chat, /api/dashboard/*, /api/executive/*, /api/telemetry/*)
+    else if (url === '/api/chat' || url.startsWith('/api/chat') || url.startsWith('/api/dashboard') || url.startsWith('/api/telemetry') || url.startsWith('/api/executive')) {
       const auth = authMiddleware.authenticateRequest(effectiveHeaders, [Roles.ADMIN, Roles.AGENT]);
       if (!auth.authenticated) {
         response = {

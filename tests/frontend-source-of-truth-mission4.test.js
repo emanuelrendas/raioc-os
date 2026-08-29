@@ -196,10 +196,40 @@ describe('MISSION-004: All canonical public pages serve 200 with HTML', () => {
 });
 
 // ─── Test Suite 4: Protected Route Auth Invariants (MISSION-002 frozen) ────────
-describe('MISSION-004: Protected frontend routes still enforce 401 without auth', () => {
-  const protectedRoutes = ['/dashboard', '/mission-control'];
+// MISSION-012-AUTH-FIX: the '/dashboard' and '/mission-control' HTML shells are
+// intentionally browser-loadable. The MISSION-002 invariant is retained on the
+// data path they call, asserted immediately below.
+describe('MISSION-004: Frontend HTML shells load; their data APIs still enforce 401', () => {
+  const htmlShellRoutes = ['/dashboard', '/mission-control'];
 
-  for (const route of protectedRoutes) {
+  for (const route of htmlShellRoutes) {
+    test(`GET ${route} without auth returns the 200 HTML shell`, async (t) => {
+      if (skipIfNoHandler) {
+        t.skip('Handler import failed — skipping');
+        return;
+      }
+
+      const req = {
+        url: route,
+        method: 'GET',
+        headers: {},
+        query: {},
+        body: {},
+      };
+      const res = makeMockRes();
+      await handler(req, res);
+
+      assert.strictEqual(
+        res.statusCode,
+        200,
+        `GET ${route} must be loadable by a normal browser (HTML shell)`
+      );
+    });
+  }
+
+  const protectedApiRoutes = ['/api/dashboard/overview', '/api/executive/status', '/api/telemetry/status'];
+
+  for (const route of protectedApiRoutes) {
     test(`GET ${route} without auth returns 401 Unauthorized`, async (t) => {
       if (skipIfNoHandler) {
         t.skip('Handler import failed — skipping');

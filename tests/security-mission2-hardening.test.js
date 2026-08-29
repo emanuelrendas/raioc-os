@@ -42,10 +42,21 @@ describe('MISSION-002: Security Hardening & Unauthenticated Send Surface Closure
     assert.match(res.body.error, /Unauthorized/i);
   });
 
-  test('4. Unauthenticated requests to /dashboard return 401', async () => {
+  // MISSION-012-AUTH-FIX: /dashboard is the HTML shell and is intentionally
+  // browser-loadable. The MISSION-002 invariant is retained on the data path
+  // it calls, asserted in test 4b below.
+  test('4. Unauthenticated requests to /dashboard return the 200 HTML shell', async () => {
     const res = await routeApiRequest('/dashboard', 'GET', {}, {}, {});
-    assert.strictEqual(res.status, 401);
-    assert.strictEqual(res.body.success, false);
+    assert.strictEqual(res.status, 200);
+    assert.match(String(res.headers['Content-Type']), /text\/html/);
+  });
+
+  test('4b. Unauthenticated requests to the dashboard data APIs still return 401', async () => {
+    for (const url of ['/api/dashboard/overview', '/api/executive/status', '/api/telemetry/status']) {
+      const res = await routeApiRequest(url, 'GET', {}, {}, {});
+      assert.strictEqual(res.status, 401, `${url} must still require authentication`);
+      assert.strictEqual(res.body.success, false);
+    }
   });
 
   test('5. Unauthenticated requests to /api/dashboard/ui return 401', async () => {
