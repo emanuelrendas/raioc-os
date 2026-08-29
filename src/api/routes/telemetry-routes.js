@@ -266,10 +266,24 @@ export async function handleTelemetryRequest(path, context = {}) {
     const activeTasks = autonomousTaskManager.listTasks();
     const activeAgents = (rawData.agents || []).filter(a => a.status === 'IDLE' || a.status === 'BUSY' || a.status === 'ONLINE').length;
 
-    const leadsProcessed = typeof supabase.getLeadsCount === 'function' ? await supabase.getLeadsCount().catch(() => 0) : (rawData.metrics?.leadsProcessedToday || 0);
-    const outreachSent = typeof supabase.getOutreachSentCount === 'function' ? await supabase.getOutreachSentCount().catch(() => 0) : (rawData.metrics?.outreachSentToday || 0);
-    const scheduledCount = typeof supabase.getScheduledCount === 'function' ? await supabase.getScheduledCount().catch(() => 0) : (rawData.metrics?.activeFollowUps || 0);
-    const estimatedAed = typeof supabase.getTotalEstimatedAed === 'function' ? await supabase.getTotalEstimatedAed().catch(() => 0) : (rawData.metrics?.estimatedPipelineAed || 0);
+    let investorMetrics = { totalLeads: 0, pipelineRevenueAed: 0, projectedCommissionsAed: 0, activeLeads: 0 };
+    try {
+      if (typeof supabase.fetchInvestorsMetrics === 'function') {
+        investorMetrics = await supabase.fetchInvestorsMetrics();
+      }
+    } catch (err) {
+      if (supabase.isStrictProduction) {
+        return {
+          status: 503,
+          body: { success: false, error: `Database read failed: ${err.message}` },
+        };
+      }
+    }
+
+    const leadsProcessed = investorMetrics.totalLeads;
+    const outreachSent = rawData.metrics?.outreachSentToday || 0;
+    const scheduledCount = rawData.metrics?.activeFollowUps || 0;
+    const estimatedAed = investorMetrics.pipelineRevenueAed;
 
     const connectorsSummary = {
       supabase: liveConnectors.supabase?.status || 'DISCONNECTED',
@@ -293,10 +307,10 @@ export async function handleTelemetryRequest(path, context = {}) {
         totalAgents: (rawData.agents || []).length,
         connectors: connectorsSummary,
         metrics: {
-          leadsProcessed: leadsProcessed || rawData.metrics?.leadsProcessedToday || 0,
-          outreachSent: outreachSent || rawData.metrics?.outreachSentToday || 0,
-          scheduledAppointments: scheduledCount || rawData.metrics?.activeFollowUps || 0,
-          estimatedPipelineAed: estimatedAed || rawData.metrics?.estimatedPipelineAed || 0,
+          leadsProcessed,
+          outreachSent,
+          scheduledAppointments: scheduledCount,
+          estimatedPipelineAed: estimatedAed,
           queueDepth: activeTasks.length,
           cycleCount: rawData.metrics?.totalCycles || 0,
         },
@@ -304,15 +318,23 @@ export async function handleTelemetryRequest(path, context = {}) {
     };
   }
 
-  // 2. Executive Connectors Probe (/api/executive/connectors)
-  if (normalized === 'connectors' || path === '/api/executive/connectors') {
+  // 2. Executive Connectors Probe (/api/executive/connectors, /api/dashboard/connectors)
+  if (normalized === 'connectors' || path === '/api/executive/connectors' || path === '/api/dashboard/connectors') {
     const liveConnectors = await probeExecutiveConnectors();
+    const connectorList = Object.entries(liveConnectors).map(([key, val]) => ({
+      id: key,
+      name: key.toUpperCase(),
+      status: val.status === 'CONNECTED' ? 'ACTIVE' : 'BLOCKED',
+      latencyMs: val.latencyMs || 0,
+      details: val.details || val.endpointUrl || null,
+    }));
     return {
       status: 200,
       body: {
         success: true,
         timestamp: new Date().toISOString(),
-        connectors: liveConnectors,
+        connectors: connectorList,
+        connectorsMap: liveConnectors,
       },
     };
   }
@@ -348,6 +370,45 @@ export async function handleTelemetryRequest(path, context = {}) {
     };
   }
 
+  // 3b. Executive KPIs (/api/executive/kpis)
+  if (normalized === 'kpis' || path === '/api/executive/kpis') {
+    let metrics = { totalLeads: 0, pipelineRevenueAed: 0, projectedCommissionsAed: 0 };
+    try {
+      if (typeof supabase.fetchInvestorsMetrics === 'function') {
+        metrics = await supabase.fetchInvestorsMetrics();
+      }
+    } catch (err) {
+      if (supabase.isStrictProduction) {
+        return { status: 503, body: { success: false, error: err.message } };
+      }
+    }
+
+    return {
+      status: 200,
+      body: {
+        success: true,
+        pipelineValue: 'AED ' + (metrics.pipelineRevenueAed / 1000000).toFixed(1) + 'M',
+        pipelineRevenueAed: metrics.pipelineRevenueAed,
+        projectedCommissionsAed: metrics.projectedCommissionsAed,
+        totalLeads: metrics.totalLeads,
+        totalDispatches: 0,
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
+  // 3c. Executive Alerts (/api/executive/alerts)
+  if (normalized === 'alerts' || path === '/api/executive/alerts') {
+    return {
+      status: 200,
+      body: {
+        success: true,
+        alerts: [],
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+
   // 4. Executive Command Center UI (HTML)
   if (path === '/dashboard' || path === '/api/dashboard/ui') {
     return {
@@ -357,11 +418,27 @@ export async function handleTelemetryRequest(path, context = {}) {
     };
   }
 
-  // 5. Full Executive Dashboard Snapshot (JSON)
-  if (normalized === 'overview' || normalized === 'status') {
+  // 5. Full Executive Dashboard Snapshot (JSON) (/api/dashboard/overview)
+  if (normalized === 'overview') {
+    const dashData = executiveDashboard.getDashboardData();
+    try {
+      if (typeof supabase.fetchInvestorsMetrics === 'function') {
+        const metrics = await supabase.fetchInvestorsMetrics();
+        dashData.financials.pipelineRevenueAed = metrics.pipelineRevenueAed;
+        dashData.financials.projectedCommissionsAed = metrics.projectedCommissionsAed;
+        if (dashData.executiveMetrics) {
+          dashData.executiveMetrics.totalLeads = metrics.totalLeads;
+        }
+      }
+    } catch (err) {
+      if (supabase.isStrictProduction) {
+        return { status: 503, body: { success: false, error: err.message } };
+      }
+    }
+
     return {
       status: 200,
-      body: executiveDashboard.getDashboardData(),
+      body: dashData,
     };
   }
 

@@ -45,8 +45,8 @@ export class ExecutiveDashboard {
         uptimeSeconds: Math.round(process.uptime()),
       },
       financials: {
-        pipelineRevenueAed: biMetrics.pipelineRevenueAed || 25000000,
-        projectedCommissionsAed: Math.round((biMetrics.pipelineRevenueAed || 25000000) * 0.02),
+        pipelineRevenueAed: biMetrics.pipelineRevenueAed || 0,
+        projectedCommissionsAed: Math.round((biMetrics.pipelineRevenueAed || 0) * 0.02),
         totalOpportunitiesValueAed: openOpportunities.reduce((acc, o) => acc + (o.estimatedValueAed || 0), 0),
       },
       currentObjectives: autonomousTaskManager.listTasks({ status: 'IN_PROGRESS' }).map((t) => ({

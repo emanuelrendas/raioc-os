@@ -127,10 +127,10 @@
           <div class="p-1.5 rounded-lg bg-accent-500/10 text-accent-400"><i data-lucide="trending-up" class="w-4 h-4"></i></div>
         </div>
         <div class="mt-2 flex items-baseline gap-2">
-          <h3 id="kpi-pipeline" class="text-2xl font-bold text-white font-mono">AED 120.0M</h3>
+          <h3 id="kpi-pipeline" class="text-2xl font-bold text-white font-mono">AED 0.0M</h3>
           <span class="text-xs text-emerald-400 font-medium">Verified</span>
         </div>
-        <p id="kpi-commissions" class="text-[11px] text-gray-500 mt-1">Projected Fees: AED 2,400,000</p>
+        <p id="kpi-commissions" class="text-[11px] text-gray-500 mt-1">Projected Fees: AED 0</p>
       </div>
 
       <!-- KPI 3 -->
@@ -140,7 +140,7 @@
           <div class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400"><i data-lucide="cpu" class="w-4 h-4"></i></div>
         </div>
         <div class="mt-2 flex items-baseline gap-2">
-          <h3 id="kpi-agents" class="text-2xl font-bold text-white font-mono">8 / 8</h3>
+          <h3 id="kpi-agents" class="text-2xl font-bold text-white font-mono">12 / 12</h3>
           <span class="text-xs text-emerald-400 font-medium">100% Health</span>
         </div>
         <p class="text-[11px] text-gray-500 mt-1">JARVIS, DIRA, IKL, BRIEF, DISPATCH</p>
@@ -156,7 +156,7 @@
           <h3 id="kpi-queue" class="text-2xl font-bold text-white font-mono">0 Backlog</h3>
           <span class="text-xs text-purple-400 font-medium">Zero Stall</span>
         </div>
-        <p id="kpi-tasks-processed" class="text-[11px] text-gray-500 mt-1">Tasks Completed: 28</p>
+        <p id="kpi-tasks-processed" class="text-[11px] text-gray-500 mt-1">Tasks Completed: 0</p>
       </div>
 
       <!-- KPI 5 -->
@@ -248,7 +248,7 @@
               <p class="text-[10px] text-gray-400">E.164 phone verification, lead deduplication & rate limiting.</p>
               <div class="pt-2 border-t border-gray-800/80 flex items-center justify-between text-[9px] font-mono text-gray-400">
                 <span>STAGE: INGESTION</span>
-                <span id="metric-dira-processed" class="text-blue-400 font-bold">18 Processed</span>
+                <span id="metric-dira-processed" class="text-blue-400 font-bold">0 Processed</span>
               </div>
             </div>
 
@@ -268,8 +268,8 @@
               </div>
               <p class="text-[10px] text-gray-400">Deterministic scoring matrix & systemic risk evaluation.</p>
               <div class="pt-2 border-t border-gray-800/80 flex items-center justify-between text-[9px] font-mono text-gray-400">
-                <span>AVG SCORE: <strong class="text-emerald-400">89.4</strong></span>
-                <span id="metric-riis-processed" class="text-emerald-400 font-bold">18 Evaluated</span>
+                <span>STATUS: <strong class="text-emerald-400">READY</strong></span>
+                <span id="metric-riis-processed" class="text-emerald-400 font-bold">0 Evaluated</span>
               </div>
             </div>
           </div>
@@ -355,7 +355,7 @@
               <p class="text-[11px] text-gray-400">Autonomous email, WhatsApp, CRM & Telegram dispatch queue with exponential backoff.</p>
               <div class="pt-2.5 border-t border-gray-800/80 flex items-center justify-between text-[9px] font-mono text-gray-400">
                 <span>DELIVERY: 100% SLA</span>
-                <span id="metric-queue-dispatches" class="text-purple-400 font-bold">36 Dispatched</span>
+                <span id="metric-queue-dispatches" class="text-purple-400 font-bold">0 Dispatched</span>
               </div>
             </div>
 
@@ -363,10 +363,10 @@
             <div class="p-3.5 bg-gray-950/90 rounded-xl border border-gray-800/80 font-mono text-[10px] space-y-1 text-gray-400">
               <div class="flex justify-between items-center text-gray-300">
                 <span class="font-bold flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> MESH LATENCY</span>
-                <span id="canvas-mesh-latency" class="text-emerald-400 font-bold">14ms</span>
+                <span id="canvas-mesh-latency" class="text-emerald-400 font-bold">--</span>
               </div>
               <div class="flex justify-between items-center text-gray-400">
-                <span>ACTIVE CONNECTIONS:</span>
+                <span class="text-gray-400">ACTIVE CONNECTIONS:</span>
                 <span class="text-cyan-400 font-bold">6 Wires Synced</span>
               </div>
             </div>
@@ -383,11 +383,11 @@
           <span class="text-[11px] font-bold text-gray-300 uppercase tracking-wider">LIVE TELEMETRY TICKER:</span>
         </div>
         <div id="live-ticker-stream" class="text-[11px] text-gray-400 truncate flex items-center space-x-3 w-full">
-          <span id="ticker-agent" class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold text-[10px]">agent-dira</span>
-          <span id="ticker-corr" class="text-gray-500">corr_live_1787687200</span>
-          <span id="ticker-action" class="text-gray-200 truncate">Lead Ingested & Verified E.164 (+41791234567)</span>
-          <span id="ticker-latency" class="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-bold text-[10px]">14ms</span>
-          <span id="ticker-time" class="text-gray-500 ml-auto shrink-0">00:10:00 GST</span>
+          <span id="ticker-agent" class="px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30 font-bold text-[10px]">SYSTEM</span>
+          <span id="ticker-corr" class="text-gray-500">--</span>
+          <span id="ticker-action" class="text-gray-200 truncate">Standing by for live telemetry...</span>
+          <span id="ticker-latency" class="px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-bold text-[10px]">--</span>
+          <span id="ticker-time" class="text-gray-500 ml-auto shrink-0">--:--:-- GST</span>
         </div>
       </div>
 
@@ -750,22 +750,24 @@
       if (!data) return;
 
       // KPIs
-      if (kpis && kpis.pipelineValue) {
+      if (kpis && kpis.pipelineValue !== undefined) {
         document.getElementById('kpi-pipeline').textContent = kpis.pipelineValue;
-        if (kpis.totalLeads) {
-          const leadCountEl = document.getElementById('metric-dira-processed');
-          if (leadCountEl) leadCountEl.textContent = `${kpis.totalLeads} Processed`;
-          const riisCountEl = document.getElementById('metric-riis-processed');
-          if (riisCountEl) riisCountEl.textContent = `${kpis.totalLeads} Evaluated`;
+        if (kpis.projectedCommissionsAed !== undefined) {
+          document.getElementById('kpi-commissions').textContent = 'Projected Fees: AED ' + (kpis.projectedCommissionsAed || 0).toLocaleString();
         }
-        if (kpis.totalDispatches) {
-          const queueCountEl = document.getElementById('metric-queue-dispatches');
-          if (queueCountEl) queueCountEl.textContent = `${kpis.totalDispatches} Dispatched`;
-          document.getElementById('kpi-tasks-processed').textContent = `Tasks Completed: ${kpis.totalDispatches}`;
-        }
+        const leadCountEl = document.getElementById('metric-dira-processed');
+        if (leadCountEl) leadCountEl.textContent = `${kpis.totalLeads || 0} Processed`;
+        const riisCountEl = document.getElementById('metric-riis-processed');
+        if (riisCountEl) riisCountEl.textContent = `${kpis.totalLeads || 0} Evaluated`;
+        
+        const queueCountEl = document.getElementById('metric-queue-dispatches');
+        if (queueCountEl) queueCountEl.textContent = `${kpis.totalDispatches || 0} Dispatched`;
+        document.getElementById('kpi-tasks-processed').textContent = `Tasks Completed: ${kpis.totalDispatches || 0}`;
       } else if (data.financials) {
-        document.getElementById('kpi-pipeline').textContent = 'AED ' + ((data.financials.pipelineRevenueAed || 120000000) / 1000000).toFixed(1) + 'M';
-        document.getElementById('kpi-commissions').textContent = 'Projected Fees: AED ' + (data.financials.projectedCommissionsAed || 2400000).toLocaleString();
+        const rev = data.financials.pipelineRevenueAed || 0;
+        const comm = data.financials.projectedCommissionsAed || 0;
+        document.getElementById('kpi-pipeline').textContent = 'AED ' + (rev / 1000000).toFixed(1) + 'M';
+        document.getElementById('kpi-commissions').textContent = 'Projected Fees: AED ' + comm.toLocaleString();
       }
 
       // Check alerts for modular agent errors / warnings
@@ -806,14 +808,15 @@
       // Connector Matrix
       const connList = document.getElementById('connector-matrix-list');
       if (connectors && connList) {
-        connList.innerHTML = connectors.map(c => {
-          const isActive = c.status === 'ACTIVE';
-          const isBlocked = c.status === 'BLOCKED';
+        const connArr = Array.isArray(connectors) ? connectors : Object.values(connectors);
+        connList.innerHTML = connArr.map(c => {
+          const isActive = c.status === 'ACTIVE' || c.status === 'CONNECTED';
+          const isBlocked = c.status === 'BLOCKED' || c.status === 'DISCONNECTED';
           return `
             <div class="p-2.5 bg-gray-900/60 rounded-lg border border-gray-800 flex items-center justify-between">
               <div class="flex items-center space-x-2">
                 <span class="w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : isBlocked ? 'bg-amber-500' : 'bg-rose-500'}"></span>
-                <span class="font-medium text-gray-300">${c.name}</span>
+                <span class="font-medium text-gray-300">${c.name || c.id}</span>
               </div>
               <div class="flex items-center space-x-2 font-mono text-[10px]">
                 <span class="${isActive ? 'text-emerald-400' : 'text-amber-400'}">${c.status}</span>
@@ -827,15 +830,17 @@
       // Decisions
       const decList = document.getElementById('decision-log-list');
       if (data.recentStrategicDecisions && decList) {
-        decList.innerHTML = data.recentStrategicDecisions.map(d => `
-          <div class="p-2.5 bg-gray-900/60 rounded-lg border border-gray-800">
-            <div class="flex justify-between items-center text-[10px] font-mono text-gray-400 mb-1">
-              <span class="text-accent-400 font-bold">${d.chosenAction}</span>
-              <span>${d.timestamp?.substring(11, 19) || ''}</span>
+        decList.innerHTML = data.recentStrategicDecisions.length > 0
+          ? data.recentStrategicDecisions.map(d => `
+            <div class="p-2.5 bg-gray-900/60 rounded-lg border border-gray-800">
+              <div class="flex justify-between items-center text-[10px] font-mono text-gray-400 mb-1">
+                <span class="text-accent-400 font-bold">${d.chosenAction}</span>
+                <span>${d.timestamp?.substring(11, 19) || ''}</span>
+              </div>
+              <p class="text-[11px] text-gray-300">${d.rationale}</p>
             </div>
-            <p class="text-[11px] text-gray-300">${d.rationale}</p>
-          </div>
-        `).join('');
+          `).join('')
+          : '<p class="text-xs text-gray-500 font-mono p-2">No executive decisions logged yet.</p>';
       }
 
       // Cognitive Memory Categories
@@ -854,36 +859,24 @@
       // Opportunities
       const oppList = document.getElementById('opportunity-feed-list');
       if (oppList) {
-        const opps = (data.openOpportunities && data.openOpportunities.length > 0) ? data.openOpportunities : [
-          { type: 'MACRO_CATALYST', estimatedValueAed: 3200000, title: 'Dubai South / DWC Aviation Hub $35B Inflection', rationale: 'Al Maktoum Int Airport 260M passenger masterplan driving Emaar South land valuation.' },
-          { type: 'SOVEREIGN_WATERFRONT', estimatedValueAed: 18500000, title: 'Palm Jebel Ali Beachfront Expansion', rationale: 'Nakheel mega-island doubling coastline; multi-generational ultra-luxury preservation.' },
-          { type: 'CULTURAL_CORRIDOR', estimatedValueAed: 6800000, title: 'Saadiyat Cultural District (Abu Dhabi)', rationale: 'Louvre & Guggenheim proximity attracting international family offices.' },
-          { type: 'GAMING_CATALYST', estimatedValueAed: 2400000, title: 'Al Marjan Island Wynn Resort (RAK)', rationale: 'First GCC regulated gaming resort generating peak short-term cash yields (9.2%+).' },
-        ];
-        oppList.innerHTML = opps.map(o => `
-          <div class="p-2.5 bg-gray-900/60 rounded-lg border border-amber-500/20">
-            <div class="flex justify-between items-center text-[10px] font-mono text-amber-400 mb-1">
-              <span class="font-bold">${o.type}</span>
-              <span>AED ${(o.estimatedValueAed || 0).toLocaleString()}</span>
+        const opps = (data.openOpportunities && Array.isArray(data.openOpportunities)) ? data.openOpportunities : [];
+        if (opps.length > 0) {
+          oppList.innerHTML = opps.map(o => `
+            <div class="p-2.5 bg-gray-900/60 rounded-lg border border-amber-500/20">
+              <div class="flex justify-between items-center text-[10px] font-mono text-amber-400 mb-1">
+                <span class="font-bold">${o.type}</span>
+                <span>AED ${(o.estimatedValueAed || 0).toLocaleString()}</span>
+              </div>
+              <p class="text-[11px] text-gray-300 font-medium">${o.title}</p>
+              <p class="text-[10px] text-gray-500 mt-1">${o.rationale}</p>
             </div>
-            <p class="text-[11px] text-gray-300 font-medium">${o.title}</p>
-            <p class="text-[10px] text-gray-500 mt-1">${o.rationale}</p>
-          </div>
-        `).join('');
+          `).join('');
+        } else {
+          oppList.innerHTML = '<p class="text-xs text-gray-500 font-mono p-2">No active opportunities.</p>';
+        }
       }
 
-      // Seed initial Accountability Feed if empty
-      if (liveEvents.length === 0) {
-        liveEvents = [
-          { topic: 'lead:ingested', agent: 'agent-dira', details: 'Count Maximillian von Bern (AED 28M) ingested with valid E.164 phone', timestamp: new Date().toISOString() },
-          { topic: 'risk:evaluated', agent: 'agent-riis', details: 'RIIS score 85/100 compiled — Low systemic risk rating', timestamp: new Date(Date.now() - 3000).toISOString() },
-          { topic: 'valuation:mollak', agent: 'agent-valuation', details: 'Net Mollak yield verified (7.8%) for Como Residences & Armani Beach', timestamp: new Date(Date.now() - 4500).toISOString() },
-          { topic: 'tax:structuring', agent: 'agent-tax', details: '0% personal income tax and corporate ring-fencing confirmed under Law 8/2007', timestamp: new Date(Date.now() - 6000).toISOString() },
-          { topic: 'visa:statutory', agent: 'agent-golden-visa', details: 'Cabinet Resolution 65/2022 10-year residency clearance validated', timestamp: new Date(Date.now() - 7500).toISOString() },
-          { topic: 'dispatch:executed', agent: 'agent-queue', details: 'Autonomous zero-click multi-channel dispatch completed with receipt ID', timestamp: new Date(Date.now() - 9000).toISOString() },
-        ];
-        renderAccountabilityFeed();
-      }
+      renderAccountabilityFeed();
 
       lucide.createIcons();
     }
@@ -891,6 +884,11 @@
     function renderAccountabilityFeed() {
       const streamContainer = document.getElementById('event-stream-list');
       if (!streamContainer) return;
+
+      if (liveEvents.length === 0) {
+        streamContainer.innerHTML = '<p class="text-xs text-gray-500 font-mono p-3">Standing by for realtime agent events...</p>';
+        return;
+      }
 
       streamContainer.innerHTML = liveEvents.map(e => {
         const agent = resolveAgentDetails(e.agent || e.metadata?.sourceAgent, e.topic, e);

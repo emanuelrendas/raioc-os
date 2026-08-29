@@ -17,14 +17,16 @@ export class PersistenceError extends Error {
 
 export class SupabaseClient {
   constructor(options = {}) {
-    this.explicitMock = options.useMock === true;
-    this.url = options.url || config.supabase.url;
-    this.key = options.key || config.supabase.serviceKey; // Removed anonKey fallback for service writes
+    this.explicitMock = options.useMock === true || options.isMock === true;
+    this.url = options.url || options.supabaseUrl || config.supabase.url;
+    this.key = options.key || options.supabaseKey || config.supabase.serviceKey; // Removed anonKey fallback for service writes
     
     // Strict production check: If running in production without explicit mock override, fail-closed
-    this.isStrictProduction = (process.env.NODE_ENV === 'production' || config.env === 'production') &&
-      !this.explicitMock &&
-      process.env.SUPABASE_MOCK_FALLBACK !== 'true';
+    this.isStrictProduction = options.isStrictProduction !== undefined
+      ? options.isStrictProduction
+      : (process.env.NODE_ENV === 'production' || config.env === 'production') &&
+        !this.explicitMock &&
+        process.env.SUPABASE_MOCK_FALLBACK !== 'true';
 
     if (this.isStrictProduction && (!this.url || !this.key)) {
       const errMsg = 'FATAL: Supabase URL and serviceKey are required in production environment (Fail-Closed enforced). Silent in-memory fallback is disabled.';
@@ -32,7 +34,7 @@ export class SupabaseClient {
       throw new PersistenceError('init', errMsg);
     }
 
-    this.isMock = this.explicitMock || !this.url || !this.key;
+    this.isMock = this.explicitMock || (!this.isStrictProduction && (!this.url || !this.key));
 
     // In-memory mock storage for hermetic tests and local fallback
     this.mockStore = {
@@ -3187,7 +3189,7 @@ export class SupabaseClient {
     }
 
     try {
-      let q = `${this.url}/rest/v1/investors?select=*&order=updated_at.desc`;
+      let q = `${this.url}/rest/v1/investors?select=*&order=created_at.desc`;
       if (query.segment) q += `&segment=eq.${query.segment}`;
       if (query.status || query.stage) q += `&status=eq.${query.status || query.stage}`;
       const res = await fetch(q, {
@@ -3201,7 +3203,119 @@ export class SupabaseClient {
       return await res.json();
     } catch (err) {
       logger.error('SUPABASE', 'Failed to fetch investors from database', { error: err.message });
+      if (this.isStrictProduction) {
+        throw new PersistenceError('fetchInvestors', `Database read failed in production: ${err.message}`);
+      }
       return [...this.mockStore.investors];
+    }
+  }
+
+  async fetchInvestorsCount() {
+    if (this.isMock) {
+      return this.mockStore.investors.length;
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/investors?select=id`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Prefer': 'count=exact',
+          'Range-Unit': 'items',
+          'Range': '0-0',
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const contentRange = res.headers.get('content-range');
+      if (contentRange && contentRange.includes('/')) {
+        const total = parseInt(contentRange.split('/')[1], 10);
+        if (!isNaN(total)) return total;
+      }
+      const data = await res.json();
+      return Array.isArray(data) ? data.length : 0;
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch investors count', { error: err.message });
+      if (this.isStrictProduction) {
+        throw new PersistenceError('fetchInvestorsCount', err.message);
+      }
+      return this.mockStore.investors.length;
+    }
+  }
+
+  async fetchInvestorsMetrics() {
+    if (this.isMock) {
+      const investors = this.mockStore.investors;
+      const totalLeads = investors.length;
+      const pipelineRevenueAed = investors.reduce((sum, i) => sum + (Number(i.budget_aed || i.budgetAed) || 0), 0);
+      const projectedCommissionsAed = Math.round(pipelineRevenueAed * 0.02);
+      return {
+        totalLeads,
+        pipelineRevenueAed,
+        projectedCommissionsAed,
+        activeLeads: investors.filter(i => (i.status || '').toUpperCase() !== 'ARCHIVED' && (i.status || '').toUpperCase() !== 'LOST').length,
+      };
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/investors?select=id,status,budget_aed`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      const totalLeads = Array.isArray(data) ? data.length : 0;
+      const pipelineRevenueAed = Array.isArray(data)
+        ? data.reduce((sum, i) => sum + (Number(i.budget_aed) || 0), 0)
+        : 0;
+      const projectedCommissionsAed = Math.round(pipelineRevenueAed * 0.02);
+      const activeLeads = Array.isArray(data)
+        ? data.filter(i => (i.status || '').toUpperCase() !== 'ARCHIVED' && (i.status || '').toUpperCase() !== 'LOST').length
+        : 0;
+
+      return {
+        totalLeads,
+        pipelineRevenueAed,
+        projectedCommissionsAed,
+        activeLeads,
+      };
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch investors metrics', { error: err.message });
+      if (this.isStrictProduction) {
+        throw new PersistenceError('fetchInvestorsMetrics', err.message);
+      }
+      return {
+        totalLeads: this.mockStore.investors.length,
+        pipelineRevenueAed: this.mockStore.investors.reduce((sum, i) => sum + (Number(i.budget_aed || i.budgetAed) || 0), 0),
+        projectedCommissionsAed: Math.round(this.mockStore.investors.reduce((sum, i) => sum + (Number(i.budget_aed || i.budgetAed) || 0), 0) * 0.02),
+        activeLeads: this.mockStore.investors.length,
+      };
+    }
+  }
+
+  async fetchRecentInvestors(limit = 10) {
+    if (this.isMock) {
+      return [...this.mockStore.investors].slice(0, limit);
+    }
+
+    try {
+      const res = await fetch(`${this.url}/rest/v1/investors?select=id,reference_id,name,email,phone,segment,status,budget_aed,target_thesis,created_at&order=created_at.desc&limit=${limit}`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch recent investors', { error: err.message });
+      if (this.isStrictProduction) {
+        throw new PersistenceError('fetchRecentInvestors', err.message);
+      }
+      return [...this.mockStore.investors].slice(0, limit);
     }
   }
 
@@ -3222,6 +3336,9 @@ export class SupabaseClient {
       const list = await res.json();
       return list[0] || null;
     } catch {
+      if (this.isStrictProduction) {
+        return null;
+      }
       return this.mockStore.investors.find((i) => i.id === id || i.reference_id === id) || null;
     }
   }
