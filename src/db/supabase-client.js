@@ -1016,7 +1016,9 @@ export class SupabaseClient {
       if (lead) {
         lead.status = status;
         lead.updated_at = new Date().toISOString();
-        lead.metadata = { ...(lead.metadata || {}), ...metadata };
+        if (metadata && Object.keys(metadata).length > 0) {
+          lead.metadata = { ...(lead.metadata || {}), ...metadata };
+        }
       }
       return lead;
     }
@@ -1033,7 +1035,6 @@ export class SupabaseClient {
         body: JSON.stringify({
           status,
           updated_at: new Date().toISOString(),
-          metadata,
         }),
       });
       if (!res.ok) throw new Error(`Supabase updateLeadStatus error: ${res.statusText}`);
