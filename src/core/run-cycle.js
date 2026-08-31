@@ -174,13 +174,8 @@ export async function run_cycle(options = {}) {
         });
         summary.dispatches.crm++;
 
-        // Mark lead as completed with metadata
-        await db.updateLeadStatus(lead.id, 'completed', {
-          riis_score: intelligence.riis.score,
-          dira_risk: intelligence.dira.riskLevel,
-          brief_id: brief.id,
-          processed_at: new Date().toISOString(),
-        });
+        // Mark lead as completed
+        await db.updateLeadStatus(lead.id, 'completed');
 
         summary.leadsProcessed++;
         logger.audit('RUN_CYCLE', 'LEAD_PROCESSED', lead.id, 'pending', 'completed', {
@@ -190,7 +185,7 @@ export async function run_cycle(options = {}) {
       } catch (leadError) {
         summary.failures.processing++;
         logger.error('RUN_CYCLE', `Failed processing lead ${lead.id}`, { error: leadError.message });
-        await db.updateLeadStatus(lead.id, 'failed', { error: leadError.message });
+        await db.updateLeadStatus(lead.id, 'failed');
       }
     }
 

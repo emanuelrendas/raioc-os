@@ -63,7 +63,6 @@ describe('Run Cycle End-to-End Integration Tests', () => {
     // Verify Leads status updated to completed
     const lead1 = mockDb.mockStore.leads.find((l) => l.id === 'lead_001');
     assert.strictEqual(lead1.status, 'completed');
-    assert.ok(lead1.metadata.riis_score);
 
     // Verify Dispatches completed
     assert.ok(result.summary.dispatches.whatsapp >= 2);
