@@ -8,6 +8,7 @@
 #   - MISSION-002: security-mission2-hardening.test.js  (auth, deleted endpoints)
 #   - MISSION-003: schema-provenance-mission3.test.js   (write-path schema)
 #   - MISSION-004: frontend-source-of-truth-mission4.test.js + vercel-entrypoint.test.js
+#   - MISSION-015B: lead-fail-closed-mission015b.test.js (fail-closed lead status gate)
 #
 # Explicitly excluded from CI:
 #   - test:smoke  (requires live Supabase/SMTP secrets — never run in CI)
