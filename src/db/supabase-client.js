@@ -1010,15 +1010,12 @@ export class SupabaseClient {
     }
   }
 
-  async updateLeadStatus(id, status, metadata = {}) {
+  async updateLeadStatus(id, status) {
     if (this.isMock) {
       const lead = this.mockStore.leads.find((l) => l.id === id);
       if (lead) {
         lead.status = status;
         lead.updated_at = new Date().toISOString();
-        if (metadata && Object.keys(metadata).length > 0) {
-          lead.metadata = { ...(lead.metadata || {}), ...metadata };
-        }
       }
       return lead;
     }
