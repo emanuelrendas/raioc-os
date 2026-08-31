@@ -23,6 +23,30 @@ queueEngine.registerAdapter('email', emailAdapter);
 queueEngine.registerAdapter('crm', crmAdapter);
 
 /**
+ * Confirms that a lead status write actually reached storage.
+ *
+ * updateLeadStatus swallows its own failures, so its return value is the only
+ * evidence the caller has. It resolves to:
+ *   null        the write threw and was caught inside the client
+ *   undefined   mock store held no lead with that id
+ *   []          PostgREST matched zero rows (Prefer: return=representation)
+ *   [{...}]     the row was written
+ *   {...}       mock store wrote the row
+ *
+ * Only the last two are a persisted transition. An empty array is truthy, so a
+ * plain falsy check would read a zero-row write as success — the exact silent
+ * false-success this gate exists to prevent.
+ *
+ * @param {*} result - value resolved by updateLeadStatus
+ * @returns {boolean} true only when a row was demonstrably written
+ */
+function isStatusPersisted(result) {
+  if (result === null || result === undefined) return false;
+  if (Array.isArray(result)) return result.length > 0;
+  return typeof result === 'object';
+}
+
+/**
  * Executes a single complete autonomous processing cycle
  * @param {Object} options - Cycle configuration overrides
  * @returns {Promise<Object>} Cycle execution summary
@@ -66,8 +90,20 @@ export async function run_cycle(options = {}) {
     // 2. Process each lead
     for (const lead of pendingLeads) {
       try {
-        // Mark lead as processing
-        await db.updateLeadStatus(lead.id, 'processing');
+        // Mark lead as processing.
+        // Fail closed: this transition must be confirmed durable before the lead
+        // reaches any externally-visible step. If storage did not accept it we
+        // abort this lead rather than dispatch on state we failed to record.
+        const marked = await db.updateLeadStatus(lead.id, 'processing');
+        if (!isStatusPersisted(marked)) {
+          summary.failures.processing++;
+          logger.error(
+            'RUN_CYCLE',
+            `Aborting lead ${lead.id}: initial status transition was not persisted`,
+            { leadId: lead.id, attemptedStatus: 'processing' }
+          );
+          continue;
+        }
 
         // Execute DIRA & RIIS intelligence assessment
         const intelligence = diraRiisEngine.analyze(lead);
