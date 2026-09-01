@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { run_cycle } from '../src/core/run-cycle.js';
 import { SupabaseClient } from '../src/db/supabase-client.js';
 
+process.env.RAIOC_RUNTIME_EXECUTION_MODE = 'active';
+
 describe('Run Cycle End-to-End Integration Tests', () => {
   test('executes full autonomous cycle from pending lead to executive brief and dispatches', async () => {
     const mockDb = new SupabaseClient({ useMock: true });
@@ -20,6 +22,7 @@ describe('Run Cycle End-to-End Integration Tests', () => {
         timeline: 'immediate',
         data_stack: 'modern cloud',
         status: 'new',
+        consent_status: 'opted_in',
         created_at: new Date().toISOString(),
       },
       {
@@ -33,6 +36,7 @@ describe('Run Cycle End-to-End Integration Tests', () => {
         timeline: 'quarter',
         data_stack: 'spreadsheets',
         status: 'new',
+        consent_status: 'opted_in',
         created_at: new Date().toISOString(),
       }
     );

@@ -12,6 +12,8 @@ import { TelegramAdapter, sendTelegramAlert, telegramAdapter, NOTIF_TEMPLATES } 
 import { SupabaseClient } from '../../src/db/supabase-client.js';
 import { run_cycle } from '../../src/core/run-cycle.js';
 
+process.env.RAIOC_RUNTIME_EXECUTION_MODE = 'active';
+
 describe('INTEGRATION: n8n Webhook Egress & Telegram VIP Bridge', () => {
   let originalFetch;
   let originalN8nSecret;
@@ -294,6 +296,7 @@ describe('INTEGRATION: n8n Webhook Egress & Telegram VIP Bridge', () => {
       timeline: 'immediate',
       budgetAed: 100000000,
       status: 'new',
+      consent_status: 'opted_in',
       created_at: new Date().toISOString(),
     });
 

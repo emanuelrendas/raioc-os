@@ -13,6 +13,7 @@
 
 process.env.N8N_ENABLED = 'false';
 process.env.TELEGRAM_ENABLED = 'false';
+process.env.RAIOC_RUNTIME_EXECUTION_MODE = 'active';
 
 import { test, describe, before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';

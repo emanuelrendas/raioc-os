@@ -970,16 +970,27 @@ export class SupabaseClient {
    * permit — they could never match a row, and treating a business column as
    * execution state is exactly what ADR-015D forbids.
    */
-  async fetchPendingLeads(limit = 50) {
+  async fetchPendingLeads(limit = 50, options = {}) {
+    const leadIds = Array.isArray(options?.leadIds) ? options.leadIds : null;
+    // An empty explicit allowlist means no discovery. It must never be allowed
+    // to fall through to the normal status=new query.
+    if (leadIds && leadIds.length === 0) return [];
+
     if (this.isMock) {
       return this.mockStore.leads
-        .filter((l) => l.status === 'new' || !l.status)
+        .filter((l) => (l.status === 'new' || !l.status) && (!leadIds || leadIds.includes(String(l.id).toLowerCase())))
         .slice(0, limit);
     }
 
     try {
+      const query = new URLSearchParams({
+        status: 'eq.new',
+        order: 'created_at.asc',
+        limit: String(limit),
+      });
+      if (leadIds) query.set('id', `in.(${leadIds.join(',')})`);
       const res = await fetch(
-        `${this.url}/rest/v1/leads?status=eq.new&order=created_at.asc&limit=${limit}`,
+        `${this.url}/rest/v1/leads?${query.toString()}`,
         {
           headers: {
             apikey: this.key,
