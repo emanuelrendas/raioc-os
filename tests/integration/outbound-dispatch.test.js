@@ -44,7 +44,7 @@ describe('INTEGRATION: Outbound Dispatch Queue Drainer', () => {
       timeline: 'immediate',
       data_stack: 'modern cloud',
       budgetAed: 5000000,
-      status: 'INGESTED',
+      status: 'new',
       created_at: new Date().toISOString(),
     };
 

@@ -16,6 +16,14 @@ import { dispatchN8nEvent } from '../adapters/n8n-adapter.js';
 import { sendTelegramAlert } from '../adapters/telegram-adapter.js';
 import { logger } from '../logging/audit-logger.js';
 import { telemetry } from '../logging/telemetry.js';
+import {
+  ACQUIRE_OUTCOME,
+  EFFECT_TYPES,
+  acquireLeadExecution,
+  completeLeadExecution,
+  concludeFailedAttempt,
+  dispatchGuardedEffect,
+} from './execution-authority.js';
 
 // Register adapters into the Queue Engine
 queueEngine.registerAdapter('whatsapp', whatsAppAdapter);
@@ -36,6 +44,7 @@ export async function run_cycle(options = {}) {
 
   const summary = {
     leadsProcessed: 0,
+    leadsSkipped: 0,
     assessmentsProcessed: 0,
     executiveBriefsGenerated: 0,
     dispatches: {
@@ -65,10 +74,30 @@ export async function run_cycle(options = {}) {
 
     // 2. Process each lead
     for (const lead of pendingLeads) {
+      // Discovery is not authority (ADR-015D). Only a database claim grants the
+      // right to score this lead or to contact anyone about it.
+      let handle;
       try {
-        // Mark lead as processing
-        await db.updateLeadStatus(lead.id, 'processing');
+        const acquisition = await acquireLeadExecution(db, lead.id);
+        if (acquisition.outcome !== ACQUIRE_OUTCOME.CLAIMED) {
+          summary.leadsSkipped++;
+          logger.info('RUN_CYCLE', `Skipping lead ${lead.id}: ${acquisition.reason}`);
+          continue;
+        }
+        handle = {
+          execution: acquisition.execution,
+          claimVersion: acquisition.claimVersion,
+        };
+      } catch (claimError) {
+        // Fail-closed law: if the execution layer cannot answer, nothing runs.
+        summary.failures.processing++;
+        logger.error('RUN_CYCLE', `Could not establish execution authority for lead ${lead.id}; no processing, no effects`, {
+          error: claimError.message,
+        });
+        continue;
+      }
 
+      try {
         // Execute DIRA & RIIS intelligence assessment
         const intelligence = diraRiisEngine.analyze(lead);
 
@@ -91,23 +120,27 @@ export async function run_cycle(options = {}) {
         await db.saveExecutiveBrief(brief);
         summary.executiveBriefsGenerated++;
 
-        // Automated Webhook & VIP Bridge: Dispatch QUALIFIED_LEAD to n8n and Telegram
+        // Automated Webhook & VIP Bridge: Dispatch QUALIFIED_LEAD to n8n and Telegram.
+        // Both are direct externally-visible effects, so each one goes through
+        // execution-effect authority: ownership is re-proven and the effect is
+        // reserved before the provider is contacted, and never twice.
         const correlationId = lead.correlation_id || lead.metadata?.correlationId || `corr_cycle_${lead.id}_${Date.now()}`;
-        await dispatchN8nEvent('QUALIFIED_LEAD', {
-          lead,
-          intelligence,
-          brief,
-          correlationId,
-        });
-        summary.dispatches.n8n++;
 
-        await sendTelegramAlert('NOTIF_QUALIFIED_LEAD', {
-          lead,
-          intelligence,
-          brief,
-          correlationId,
-        });
-        summary.dispatches.telegram++;
+        const n8nOutcome = await dispatchGuardedEffect(
+          db,
+          handle,
+          EFFECT_TYPES.N8N_WEBHOOK,
+          () => dispatchN8nEvent('QUALIFIED_LEAD', { lead, intelligence, brief, correlationId })
+        );
+        if (n8nOutcome.dispatched) summary.dispatches.n8n++;
+
+        const telegramOutcome = await dispatchGuardedEffect(
+          db,
+          handle,
+          EFFECT_TYPES.TELEGRAM_ALERT,
+          () => sendTelegramAlert('NOTIF_QUALIFIED_LEAD', { lead, intelligence, brief, correlationId })
+        );
+        if (telegramOutcome.dispatched) summary.dispatches.telegram++;
 
         // Enqueue Dispatches
         if (brief.dispatchPayloads.whatsapp.recipient) {
@@ -138,18 +171,40 @@ export async function run_cycle(options = {}) {
         });
         summary.dispatches.crm++;
 
-        // Mark lead as completed
-        await db.updateLeadStatus(lead.id, 'completed');
+        // Terminal success on the execution, conditional on still owning it.
+        // leads.status is untouched: finishing the workflow is not a business
+        // qualification decision.
+        const completed = await completeLeadExecution(db, handle);
+        if (!completed) {
+          summary.leadsSkipped++;
+          logger.warn('RUN_CYCLE', `Lead ${lead.id} processed but claim was taken over before completion; not recorded as completed`, {
+            executionId: handle.execution.id,
+            claimVersion: handle.claimVersion,
+          });
+          continue;
+        }
 
         summary.leadsProcessed++;
-        logger.audit('RUN_CYCLE', 'LEAD_PROCESSED', lead.id, 'pending', 'completed', {
+        logger.audit('RUN_CYCLE', 'LEAD_EXECUTION_COMPLETED', lead.id, 'RUNNING', 'COMPLETED', {
+          executionId: handle.execution.id,
+          claimVersion: handle.claimVersion,
           riisScore: intelligence.riis.score,
           diraRisk: intelligence.dira.riskLevel,
         });
       } catch (leadError) {
         summary.failures.processing++;
         logger.error('RUN_CYCLE', `Failed processing lead ${lead.id}`, { error: leadError.message });
-        await db.updateLeadStatus(lead.id, 'failed');
+
+        // The execution keeps its identity and its remaining attempts; it
+        // becomes reclaimable when the lease lapses. The lead's business status
+        // is not touched because a worker failure says nothing about the lead.
+        try {
+          await concludeFailedAttempt(db, handle);
+        } catch (ledgerError) {
+          logger.error('RUN_CYCLE', `Could not record attempt outcome for lead ${lead.id}`, {
+            error: ledgerError.message,
+          });
+        }
       }
     }
 

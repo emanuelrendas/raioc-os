@@ -293,7 +293,7 @@ describe('INTEGRATION: n8n Webhook Egress & Telegram VIP Bridge', () => {
       ai_maturity: 'in_production',
       timeline: 'immediate',
       budgetAed: 100000000,
-      status: 'pending',
+      status: 'new',
       created_at: new Date().toISOString(),
     });
 

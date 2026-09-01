@@ -186,6 +186,11 @@ export class TelegramAdapter {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // Set once response headers arrive. It is the difference between "Telegram
+    // answered and refused" (no delivery) and "we never heard back" (delivery
+    // unknown) — the execution-effect ledger classifies those differently.
+    let providerResponded = false;
+
     try {
       logger.info('TELEGRAM_ADAPTER', `Posting VIP alert [${templateId}] to Telegram chat ${targetChatId}...`, { correlationId });
 
@@ -197,6 +202,7 @@ export class TelegramAdapter {
       });
 
       clearTimeout(timeoutId);
+      providerResponded = true;
 
       const responseBody = await res.json();
 
@@ -271,6 +277,7 @@ export class TelegramAdapter {
         correlationId,
         error: errorMessage,
         isTimeout,
+        providerResponded,
         timestamp: new Date().toISOString(),
       };
     }

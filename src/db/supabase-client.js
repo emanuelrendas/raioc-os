@@ -68,6 +68,8 @@ export class SupabaseClient {
       agent_heartbeats: [],
       executions: new Map(),
       workflow_runs: new Map(),
+      lead_executions: [],
+      execution_effects: [],
       notifications: [],
       off_plan_projects: [],
     };
@@ -958,16 +960,26 @@ export class SupabaseClient {
 
   // --- Lead & Assessment Operations ---
 
+  /**
+   * Discovers leads that are candidates for workflow processing.
+   *
+   * This is DISCOVERY ONLY and confers no authority: whether a lead may actually
+   * be processed is decided by the canonical execution layer (ADR-015D), not by
+   * this query. The former filter also matched 'pending' and 'INGESTED', which
+   * are execution states the live leads.status check constraint does not even
+   * permit — they could never match a row, and treating a business column as
+   * execution state is exactly what ADR-015D forbids.
+   */
   async fetchPendingLeads(limit = 50) {
     if (this.isMock) {
       return this.mockStore.leads
-        .filter((l) => l.status === 'pending' || l.status === 'INGESTED' || l.status === 'new' || !l.status)
+        .filter((l) => l.status === 'new' || !l.status)
         .slice(0, limit);
     }
 
     try {
       const res = await fetch(
-        `${this.url}/rest/v1/leads?status=in.(pending,new,INGESTED)&order=created_at.asc&limit=${limit}`,
+        `${this.url}/rest/v1/leads?status=eq.new&order=created_at.asc&limit=${limit}`,
         {
           headers: {
             apikey: this.key,
@@ -1040,6 +1052,293 @@ export class SupabaseClient {
       logger.error('SUPABASE', `Failed to update lead ${id} status to ${status}`, { error: err.message });
       return null;
     }
+  }
+
+  // --- Canonical Execution Layer (ADR-015D / migration 005) ---
+  //
+  // These operations are the authority for whether a workflow may run for a lead
+  // and whether an externally-visible effect may be attempted. Unlike the CRM
+  // helpers above they NEVER swallow a database error into a benign-looking
+  // value: a caller that cannot tell "no execution exists" from "the database is
+  // unreachable" would claim a lead it does not own. Every failure throws, so the
+  // runtime fails closed.
+
+  _executionHeaders(prefer = null) {
+    const headers = {
+      apikey: this.key,
+      Authorization: `Bearer ${this.key}`,
+      'Content-Type': 'application/json',
+    };
+    if (prefer) headers.Prefer = prefer;
+    return headers;
+  }
+
+  // PostgREST surfaces a unique-constraint violation as HTTP 409 / SQLSTATE 23505.
+  static async _isUniqueViolation(res) {
+    if (res.status !== 409) return false;
+    try {
+      const body = await res.clone().json();
+      return body?.code === '23505' || /duplicate key/i.test(body?.message || '');
+    } catch {
+      return true;
+    }
+  }
+
+  /**
+   * Reads the single logical execution for (lead_id, workflow_key), or null when
+   * none exists. Throws if the read itself could not be completed.
+   */
+  async fetchLeadExecution(leadId, workflowKey) {
+    if (this.isMock) {
+      return (
+        this.mockStore.lead_executions.find(
+          (e) => e.lead_id === leadId && e.workflow_key === workflowKey
+        ) || null
+      );
+    }
+
+    let res;
+    try {
+      res = await fetch(
+        `${this.url}/rest/v1/lead_executions?lead_id=eq.${encodeURIComponent(leadId)}` +
+          `&workflow_key=eq.${encodeURIComponent(workflowKey)}&limit=1`,
+        { headers: this._executionHeaders() }
+      );
+    } catch (err) {
+      throw new PersistenceError('fetchLeadExecution', err.message);
+    }
+    if (!res.ok) {
+      throw new PersistenceError('fetchLeadExecution', `${res.status} ${res.statusText}`);
+    }
+    const rows = await res.json();
+    return rows[0] || null;
+  }
+
+  /**
+   * Attempts the initial claim by inserting the logical execution row. The
+   * UNIQUE (lead_id, workflow_key) constraint is what resolves a race between
+   * workers: exactly one INSERT can win.
+   *
+   * @returns {Promise<{claimed: boolean, execution: Object|null, conflict: boolean}>}
+   */
+  async insertLeadExecution(row) {
+    const record = {
+      lead_id: row.leadId,
+      workflow_key: row.workflowKey,
+      workflow_version: row.workflowVersion,
+      status: 'RUNNING',
+      claim_version: row.claimVersion ?? 1,
+      attempt_count: row.attemptCount ?? 1,
+      lease_expires_at: row.leaseExpiresAt,
+    };
+
+    if (this.isMock) {
+      const clash = this.mockStore.lead_executions.find(
+        (e) => e.lead_id === record.lead_id && e.workflow_key === record.workflow_key
+      );
+      if (clash) return { claimed: false, execution: null, conflict: true };
+
+      const now = new Date().toISOString();
+      const execution = {
+        id: `exec_${this.mockStore.lead_executions.length + 1}_${Math.random().toString(36).slice(2, 8)}`,
+        max_attempts: 5,
+        created_at: now,
+        updated_at: now,
+        ...record,
+      };
+      this.mockStore.lead_executions.push(execution);
+      return { claimed: true, execution, conflict: false };
+    }
+
+    let res;
+    try {
+      res = await fetch(`${this.url}/rest/v1/lead_executions`, {
+        method: 'POST',
+        headers: this._executionHeaders('return=representation'),
+        body: JSON.stringify(record),
+      });
+    } catch (err) {
+      throw new PersistenceError('insertLeadExecution', err.message);
+    }
+
+    if (await SupabaseClient._isUniqueViolation(res)) {
+      return { claimed: false, execution: null, conflict: true };
+    }
+    if (!res.ok) {
+      throw new PersistenceError('insertLeadExecution', `${res.status} ${res.statusText}`);
+    }
+
+    const rows = await res.json();
+    return { claimed: true, execution: Array.isArray(rows) ? rows[0] : rows, conflict: false };
+  }
+
+  /**
+   * Compare-and-set on a single execution row. `match` is the state the caller
+   * believes it owns; the update only lands if the database still agrees.
+   *
+   * @returns {Promise<Array>} the updated rows — exactly one on success, empty
+   *                           when the caller has lost ownership.
+   */
+  async casUpdateLeadExecution(executionId, match, patch) {
+    const nowIso = new Date().toISOString();
+
+    if (this.isMock) {
+      const row = this.mockStore.lead_executions.find((e) => e.id === executionId);
+      if (!row) return [];
+      if (match.status !== undefined && row.status !== match.status) return [];
+      if (match.claimVersion !== undefined && row.claim_version !== match.claimVersion) return [];
+      if (match.leaseExpiredBefore !== undefined) {
+        const leased = row.lease_expires_at && row.lease_expires_at >= match.leaseExpiredBefore;
+        if (leased) return [];
+      }
+      if (match.attemptCountBelow !== undefined && row.attempt_count >= match.attemptCountBelow) {
+        return [];
+      }
+
+      Object.assign(row, patch, { updated_at: nowIso });
+      return [{ ...row }];
+    }
+
+    const filters = [`id=eq.${encodeURIComponent(executionId)}`];
+    if (match.status !== undefined) filters.push(`status=eq.${encodeURIComponent(match.status)}`);
+    if (match.claimVersion !== undefined) filters.push(`claim_version=eq.${match.claimVersion}`);
+    if (match.leaseExpiredBefore !== undefined) {
+      // A RUNNING row with no lease is by definition not actively held.
+      filters.push(
+        `or=(lease_expires_at.is.null,lease_expires_at.lt.${encodeURIComponent(match.leaseExpiredBefore)})`
+      );
+    }
+    // PostgREST compares a column against a literal, never against another
+    // column, so the row's own max_attempts is passed in as the bound. This
+    // stays atomic: the claim_version match already serialises competing
+    // reclaims, and the migration-005 CHECK (attempt_count <= max_attempts) is
+    // the database-side backstop if it ever did not.
+    if (match.attemptCountBelow !== undefined) {
+      filters.push(`attempt_count=lt.${match.attemptCountBelow}`);
+    }
+
+    let res;
+    try {
+      res = await fetch(`${this.url}/rest/v1/lead_executions?${filters.join('&')}`, {
+        method: 'PATCH',
+        headers: this._executionHeaders('return=representation'),
+        body: JSON.stringify({ ...patch, updated_at: nowIso }),
+      });
+    } catch (err) {
+      throw new PersistenceError('casUpdateLeadExecution', err.message);
+    }
+    if (!res.ok) {
+      throw new PersistenceError('casUpdateLeadExecution', `${res.status} ${res.statusText}`);
+    }
+    return await res.json();
+  }
+
+  /**
+   * Reserves the authority to attempt one external effect. UNIQUE
+   * (execution_id, effect_type) means only one worker can hold it.
+   * idempotency_key is generated by PostgreSQL and is never supplied here.
+   *
+   * @returns {Promise<{reserved: boolean, effect: Object|null, conflict: boolean}>}
+   */
+  async reserveExecutionEffect(executionId, effectType) {
+    const record = { execution_id: executionId, effect_type: effectType, status: 'RESERVED' };
+
+    if (this.isMock) {
+      const clash = this.mockStore.execution_effects.find(
+        (e) => e.execution_id === executionId && e.effect_type === effectType
+      );
+      if (clash) return { reserved: false, effect: null, conflict: true };
+
+      const effect = {
+        id: `effect_${this.mockStore.execution_effects.length + 1}_${Math.random().toString(36).slice(2, 8)}`,
+        // Mirrors the STORED generated column in migration 005.
+        idempotency_key: `${executionId}:${effectType}`,
+        created_at: new Date().toISOString(),
+        dispatched_at: null,
+        last_error: null,
+        ...record,
+      };
+      this.mockStore.execution_effects.push(effect);
+      return { reserved: true, effect, conflict: false };
+    }
+
+    let res;
+    try {
+      res = await fetch(`${this.url}/rest/v1/execution_effects`, {
+        method: 'POST',
+        headers: this._executionHeaders('return=representation'),
+        body: JSON.stringify(record),
+      });
+    } catch (err) {
+      throw new PersistenceError('reserveExecutionEffect', err.message);
+    }
+
+    if (await SupabaseClient._isUniqueViolation(res)) {
+      return { reserved: false, effect: null, conflict: true };
+    }
+    if (!res.ok) {
+      throw new PersistenceError('reserveExecutionEffect', `${res.status} ${res.statusText}`);
+    }
+
+    const rows = await res.json();
+    return { reserved: true, effect: Array.isArray(rows) ? rows[0] : rows, conflict: false };
+  }
+
+  async fetchExecutionEffect(executionId, effectType) {
+    if (this.isMock) {
+      return (
+        this.mockStore.execution_effects.find(
+          (e) => e.execution_id === executionId && e.effect_type === effectType
+        ) || null
+      );
+    }
+
+    let res;
+    try {
+      res = await fetch(
+        `${this.url}/rest/v1/execution_effects?execution_id=eq.${encodeURIComponent(executionId)}` +
+          `&effect_type=eq.${encodeURIComponent(effectType)}&limit=1`,
+        { headers: this._executionHeaders() }
+      );
+    } catch (err) {
+      throw new PersistenceError('fetchExecutionEffect', err.message);
+    }
+    if (!res.ok) {
+      throw new PersistenceError('fetchExecutionEffect', `${res.status} ${res.statusText}`);
+    }
+    const rows = await res.json();
+    return rows[0] || null;
+  }
+
+  /**
+   * Records the outcome of an effect attempt. idempotency_key is generated and
+   * must never appear in `patch`.
+   */
+  async updateExecutionEffect(effectId, patch) {
+    if (this.isMock) {
+      const effect = this.mockStore.execution_effects.find((e) => e.id === effectId);
+      if (!effect) return [];
+      Object.assign(effect, patch);
+      return [{ ...effect }];
+    }
+
+    let res;
+    try {
+      res = await fetch(
+        `${this.url}/rest/v1/execution_effects?id=eq.${encodeURIComponent(effectId)}`,
+        {
+          method: 'PATCH',
+          headers: this._executionHeaders('return=representation'),
+          body: JSON.stringify(patch),
+        }
+      );
+    } catch (err) {
+      throw new PersistenceError('updateExecutionEffect', err.message);
+    }
+    if (!res.ok) {
+      throw new PersistenceError('updateExecutionEffect', `${res.status} ${res.statusText}`);
+    }
+    return await res.json();
   }
 
   async updateAssessmentStatus(id, status, riisScore = null, diraEvaluation = null) {
