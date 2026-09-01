@@ -15,6 +15,8 @@ import { diraRiisEngine } from '../../src/engines/dira-riis-engine.js';
 import { executiveBriefGenerator } from '../../src/engines/executive-brief.js';
 import { run_cycle } from '../../src/core/run-cycle.js';
 
+process.env.RAIOC_RUNTIME_EXECUTION_MODE = 'active';
+
 describe('INTEGRATION: Outbound Dispatch Queue Drainer', () => {
   let db;
   let queue;
@@ -44,7 +46,8 @@ describe('INTEGRATION: Outbound Dispatch Queue Drainer', () => {
       timeline: 'immediate',
       data_stack: 'modern cloud',
       budgetAed: 5000000,
-      status: 'INGESTED',
+      status: 'new',
+      consent_status: 'opted_in',
       created_at: new Date().toISOString(),
     };
 

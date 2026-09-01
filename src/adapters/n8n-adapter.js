@@ -213,6 +213,11 @@ export class N8nAdapter {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
+    // Set once response headers arrive. It is the difference between "n8n
+    // answered and refused" (no delivery) and "we never heard back" (delivery
+    // unknown) — the execution-effect ledger classifies those differently.
+    let providerResponded = false;
+
     try {
       logger.info('N8N_ADAPTER', `Dispatching event [${event}] to n8n webhook: ${targetUrl}`, { correlationId });
 
@@ -230,6 +235,7 @@ export class N8nAdapter {
       });
 
       clearTimeout(timeoutId);
+      providerResponded = true;
 
       if (!res.ok) {
         throw new Error(`n8n webhook returned status ${res.status}: ${res.statusText}`);
@@ -302,6 +308,7 @@ export class N8nAdapter {
         correlationId,
         error: errorMessage,
         isTimeout,
+        providerResponded,
         timestamp,
       };
     }

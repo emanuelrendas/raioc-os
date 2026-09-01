@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import { run_cycle } from '../src/core/run-cycle.js';
 import { SupabaseClient } from '../src/db/supabase-client.js';
 
+process.env.RAIOC_RUNTIME_EXECUTION_MODE = 'active';
+
 describe('Run Cycle End-to-End Integration Tests', () => {
   test('executes full autonomous cycle from pending lead to executive brief and dispatches', async () => {
     const mockDb = new SupabaseClient({ useMock: true });
@@ -19,7 +21,8 @@ describe('Run Cycle End-to-End Integration Tests', () => {
         ai_maturity: 'in_production',
         timeline: 'immediate',
         data_stack: 'modern cloud',
-        status: 'pending',
+        status: 'new',
+        consent_status: 'opted_in',
         created_at: new Date().toISOString(),
       },
       {
@@ -32,7 +35,8 @@ describe('Run Cycle End-to-End Integration Tests', () => {
         ai_maturity: 'piloting',
         timeline: 'quarter',
         data_stack: 'spreadsheets',
-        status: 'pending',
+        status: 'new',
+        consent_status: 'opted_in',
         created_at: new Date().toISOString(),
       }
     );
@@ -60,9 +64,14 @@ describe('Run Cycle End-to-End Integration Tests', () => {
     assert.strictEqual(brief1.company_name, 'Cyberdyne Systems');
     assert.ok(brief1.riis_score >= 80);
 
-    // Verify Leads status updated to completed
+    // MISSION-015E-B / ADR-015D: completion is recorded on the execution, never
+    // on the lead. leads.status is CRM lifecycle only and is left untouched.
     const lead1 = mockDb.mockStore.leads.find((l) => l.id === 'lead_001');
-    assert.strictEqual(lead1.status, 'completed');
+    assert.strictEqual(lead1.status, 'new');
+
+    const execution1 = mockDb.mockStore.lead_executions.find((e) => e.lead_id === 'lead_001');
+    assert.ok(execution1, 'lead_001 must have a canonical execution row');
+    assert.strictEqual(execution1.status, 'COMPLETED');
 
     // Verify Dispatches completed
     assert.ok(result.summary.dispatches.whatsapp >= 2);
