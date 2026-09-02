@@ -1,8 +1,10 @@
 /**
  * Vercel Serverless Entrypoint - RAIOC OS (Security Hardened)
  * Explicitly protects root '/' to serve index.html (public website),
- * requires authentication for '/dashboard', '/admin/mission-control', and '/api/executive/*',
- * and routes through the unified API router.
+ * serves the '/dashboard' and '/admin/mission-control' HTML shells
+ * unauthenticated so a browser can load them, and routes through the unified
+ * API router, where '/api/executive/*', '/api/dashboard/*', '/api/telemetry/*'
+ * and '/api/chat' remain authenticated.
  */
 
 import fs from 'node:fs';
@@ -13,7 +15,6 @@ import { renderExecutiveBriefHtml } from '../src/site/brief-viewer-html.js';
 import { renderMissionControlHtml } from '../src/site/mission-control-html.js';
 import { supabase } from '../src/db/supabase-client.js';
 import { sitePages } from '../src/site/site-pages.js';
-import { authMiddleware, Roles } from '../src/security/auth-middleware.js';
 
 export const config = {
   api: {
@@ -100,15 +101,11 @@ export default async function handler(req, res) {
     return typeof res.send === 'function' ? res.send(briefHtml) : res.end(briefHtml);
   }
 
-  // 1b. Executive Mission Control UI (/admin/mission-control, /mission-control) -> PROTECTED
+  // 1b. Executive Mission Control UI (/admin/mission-control, /mission-control)
+  // HTML shell only, served unauthenticated so a normal browser can load the
+  // page. Every data path it calls (/api/v1/mission-control/*, /api/executive/*,
+  // /api/dashboard/*) stays authenticated in src/api/server.js.
   if (url === '/admin/mission-control' || url === '/mission-control' || url === '/admin/mission-control.html' || url === '/mission-control.html' || url === '/api/mission-control/ui') {
-    const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN, Roles.AGENT]);
-    if (!auth.authenticated) {
-      res.setHeader('Content-Type', 'application/json');
-      res.status(401);
-      return res.json ? res.json({ success: false, error: 'Unauthorized: Mission Control requires authentication', details: auth.error }) : res.end(JSON.stringify({ success: false, error: 'Unauthorized', details: auth.error }));
-    }
-
     const mcHtml = (sitePages && sitePages['mission-control']) ? sitePages['mission-control'] : renderMissionControlHtml();
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
@@ -116,15 +113,11 @@ export default async function handler(req, res) {
     return typeof res.send === 'function' ? res.send(mcHtml) : res.end(mcHtml);
   }
 
-  // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard' -> PROTECTED
-  if (host.includes('dashboard') || url === '/dashboard' || url === '/dashboard/' || url === '/dashboard.html' || url === '/api/dashboard/ui') {
-    const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN, Roles.AGENT]);
-    if (!auth.authenticated) {
-      res.setHeader('Content-Type', 'application/json');
-      res.status(401);
-      return res.json ? res.json({ success: false, error: 'Unauthorized: Executive Dashboard requires authentication', details: auth.error }) : res.end(JSON.stringify({ success: false, error: 'Unauthorized', details: auth.error }));
-    }
-
+  // 2. Dashboard Subdomain (dashboard.emanuelrendas.com) or '/dashboard'
+  // HTML shell only, served unauthenticated so a normal browser can load the
+  // page. '/api/*' paths on the dashboard host are excluded here so they fall
+  // through to the API router below and keep their authentication.
+  if ((host.includes('dashboard') && !url.startsWith('/api/')) || url === '/dashboard' || url === '/dashboard/' || url === '/dashboard.html' || url === '/api/dashboard/ui') {
     let dashHtml = (sitePages && sitePages.dashboard) ? sitePages.dashboard : '';
     if (!dashHtml) {
       try {

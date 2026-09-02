@@ -43,20 +43,15 @@ describe('Vercel Serverless Function Entrypoint Tests', () => {
     );
   });
 
-  // ─── MISSION-002 Invariant: /dashboard requires authentication ──────────────
-  test('/dashboard returns 401 Unauthorized without auth credentials', async () => {
+  // ─── MISSION-012-AUTH-FIX: /dashboard HTML shell is browser-loadable, but
+  // the API paths behind it stay authenticated (MISSION-002 invariant retained
+  // on the data path, which is what it protects). ─────────────────────────────
+  const invoke = async (url, headers = {}) => {
     let statusCode = null;
-    let headersSet = {};
+    const headersSet = {};
     let responseData = null;
 
-    const req = {
-      url: '/dashboard',
-      method: 'GET',
-      headers: {},
-      query: {},
-      body: {},
-    };
-
+    const req = { url, method: 'GET', headers, query: {}, body: {} };
     const res = {
       status(code) { statusCode = code; return this; },
       setHeader(name, val) { headersSet[name] = val; return this; },
@@ -66,12 +61,35 @@ describe('Vercel Serverless Function Entrypoint Tests', () => {
     };
 
     await handler(req, res);
+    return { statusCode, headersSet, responseData };
+  };
 
-    assert.strictEqual(
-      statusCode,
-      401,
-      '/dashboard must require authentication (401) — MISSION-002 invariant'
-    );
+  test('/dashboard returns 200 HTML without auth credentials (browser-loadable shell)', async () => {
+    const { statusCode, headersSet, responseData } = await invoke('/dashboard');
+
+    assert.strictEqual(statusCode, 200, '/dashboard must be loadable by a normal browser');
+    assert.match(String(headersSet['Content-Type']), /text\/html/);
+    assert.match(String(responseData), /<!DOCTYPE html>/i);
+  });
+
+  test('/admin/mission-control returns 200 HTML without auth credentials (browser-loadable shell)', async () => {
+    const { statusCode, headersSet, responseData } = await invoke('/admin/mission-control');
+
+    assert.strictEqual(statusCode, 200, '/admin/mission-control must be loadable by a normal browser');
+    assert.match(String(headersSet['Content-Type']), /text\/html/);
+    assert.match(String(responseData), /<!DOCTYPE html>/i);
+  });
+
+  test('data APIs behind the dashboard remain 401 without auth credentials', async () => {
+    for (const url of ['/api/dashboard/overview', '/api/executive/status', '/api/telemetry/status', '/api/chat']) {
+      const { statusCode } = await invoke(url);
+      assert.strictEqual(statusCode, 401, `${url} must still require authentication`);
+    }
+  });
+
+  test('API paths on the dashboard subdomain remain 401 (not swallowed by the HTML shell)', async () => {
+    const { statusCode } = await invoke('/api/dashboard/overview', { host: 'dashboard.emanuelrendas.com' });
+    assert.strictEqual(statusCode, 401, 'dashboard-host /api/* must reach the authenticated API router');
   });
 
   // ─── MISSION-004: Public pages are served correctly ─────────────────────────
