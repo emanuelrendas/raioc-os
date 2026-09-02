@@ -91,19 +91,17 @@ export function extractTelegramFields(event, payload = {}, correlationId = '') {
   const brief = payload.brief || {};
   const riis = intelligence.riis || brief.riis || {};
   const dira = intelligence.dira || brief.dira || {};
+  const unknown = 'N/A';
 
   // 1. Full name
-  const rawFullName = lead.name || lead.contactName || lead.full_name || payload.full_name || payload.name || 'Private Client';
+  const rawFullName = lead.name || lead.contactName || lead.full_name || payload.full_name || payload.name || unknown;
   const fullName = escapeTelegramHtml(rawFullName);
 
   // 2. Budget formatted
-  let rawBudget = lead.budgetAed ?? payload.budgetAed ?? lead.budget_aed ?? payload.budget_aed;
-  let budgetFormatted = '';
+  const rawBudget = lead.budgetAed ?? payload.budgetAed ?? lead.budget_aed ?? payload.budget_aed;
+  let budgetFormatted = unknown;
   if (rawBudget !== undefined && rawBudget !== null && !isNaN(Number(rawBudget)) && Number(rawBudget) > 0) {
     budgetFormatted = `AED ${Number(rawBudget).toLocaleString()}`;
-  } else {
-    const fallbackBudget = lead.budget_formatted || payload.budget_formatted || lead.budget || payload.budget || 'AED 15,000,000+';
-    budgetFormatted = escapeTelegramHtml(fallbackBudget);
   }
 
   // 3. Message text
@@ -112,13 +110,17 @@ export function extractTelegramFields(event, payload = {}, correlationId = '') {
   if (providedText) {
     messageText = sanitizeTelegramHtml(providedText);
   } else if (event === 'QUALIFIED_LEAD' || event === 'LEAD_INGESTED') {
-    const company = escapeTelegramHtml(lead.company || lead.companyName || lead.company_name || 'Enterprise Candidate');
-    const email = escapeTelegramHtml(lead.email || lead.contactEmail || 'N/A');
-    const phone = escapeTelegramHtml(lead.phone || lead.contactPhone || lead.whatsapp || 'N/A');
-    const riisScore = riis.score !== undefined ? riis.score : (brief.riisScore || intelligence.score || 85);
-    const tierLabel = escapeTelegramHtml(riis.tierLabel || brief.diraTier || 'Institutional Tier');
-    const riskLevel = escapeTelegramHtml(dira.riskLevel || brief.diraRiskLevel || 'MODERATE');
-    const strategy = escapeTelegramHtml(intelligence.recommendedTrack || brief.strategyCode || lead.timeline || 'Immediate Deployment');
+    const company = escapeTelegramHtml(lead.company || lead.companyName || lead.company_name || unknown);
+    const email = escapeTelegramHtml(lead.email || lead.contactEmail || unknown);
+    const phone = escapeTelegramHtml(lead.phone || lead.contactPhone || lead.whatsapp || unknown);
+    const rawRiisScore = riis.score ?? brief.riisScore ?? intelligence.score;
+    const riisScore = rawRiisScore !== null && rawRiisScore !== undefined && rawRiisScore !== '' && Number.isFinite(Number(rawRiisScore))
+      ? Number(rawRiisScore)
+      : null;
+    const riisScorePresentation = riisScore === null ? unknown : `${riisScore}/100`;
+    const tierLabel = escapeTelegramHtml(riis.tierLabel || brief.diraTier || unknown);
+    const riskLevel = escapeTelegramHtml(dira.riskLevel || brief.diraRiskLevel || unknown);
+    const strategy = escapeTelegramHtml(intelligence.recommendedTrack || brief.strategyCode || lead.timeline || unknown);
 
     messageText = `🚀 <b>VIP NOTIFICATION: ${escapeTelegramHtml(event)}</b>\n\n` +
       `👤 <b>Name:</b> ${fullName}\n` +
@@ -126,7 +128,7 @@ export function extractTelegramFields(event, payload = {}, correlationId = '') {
       `📧 <b>Email:</b> ${email}\n` +
       `📱 <b>Phone:</b> ${phone}\n` +
       `💰 <b>Budget:</b> ${budgetFormatted}\n` +
-      `📊 <b>RIIS Score:</b> <code>${riisScore}/100</code> (${tierLabel})\n` +
+      `📊 <b>RIIS Score:</b> <code>${riisScorePresentation}</code> (${tierLabel})\n` +
       `🛡️ <b>DIRA Risk:</b> <code>${riskLevel}</code>\n` +
       `⚡ <b>Recommended Track:</b> ${strategy}\n` +
       `🆔 <b>Correlation ID:</b> <code>${escapeTelegramHtml(correlationId)}</code>`;

@@ -339,8 +339,8 @@ export async function ingestCrmLead(body = {}, options = {}) {
     crmSyncResult = await crmClient.syncLead({
       companyName: leadRecord.company,
       contactName: leadRecord.name,
-      email: leadRecord.email || `lead_${leadRecord.id}@private.emanuelrendas.com`,
-      phone: leadRecord.phone,
+      email: leadRecord.email || null,
+      phone: leadRecord.phone || null,
       riisScore: intelligence.riis.score,
       riskLevel: intelligence.dira.riskLevel,
       dealValueAed: leadRecord.budgetAed,

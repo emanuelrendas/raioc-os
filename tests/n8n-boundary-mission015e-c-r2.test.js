@@ -10,7 +10,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { createHmac } from 'node:crypto';
-import { N8nAdapter, N8N_WF01_CALLER_TIMEOUT_MS } from '../src/adapters/n8n-adapter.js';
+import { extractTelegramFields, N8nAdapter, N8N_WF01_CALLER_TIMEOUT_MS } from '../src/adapters/n8n-adapter.js';
 import { verifyWf01Boundary } from '../scripts/verify-wf01-boundary.mjs';
 import { SupabaseClient } from '../src/db/supabase-client.js';
 import {
@@ -199,6 +199,34 @@ test('a synchronous provider success carries the signed runtime mode context', a
   } finally {
     globalThis.fetch = previousFetch;
   }
+});
+
+test('missing n8n event evidence remains unknown rather than becoming synthetic facts', async () => {
+  const adapter = new N8nAdapter({
+    enabled: true,
+    webhookUrl: '',
+    webhookSecret: 'r2-test-secret',
+  });
+
+  const result = await adapter.dispatchEvent('QUALIFIED_LEAD', {
+    runtime: { mode: 'canary' },
+    lead: {},
+    intelligence: {},
+    brief: {},
+  });
+
+  assert.equal(result.status, 'compiled_for_n8n');
+  assert.equal(result.payload.budget_formatted, 'N/A');
+  assert.match(result.payload.text, /RIIS Score:<\/b> <code>N\/A<\/code> \(N\/A\)/);
+  assert.match(result.payload.text, /DIRA Risk:<\/b> <code>N\/A<\/code>/);
+  assert.match(result.payload.text, /Recommended Track:<\/b> N\/A/);
+  assert.match(result.payload.text, /Email:<\/b> N\/A/);
+  assert.match(result.payload.text, /Phone:<\/b> N\/A/);
+  assert.doesNotMatch(result.payload.text, /AED 15,000,000\+|85\/100|MODERATE|Institutional Tier|Immediate Deployment/);
+
+  const display = extractTelegramFields('QUALIFIED_LEAD', { lead: {} });
+  assert.equal(display.budget_formatted, 'N/A');
+  assert.doesNotMatch(display.text, /AED 15,000,000\+|85\/100|MODERATE|Institutional Tier|Immediate Deployment/);
 });
 
 test('an explicit n8n rejection is failed, while timeout uncertainty remains AMBIGUOUS', async () => {

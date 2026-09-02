@@ -32,7 +32,7 @@ afterEach(() => {
   assert.equal(unexpectedNetworkAttempts, 0, 'an unmocked network call was attempted');
 });
 
-function payload(origin) {
+function payload(origin, overrides = {}) {
   return {
     id: `r2-${origin || 'normal'}-lead`,
     name: 'R2 CRM Synthetic Lead',
@@ -43,6 +43,7 @@ function payload(origin) {
     budget_aed: 15000000,
     notes: 'Synthetic hermetic fixture',
     ...(origin ? { origin } : {}),
+    ...overrides,
   };
 }
 
@@ -121,6 +122,24 @@ test('WF-01 provenance suppresses n8n re-forward and background run_cycle', asyn
   assert.equal(dependencies.calls.crm.length, 1, 'CRM ingestion remains available for the active workflow path');
   assert.equal(dependencies.calls.n8n.length, 0, 'WF-01 origin must not re-forward to n8n');
   assert.equal(dependencies.calls.cycles.length, 0, 'WF-01 origin must not start another runtime cycle');
+});
+
+test('WF-01 provenance preserves missing customer contacts without fabricating identity', async () => {
+  const dependencies = makeDependencies();
+
+  await ingestCrmLead(payload('n8n-wf01', { email: '', phone: '' }), {
+    ...dependencies,
+    correlationId: 'r2-wf01-missing-contact',
+    origin: 'n8n-wf01',
+    triggerCycle: false,
+    forwardToN8n: false,
+  });
+
+  assert.equal(dependencies.calls.crm.length, 1);
+  assert.equal(dependencies.calls.crm[0].email, null);
+  assert.equal(dependencies.calls.crm[0].phone, null);
+  assert.equal(dependencies.calls.n8n.length, 0);
+  assert.equal(dependencies.calls.cycles.length, 0);
 });
 
 test('normal CRM ingestion preserves its existing n8n forward and run_cycle behavior', async () => {
