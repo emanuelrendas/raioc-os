@@ -216,9 +216,14 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     else if (url.startsWith('/api/v1/assessment') || url.startsWith('/api/assessment')) {
       response = await handleAssessmentSubmission(body, effectiveQuery);
     }
-    // 9. Lead Submissions & Capture
+    // 9. Lead Submissions & Capture (MISSION P1-A: canonical website ingress —
+    // headers must be forwarded so rate limiting sees the real client key)
     else if (url.startsWith('/api/v1/leads') || url.startsWith('/api/leads') || url.startsWith('/api/lead')) {
-      response = await handleLeadSubmission(body, method, effectiveQuery);
+      response = await handleLeadSubmission(body, {
+        method: effectiveMethod,
+        query: effectiveQuery,
+        headers: effectiveHeaders,
+      });
     }
     // 9a. CRM Sync & Direct Webhook Relay
     else if (url.startsWith('/api/v1/crm') || url.startsWith('/api/crm')) {
