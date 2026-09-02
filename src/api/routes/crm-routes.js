@@ -234,6 +234,18 @@ export function normalizeLeadPayload(raw = {}) {
 export async function ingestCrmLead(body = {}, options = {}) {
   const db = options.dbClient || supabase;
   const correlationId = options.correlationId || correlationTracer.generateCorrelationId('crm_lead');
+  const eventBus = options.eventBus || agentEventBus;
+  const crmClient = options.crmSyncClient || crmSyncClient;
+  const n8nClient = options.n8nWebhookClient || n8nWebhookClient;
+  const runCycle = options.runCycle || run_cycle;
+
+  // Provenance can only remove authority. A WF-01-originated request is never
+  // permitted to re-forward to n8n or create a second run_cycle, even if a
+  // caller supplies contradictory options. Ordinary CRM ingestion preserves
+  // its existing defaults unless it explicitly requests a reduction.
+  const isWf01Origin = options.origin === 'n8n-wf01' || body?.origin === 'n8n-wf01';
+  const triggerCycle = isWf01Origin ? false : options.triggerCycle !== false;
+  const forwardToN8n = isWf01Origin ? false : options.forwardToN8n !== false;
 
   // 1. Normalize Lead Record
   const leadRecord = normalizeLeadPayload(body);
@@ -316,7 +328,7 @@ export async function ingestCrmLead(body = {}, options = {}) {
     timestamp: new Date().toISOString(),
   };
 
-  agentEventBus.publish(AgentEvents.LEAD_INGESTED, eventPayload, {
+  eventBus.publish(AgentEvents.LEAD_INGESTED, eventPayload, {
     correlationId,
     sourceAgent: 'crm_ingestion_engine',
   });
@@ -324,7 +336,7 @@ export async function ingestCrmLead(body = {}, options = {}) {
   // 8. Trigger CRM Sync Client (HubSpot / REST)
   let crmSyncResult = null;
   try {
-    crmSyncResult = await crmSyncClient.syncLead({
+    crmSyncResult = await crmClient.syncLead({
       companyName: leadRecord.company,
       contactName: leadRecord.name,
       email: leadRecord.email || `lead_${leadRecord.id}@private.emanuelrendas.com`,
@@ -342,8 +354,8 @@ export async function ingestCrmLead(body = {}, options = {}) {
   // 9. Forward to n8n Webhook Client if configured and enabled
   let n8nDispatchResult = null;
   try {
-    if (n8nWebhookClient.enabled) {
-      n8nDispatchResult = await n8nWebhookClient.triggerWorkflow(AgentEvents.LEAD_INGESTED, eventPayload, {
+    if (forwardToN8n && n8nClient.enabled) {
+      n8nDispatchResult = await n8nClient.triggerWorkflow(AgentEvents.LEAD_INGESTED, eventPayload, {
         correlationId,
         sourceAgent: 'crm_ingestion_engine',
       });
@@ -353,8 +365,8 @@ export async function ingestCrmLead(body = {}, options = {}) {
   }
 
   // 10. Optionally trigger run_cycle in background
-  if (options.triggerCycle !== false) {
-    run_cycle({ dbClient: db }).catch((err) => {
+  if (triggerCycle) {
+    runCycle({ dbClient: db }).catch((err) => {
       logger.error('CRM_ROUTE', 'Background run_cycle failed', { error: err.message, correlationId });
     });
   }
@@ -398,8 +410,8 @@ export async function ingestCrmLead(body = {}, options = {}) {
  * @param {Object} headers 
  * @returns {Promise<Object>}
  */
-export async function handleCrmRequest(url, method = 'GET', body = {}, query = {}, headers = {}) {
-  const normalized = url.replace(/^\/api\/crm\/?/, '').split('?')[0];
+export async function handleCrmRequest(url, method = 'GET', body = {}, query = {}, headers = {}, dependencies = {}) {
+  const normalized = url.replace(/^\/api\/(?:v1\/)?crm\/?/, '').split('?')[0];
   const correlationId = headers['x-correlation-id'] || headers['X-Correlation-ID'] || correlationTracer.generateCorrelationId('crm_api');
 
   // 1. Ingest Inbound Lead: POST /api/crm/lead/ingest, POST /api/crm/ingest, POST /api/crm/lead
@@ -408,7 +420,14 @@ export async function handleCrmRequest(url, method = 'GET', body = {}, query = {
     (normalized === 'lead/ingest' || normalized === 'ingest' || normalized === 'lead' || normalized === '')
   ) {
     try {
-      const result = await ingestCrmLead(body, { correlationId });
+      const isWf01Origin = body?.origin === 'n8n-wf01';
+      const result = await ingestCrmLead(body, {
+        ...dependencies,
+        correlationId,
+        origin: isWf01Origin ? 'n8n-wf01' : undefined,
+        triggerCycle: isWf01Origin ? false : dependencies.triggerCycle,
+        forwardToN8n: isWf01Origin ? false : dependencies.forwardToN8n,
+      });
       return {
         status: 200,
         body: result,

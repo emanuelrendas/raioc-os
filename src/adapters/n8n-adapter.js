@@ -1,13 +1,32 @@
 /**
  * RAIOC OS - n8n Egress Webhook Dispatcher Adapter
  * Dispatches automated signed event webhooks to n8n workflows with HMAC-SHA256 authentication,
- * strict 5000ms timeout enforcement, and non-blocking audit error logging.
+ * a bounded synchronous WF-01 timeout, and non-blocking audit error logging.
  */
 
 import { createHmac } from 'node:crypto';
 import { config } from '../config/env.js';
 import { logger } from '../logging/audit-logger.js';
 import { supabase } from '../db/supabase-client.js';
+
+/**
+ * WF-01's canary path only verifies the signed event context and responds, so
+ * it is bounded to two seconds of n8n execution overhead. The same synchronous
+ * webhook can also run the active-only MARK request, which is capped in WF-01
+ * at 15 seconds. The caller budget is therefore 15s MARK + 2s workflow
+ * overhead + 3s transport margin = 20s. This stays well below the 120-second
+ * execution lease without changing execution-authority semantics.
+ */
+export const N8N_WF01_CANARY_MAX_PATH_MS = 2_000;
+export const N8N_WF01_MARK_REQUEST_TIMEOUT_MS = 15_000;
+export const N8N_WF01_SYNCHRONOUS_OVERHEAD_MS = 2_000;
+export const N8N_WF01_TRANSPORT_MARGIN_MS = 3_000;
+export const N8N_WF01_CALLER_TIMEOUT_MS =
+  N8N_WF01_MARK_REQUEST_TIMEOUT_MS +
+  N8N_WF01_SYNCHRONOUS_OVERHEAD_MS +
+  N8N_WF01_TRANSPORT_MARGIN_MS;
+
+const RUNTIME_MODES = new Set(['off', 'canary', 'active']);
 
 /**
  * Escapes raw HTML entities to prevent Telegram parse errors
@@ -131,7 +150,8 @@ export class N8nAdapter {
   constructor(options = {}) {
     this.webhookUrl = options.webhookUrl || process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || config.n8n?.webhookUrl || '';
     this.webhookSecret = options.webhookSecret || process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || config.n8n?.webhookSecret || 'raioc_n8n_hmac_secret';
-    this.timeoutMs = options.timeoutMs || 5000;
+    this.timeoutMs = options.timeoutMs ?? N8N_WF01_CALLER_TIMEOUT_MS;
+    this.auditClient = options.auditClient || supabase;
     this.enabled = options.enabled !== undefined 
       ? options.enabled 
       : (process.env.N8N_ENABLED !== 'false' && config.n8n?.enabled !== false);
@@ -158,17 +178,24 @@ export class N8nAdapter {
   async dispatchEvent(event, payload = {}, options = {}) {
     const targetUrl = options.webhookUrl || process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || this.webhookUrl;
     const secret = options.webhookSecret || process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || this.webhookSecret;
-    const timeoutMs = options.timeoutMs || this.timeoutMs || 5000;
+    const timeoutMs = options.timeoutMs ?? this.timeoutMs;
     const timestamp = new Date().toISOString();
     const correlationId = options.correlationId || payload.correlationId || `corr_n8n_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     const tgFields = extractTelegramFields(event, payload, correlationId);
+
+    // The runtime mode is carried in the signed event body. An unknown value is
+    // represented as null, never upgraded by the adapter, so WF-01 can refuse
+    // it before any external fan-out.
+    const runtimeMode = payload?.runtime?.mode;
+    const runtime = RUNTIME_MODES.has(runtimeMode) ? { mode: runtimeMode } : { mode: null };
 
     const eventPayload = {
       event,
       timestamp,
       correlationId,
       source: 'raioc-os',
+      runtime,
       text: tgFields.text,
       message: tgFields.message,
       full_name: tgFields.full_name,
@@ -209,7 +236,8 @@ export class N8nAdapter {
       };
     }
 
-    // Execute HTTP POST with 5000ms timeout and non-blocking error handling
+    // Execute the synchronous WF-01 request within the derived 20-second
+    // caller budget and preserve the provider-response distinction below.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -254,7 +282,7 @@ export class N8nAdapter {
         status: res.status,
       });
 
-      await supabase.recordAuditLog({
+      await this.auditClient.recordAuditLog({
         category: 'N8N_ADAPTER',
         action: 'N8N_EVENT_DISPATCHED',
         entityId: correlationId,
@@ -267,6 +295,7 @@ export class N8nAdapter {
         success: true,
         status: 'SENT',
         httpStatus: res.status,
+        providerResponded: true,
         event,
         correlationId,
         signature: `sha256=${signature}`,
@@ -292,7 +321,7 @@ export class N8nAdapter {
         error: errorMessage,
       });
 
-      await supabase.recordAuditLog({
+      await this.auditClient.recordAuditLog({
         category: 'N8N_ADAPTER',
         action: 'N8N_EVENT_FAILED',
         entityId: correlationId,
