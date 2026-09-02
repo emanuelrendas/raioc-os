@@ -49,3 +49,70 @@ export function buildProgressPayload(input) {
     current_task: input.task.trim(),
   };
 }
+
+function defaultSleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function reportProgress(input, options = {}) {
+  const secret = options.secret ?? process.env.RAIOC_PROGRESS_SECRET ?? '';
+  const url = options.url ?? process.env.RAIOC_PROGRESS_URL ?? DEFAULT_PROGRESS_URL;
+  const fetchImpl = options.fetchImpl ?? globalThis.fetch;
+  const sleepImpl = options.sleepImpl ?? defaultSleep;
+  const maxAttempts = options.maxAttempts ?? 3;
+  const retryDelaysMs = options.retryDelaysMs ?? [1000, 2000];
+
+  const validation = validateProgressInput(input, secret);
+  if (!validation.valid) {
+    return {
+      ok: false,
+      non_blocking: true,
+      reason: 'validation_failed',
+      errors: validation.errors,
+      attempts: 0,
+    };
+  }
+
+  const payload = buildProgressPayload(input);
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      const response = await fetchImpl(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-raioc-signature': secret,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`bridge_http_${response.status}`);
+      }
+
+      return {
+        ok: true,
+        mission: payload.mission,
+        event: input.event.trim(),
+        progress: payload.progress,
+        bridge_status: response.status,
+        attempts: attempt,
+      };
+    } catch {
+      if (attempt < maxAttempts) {
+        const delay = retryDelaysMs[attempt - 1] ?? retryDelaysMs.at(-1) ?? 0;
+        await sleepImpl(delay);
+      }
+    }
+  }
+
+  return {
+    ok: false,
+    non_blocking: true,
+    reason: 'progress_bridge_unavailable',
+    mission: payload.mission,
+    event: input.event.trim(),
+    progress: payload.progress,
+    attempts: maxAttempts,
+  };
+}
