@@ -218,7 +218,15 @@ export async function run_cycle(options = {}) {
           db,
           handle,
           EFFECT_TYPES.N8N_WEBHOOK,
-          () => dispatchN8nEvent('QUALIFIED_LEAD', { lead, intelligence, brief, correlationId })
+          () => dispatchN8nEvent('QUALIFIED_LEAD', {
+            lead,
+            intelligence,
+            brief,
+            correlationId,
+            // This is resolved once by the core admission policy, then HMAC
+            // signed by the adapter. WF-01 never reads an independent mode.
+            runtime: { mode: runtimeExecution.mode },
+          })
         );
         if (n8nOutcome.dispatched) summary.dispatches.n8n++;
 

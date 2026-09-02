@@ -1,13 +1,32 @@
 /**
  * RAIOC OS - n8n Egress Webhook Dispatcher Adapter
  * Dispatches automated signed event webhooks to n8n workflows with HMAC-SHA256 authentication,
- * strict 5000ms timeout enforcement, and non-blocking audit error logging.
+ * a bounded synchronous WF-01 timeout, and non-blocking audit error logging.
  */
 
 import { createHmac } from 'node:crypto';
 import { config } from '../config/env.js';
 import { logger } from '../logging/audit-logger.js';
 import { supabase } from '../db/supabase-client.js';
+
+/**
+ * WF-01's canary path only verifies the signed event context and responds, so
+ * it is bounded to two seconds of n8n execution overhead. The same synchronous
+ * webhook can also run the active-only MARK request, which is capped in WF-01
+ * at 15 seconds. The caller budget is therefore 15s MARK + 2s workflow
+ * overhead + 3s transport margin = 20s. This stays well below the 120-second
+ * execution lease without changing execution-authority semantics.
+ */
+export const N8N_WF01_CANARY_MAX_PATH_MS = 2_000;
+export const N8N_WF01_MARK_REQUEST_TIMEOUT_MS = 15_000;
+export const N8N_WF01_SYNCHRONOUS_OVERHEAD_MS = 2_000;
+export const N8N_WF01_TRANSPORT_MARGIN_MS = 3_000;
+export const N8N_WF01_CALLER_TIMEOUT_MS =
+  N8N_WF01_MARK_REQUEST_TIMEOUT_MS +
+  N8N_WF01_SYNCHRONOUS_OVERHEAD_MS +
+  N8N_WF01_TRANSPORT_MARGIN_MS;
+
+const RUNTIME_MODES = new Set(['off', 'canary', 'active']);
 
 /**
  * Escapes raw HTML entities to prevent Telegram parse errors
@@ -72,19 +91,17 @@ export function extractTelegramFields(event, payload = {}, correlationId = '') {
   const brief = payload.brief || {};
   const riis = intelligence.riis || brief.riis || {};
   const dira = intelligence.dira || brief.dira || {};
+  const unknown = 'N/A';
 
   // 1. Full name
-  const rawFullName = lead.name || lead.contactName || lead.full_name || payload.full_name || payload.name || 'Private Client';
+  const rawFullName = lead.name || lead.contactName || lead.full_name || payload.full_name || payload.name || unknown;
   const fullName = escapeTelegramHtml(rawFullName);
 
   // 2. Budget formatted
-  let rawBudget = lead.budgetAed ?? payload.budgetAed ?? lead.budget_aed ?? payload.budget_aed;
-  let budgetFormatted = '';
+  const rawBudget = lead.budgetAed ?? payload.budgetAed ?? lead.budget_aed ?? payload.budget_aed;
+  let budgetFormatted = unknown;
   if (rawBudget !== undefined && rawBudget !== null && !isNaN(Number(rawBudget)) && Number(rawBudget) > 0) {
     budgetFormatted = `AED ${Number(rawBudget).toLocaleString()}`;
-  } else {
-    const fallbackBudget = lead.budget_formatted || payload.budget_formatted || lead.budget || payload.budget || 'AED 15,000,000+';
-    budgetFormatted = escapeTelegramHtml(fallbackBudget);
   }
 
   // 3. Message text
@@ -93,13 +110,17 @@ export function extractTelegramFields(event, payload = {}, correlationId = '') {
   if (providedText) {
     messageText = sanitizeTelegramHtml(providedText);
   } else if (event === 'QUALIFIED_LEAD' || event === 'LEAD_INGESTED') {
-    const company = escapeTelegramHtml(lead.company || lead.companyName || lead.company_name || 'Enterprise Candidate');
-    const email = escapeTelegramHtml(lead.email || lead.contactEmail || 'N/A');
-    const phone = escapeTelegramHtml(lead.phone || lead.contactPhone || lead.whatsapp || 'N/A');
-    const riisScore = riis.score !== undefined ? riis.score : (brief.riisScore || intelligence.score || 85);
-    const tierLabel = escapeTelegramHtml(riis.tierLabel || brief.diraTier || 'Institutional Tier');
-    const riskLevel = escapeTelegramHtml(dira.riskLevel || brief.diraRiskLevel || 'MODERATE');
-    const strategy = escapeTelegramHtml(intelligence.recommendedTrack || brief.strategyCode || lead.timeline || 'Immediate Deployment');
+    const company = escapeTelegramHtml(lead.company || lead.companyName || lead.company_name || unknown);
+    const email = escapeTelegramHtml(lead.email || lead.contactEmail || unknown);
+    const phone = escapeTelegramHtml(lead.phone || lead.contactPhone || lead.whatsapp || unknown);
+    const rawRiisScore = riis.score ?? brief.riisScore ?? intelligence.score;
+    const riisScore = rawRiisScore !== null && rawRiisScore !== undefined && rawRiisScore !== '' && Number.isFinite(Number(rawRiisScore))
+      ? Number(rawRiisScore)
+      : null;
+    const riisScorePresentation = riisScore === null ? unknown : `${riisScore}/100`;
+    const tierLabel = escapeTelegramHtml(riis.tierLabel || brief.diraTier || unknown);
+    const riskLevel = escapeTelegramHtml(dira.riskLevel || brief.diraRiskLevel || unknown);
+    const strategy = escapeTelegramHtml(intelligence.recommendedTrack || brief.strategyCode || lead.timeline || unknown);
 
     messageText = `🚀 <b>VIP NOTIFICATION: ${escapeTelegramHtml(event)}</b>\n\n` +
       `👤 <b>Name:</b> ${fullName}\n` +
@@ -107,7 +128,7 @@ export function extractTelegramFields(event, payload = {}, correlationId = '') {
       `📧 <b>Email:</b> ${email}\n` +
       `📱 <b>Phone:</b> ${phone}\n` +
       `💰 <b>Budget:</b> ${budgetFormatted}\n` +
-      `📊 <b>RIIS Score:</b> <code>${riisScore}/100</code> (${tierLabel})\n` +
+      `📊 <b>RIIS Score:</b> <code>${riisScorePresentation}</code> (${tierLabel})\n` +
       `🛡️ <b>DIRA Risk:</b> <code>${riskLevel}</code>\n` +
       `⚡ <b>Recommended Track:</b> ${strategy}\n` +
       `🆔 <b>Correlation ID:</b> <code>${escapeTelegramHtml(correlationId)}</code>`;
@@ -131,7 +152,8 @@ export class N8nAdapter {
   constructor(options = {}) {
     this.webhookUrl = options.webhookUrl || process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || config.n8n?.webhookUrl || '';
     this.webhookSecret = options.webhookSecret || process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || config.n8n?.webhookSecret || 'raioc_n8n_hmac_secret';
-    this.timeoutMs = options.timeoutMs || 5000;
+    this.timeoutMs = options.timeoutMs ?? N8N_WF01_CALLER_TIMEOUT_MS;
+    this.auditClient = options.auditClient || supabase;
     this.enabled = options.enabled !== undefined 
       ? options.enabled 
       : (process.env.N8N_ENABLED !== 'false' && config.n8n?.enabled !== false);
@@ -158,17 +180,24 @@ export class N8nAdapter {
   async dispatchEvent(event, payload = {}, options = {}) {
     const targetUrl = options.webhookUrl || process.env.N8N_OUTBOUND_WEBHOOK_URL || process.env.N8N_WEBHOOK_URL || this.webhookUrl;
     const secret = options.webhookSecret || process.env.N8N_OUTBOUND_SECRET || process.env.N8N_WEBHOOK_SECRET || this.webhookSecret;
-    const timeoutMs = options.timeoutMs || this.timeoutMs || 5000;
+    const timeoutMs = options.timeoutMs ?? this.timeoutMs;
     const timestamp = new Date().toISOString();
     const correlationId = options.correlationId || payload.correlationId || `corr_n8n_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
 
     const tgFields = extractTelegramFields(event, payload, correlationId);
+
+    // The runtime mode is carried in the signed event body. An unknown value is
+    // represented as null, never upgraded by the adapter, so WF-01 can refuse
+    // it before any external fan-out.
+    const runtimeMode = payload?.runtime?.mode;
+    const runtime = RUNTIME_MODES.has(runtimeMode) ? { mode: runtimeMode } : { mode: null };
 
     const eventPayload = {
       event,
       timestamp,
       correlationId,
       source: 'raioc-os',
+      runtime,
       text: tgFields.text,
       message: tgFields.message,
       full_name: tgFields.full_name,
@@ -209,7 +238,8 @@ export class N8nAdapter {
       };
     }
 
-    // Execute HTTP POST with 5000ms timeout and non-blocking error handling
+    // Execute the synchronous WF-01 request within the derived 20-second
+    // caller budget and preserve the provider-response distinction below.
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -254,7 +284,7 @@ export class N8nAdapter {
         status: res.status,
       });
 
-      await supabase.recordAuditLog({
+      await this.auditClient.recordAuditLog({
         category: 'N8N_ADAPTER',
         action: 'N8N_EVENT_DISPATCHED',
         entityId: correlationId,
@@ -267,6 +297,7 @@ export class N8nAdapter {
         success: true,
         status: 'SENT',
         httpStatus: res.status,
+        providerResponded: true,
         event,
         correlationId,
         signature: `sha256=${signature}`,
@@ -292,7 +323,7 @@ export class N8nAdapter {
         error: errorMessage,
       });
 
-      await supabase.recordAuditLog({
+      await this.auditClient.recordAuditLog({
         category: 'N8N_ADAPTER',
         action: 'N8N_EVENT_FAILED',
         entityId: correlationId,

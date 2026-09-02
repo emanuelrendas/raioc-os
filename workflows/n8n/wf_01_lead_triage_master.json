@@ -5,11 +5,8 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "raioc-lead-ingest",
-        "responseMode": "onReceived",
-        "responseData": "allEntries",
-        "options": {
-          "rawBody": false
-        }
+        "responseMode": "responseNode",
+        "options": { "rawBody": false }
       },
       "name": "1. Inbound Lead Webhook",
       "type": "n8n-nodes-base.webhook",
@@ -19,9 +16,9 @@
     },
     {
       "parameters": {
-        "jsCode": "// Normalise CloudEvent v1.1 with W3C traceparent and SHA-256\nconst crypto = require('crypto');\nconst input = $input.first().json;\nconst body = input.body || input;\nconst headers = input.headers || {};\n\nconst traceparent = headers['traceparent'] || `00-${crypto.randomBytes(16).toString('hex')}-${crypto.randomBytes(8).toString('hex')}-01`;\nconst correlationId = headers['x-correlation-id'] || body.correlation_id || `corr_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;\nconst payloadString = JSON.stringify(body);\nconst payloadSha256 = crypto.createHash('sha256').update(payloadString).digest('hex');\n\nconst lead = body.data?.lead || body.lead || body;\nconst name = lead.name || lead.contact_name || 'Anonymous Sovereign Principal';\nconst email = lead.email || 'privateadvisory@emanuelrendas.com';\nconst phone = lead.phone || '+971501234567';\nconst budgetAed = Number(lead.budget_aed || lead.propertyPriceAed || 15000000);\nconst targetAsset = lead.target_asset || lead.community || 'Prime Dubai Freehold Corridor';\nconst channel = (body.channel || headers['x-raioc-channel'] || 'WEB_DIRECT').toUpperCase();\n\nreturn [{\n  json: {\n    specversion: '1.0',\n    type: 'raioc.lead.ingested.v1',\n    source: `raioc.channel.${channel.toLowerCase()}`,\n    id: `evt_ingest_${Date.now()}`,\n    time: new Date().toISOString(),\n    traceparent,\n    correlation_id: correlationId,\n    causation_id: body.id || correlationId,\n    payload_sha256: payloadSha256,\n    data: {\n      lead: {\n        name,\n        email,\n        phone,\n        budget_aed: budgetAed,\n        target_asset: targetAsset,\n        company: lead.company || 'Private Family Office',\n        country: lead.country || 'International',\n        segment: lead.segment || 'HIGH_NET_WORTH',\n        channel\n      }\n    }\n  }\n}];"
+        "jsCode": "// Verify the signed RAIOC event before mode can influence routing.\nconst crypto = require('crypto');\nconst incoming = $input.first().json;\nconst body = incoming.body || incoming;\nconst headers = incoming.headers || {};\nconst signature = headers['x-n8n-signature'] || headers['X-N8N-Signature'];\nconst signingSecret = $env.N8N_OUTBOUND_SECRET || $env.N8N_WEBHOOK_SECRET || $env.RAIOC_N8N_WEBHOOK_SECRET;\n\nlet signatureValid = false;\nif (typeof signingSecret === 'string' && signingSecret.length > 0 && typeof signature === 'string') {\n  const expectedSignature = `sha256=${crypto.createHmac('sha256', signingSecret).update(JSON.stringify(body)).digest('hex')}`;\n  signatureValid = signature.length === expectedSignature.length &&\n    crypto.timingSafeEqual(Buffer.from(signature), Buffer.from(expectedSignature));\n}\n\nconst lead = body.data?.lead || {};\nconst name = typeof lead.name === 'string' && lead.name.trim() ? lead.name.trim() : null;\nconst email = typeof lead.email === 'string' && lead.email.trim() ? lead.email.trim().toLowerCase() : null;\nconst phone = typeof lead.phone === 'string' && lead.phone.trim() ? lead.phone.trim() : null;\nconst suppliedBudget = Number(lead.budget_aed ?? lead.propertyPriceAed);\nconst budgetAed = Number.isFinite(suppliedBudget) && suppliedBudget > 0 ? suppliedBudget : null;\nconst targetAsset = typeof lead.target_asset === 'string' && lead.target_asset.trim() ? lead.target_asset.trim() : null;\nconst runtimeMode = signatureValid && typeof body.runtime?.mode === 'string' ? body.runtime.mode : null;\n\nlet boundary;\nif (!signatureValid) {\n  boundary = { completed: false, allowExternalFanout: false, httpStatus: 401, reason: 'SIGNATURE_INVALID' };\n} else if (runtimeMode === 'canary') {\n  boundary = { completed: true, allowExternalFanout: false, httpStatus: 200, reason: 'CANARY_BOUNDARY_COMPLETED' };\n} else if (runtimeMode === 'active') {\n  boundary = { completed: false, allowExternalFanout: true, httpStatus: 200, reason: 'ACTIVE_REQUIRES_SCORE_VALIDATION' };\n} else {\n  boundary = { completed: false, allowExternalFanout: false, httpStatus: 400, reason: 'RUNTIME_MODE_INVALID' };\n}\n\nreturn [{\n  json: {\n    correlation_id: body.correlationId || headers['x-correlation-id'] || null,\n    traceparent: headers.traceparent || null,\n    runtime: { mode: runtimeMode },\n    boundary,\n    data: {\n      lead: {\n        name,\n        email,\n        phone,\n        budget_aed: budgetAed,\n        target_asset: targetAsset,\n        company: typeof lead.company === 'string' && lead.company.trim() ? lead.company.trim() : null,\n        country: typeof lead.country === 'string' && lead.country.trim() ? lead.country.trim() : null,\n        segment: typeof lead.segment === 'string' && lead.segment.trim() ? lead.segment.trim() : null\n      }\n    }\n  }\n}];"
       },
-      "name": "2. CloudEvent v1.1 Normalizer",
+      "name": "2. Verify & Normalize Signed Event",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [420, 300],
@@ -29,203 +26,187 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/cognitive/dispatch",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
-            { "name": "traceparent", "value": "={{ $json.traceparent }}" },
-            { "name": "x-correlation-id", "value": "={{ $json.correlation_id }}" }
-          ]
-        },
-        "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "agent", "value": "MARK" },
-            { "name": "prompt", "value": "=Evaluate DIRA readiness and sovereign allocation thesis for {{ $json.data.lead.name }} (Budget: AED {{ $json.data.lead.budget_aed }}, Target: {{ $json.data.lead.target_asset }})" },
-            { "name": "context", "value": "={{ $json.data.lead }}" }
-          ]
-        },
-        "options": {
-          "timeout": 15000
-        }
+        "conditions": { "boolean": [{ "value1": "={{ $json.boundary.allowExternalFanout === true }}", "operation": "true" }] }
       },
-      "name": "3. MARK DIRA Risk Evaluation",
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.2,
+      "name": "3. Runtime Mode Gate",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
       "position": [640, 300],
-      "id": "node_wf01_mark_dira_03"
+      "id": "node_wf01_mode_gate_03"
     },
     {
       "parameters": {
-        "conditions": {
-          "number": [
-            {
-              "value1": "={{ $json.body?.diraScore || $json.diraScore || 85 }}",
-              "operation": "largerEqual",
-              "value2": 80
-            }
-          ]
-        }
+        "method": "POST",
+        "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/cognitive/dispatch",
+        "sendHeaders": true,
+        "headerParameters": { "parameters": [
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
+          { "name": "traceparent", "value": "={{ $('2. Verify & Normalize Signed Event').item.json.traceparent }}" },
+          { "name": "x-correlation-id", "value": "={{ $('2. Verify & Normalize Signed Event').item.json.correlation_id }}" }
+        ] },
+        "sendBody": true,
+        "bodyParameters": { "parameters": [
+          { "name": "agent", "value": "MARK" },
+          { "name": "prompt", "value": "=Evaluate DIRA and RIIS only from supplied lead data. Missing or invalid scores must be returned as invalid." },
+          { "name": "context", "value": "={{ $('2. Verify & Normalize Signed Event').item.json.data.lead }}" }
+        ] },
+        "options": { "timeout": 15000 }
       },
-      "name": "4. DIRA Tier-1 Qualification Filter",
+      "name": "4. MARK DIRA Risk Evaluation",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [860, 220],
+      "id": "node_wf01_mark_dira_04"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Scores authorize active-only fan-out, so absent, non-numeric, or below-threshold values fail closed.\nconst normalized = $('2. Verify & Normalize Signed Event').item.json;\nconst mark = $input.first().json;\nconst diraScore = Number(mark.body?.diraScore ?? mark.diraScore);\nconst riisScore = Number(mark.body?.riisScore ?? mark.riisScore);\nconst scoresValid = Number.isFinite(diraScore) && Number.isFinite(riisScore) && diraScore >= 80 && riisScore >= 80;\n\nreturn [{\n  json: {\n    ...normalized,\n    assessment: { diraScore, riisScore },\n    boundary: scoresValid\n      ? { completed: false, allowExternalFanout: true, httpStatus: 200, reason: 'ACTIVE_SCORES_VALID' }\n      : { completed: false, allowExternalFanout: false, httpStatus: 422, reason: 'DIRA_OR_RIIS_INVALID' }\n  }\n}];"
+      },
+      "name": "5. Validate DIRA and RIIS Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 220],
+      "id": "node_wf01_score_validation_05"
+    },
+    {
+      "parameters": {
+        "conditions": { "boolean": [{ "value1": "={{ $json.boundary.allowExternalFanout === true }}", "operation": "true" }] }
+      },
+      "name": "6. Valid DIRA/RIIS Qualification Filter",
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [860, 300],
-      "id": "node_wf01_filter_04"
+      "position": [1300, 220],
+      "id": "node_wf01_score_gate_06"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/crm/lead/ingest",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
-            { "name": "traceparent", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.traceparent }}" },
-            { "name": "x-correlation-id", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.correlation_id }}" }
-          ]
-        },
+        "headerParameters": { "parameters": [
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" },
+          { "name": "traceparent", "value": "={{ $json.traceparent }}" },
+          { "name": "x-correlation-id", "value": "={{ $json.correlation_id }}" }
+        ] },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "name", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.name }}" },
-            { "name": "email", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.email }}" },
-            { "name": "phone", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.phone }}" },
-            { "name": "budget_aed", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.budget_aed }}" },
-            { "name": "target_asset", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.target_asset }}" },
-            { "name": "stage", "value": "HOT_MANDATE" },
-            { "name": "dira_score", "value": "={{ $json.body?.diraScore || 92 }}" },
-            { "name": "riis_score", "value": "={{ $json.body?.riisScore || 90 }}" }
-          ]
-        },
+        "bodyParameters": { "parameters": [
+          { "name": "name", "value": "={{ $json.data.lead.name }}" },
+          { "name": "email", "value": "={{ $json.data.lead.email }}" },
+          { "name": "phone", "value": "={{ $json.data.lead.phone }}" },
+          { "name": "budget_aed", "value": "={{ $json.data.lead.budget_aed }}" },
+          { "name": "target_asset", "value": "={{ $json.data.lead.target_asset }}" },
+          { "name": "dira_score", "value": "={{ $json.assessment.diraScore }}" },
+          { "name": "riis_score", "value": "={{ $json.assessment.riisScore }}" },
+          { "name": "origin", "value": "n8n-wf01" },
+          { "name": "triggerCycle", "value": "false" },
+          { "name": "forwardToN8n", "value": "false" }
+        ] },
         "options": {}
       },
-      "name": "5. Sync to Sovereign CRM",
+      "name": "7. Sync to Sovereign CRM",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1080, 220],
-      "id": "node_wf01_crm_sync_05"
+      "position": [1520, 120],
+      "id": "node_wf01_crm_sync_07"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendMessage",
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "chat_id", "value": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}" },
-            { "name": "parse_mode", "value": "Markdown" },
-            { "name": "text", "value": "=🏛 *RAIOC SOVEREIGN MANDATE INGESTED*\n\n*Principal:* {{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.name }}\n*Asset Corridor:* {{ $('2. CloudEvent v1.1 Normalizer').item.json.data.lead.target_asset }}\n*Allocation:* AED {{ ($('2. CloudEvent v1.1 Normalizer').item.json.data.lead.budget_aed / 1000000).toFixed(1) }}M\n*DIRA Score:* {{ $json.body?.diraScore || 92 }}/100 [TIER-1]\n*Traceparent:* `{{ $('2. CloudEvent v1.1 Normalizer').item.json.traceparent }}`" }
-          ]
-        },
+        "bodyParameters": { "parameters": [
+          { "name": "chat_id", "value": "={{ $env.TELEGRAM_ALERT_CHAT_ID }}" },
+          { "name": "parse_mode", "value": "Markdown" },
+          { "name": "text", "value": "=*RAIOC QUALIFIED LEAD*\\n\\n*Principal:* {{ $('2. Verify & Normalize Signed Event').item.json.data.lead.name }}\\n*DIRA Score:* {{ $('5. Validate DIRA and RIIS Scores').item.json.assessment.diraScore }}/100\\n*RIIS Score:* {{ $('5. Validate DIRA and RIIS Scores').item.json.assessment.riisScore }}/100" }
+        ] },
         "options": {}
       },
-      "name": "6. Telegram Executive Alert",
+      "name": "8. Telegram Executive Alert",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1300, 220],
-      "id": "node_wf01_telegram_alert_06"
+      "position": [1740, 120],
+      "id": "node_wf01_telegram_alert_08"
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $env.RAIOC_API_URL || 'https://api.emanuelrendas.com' }}/api/v1/event",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Content-Type", "value": "application/json" },
-            { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
-          ]
-        },
+        "headerParameters": { "parameters": [
+          { "name": "Content-Type", "value": "application/json" },
+          { "name": "Authorization", "value": "=Bearer {{ $env.RAIOC_INTERNAL_SECRET }}" }
+        ] },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            { "name": "event_type", "value": "raioc.lead.triaged.v1" },
-            { "name": "source_agent", "value": "MARK" },
-            { "name": "correlation_id", "value": "={{ $('2. CloudEvent v1.1 Normalizer').item.json.correlation_id }}" },
-            { "name": "payload", "value": "={{ $json }}" }
-          ]
-        },
+        "bodyParameters": { "parameters": [
+          { "name": "event_type", "value": "raioc.lead.triaged.v1" },
+          { "name": "source_agent", "value": "MARK" },
+          { "name": "correlation_id", "value": "={{ $('2. Verify & Normalize Signed Event').item.json.correlation_id }}" },
+          { "name": "payload", "value": "={{ $json }}" }
+        ] },
         "options": {}
       },
-      "name": "7. Publish to Event Bus v1.1",
+      "name": "9. Publish to Event Bus v1.1",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [1520, 220],
-      "id": "node_wf01_event_bus_07"
+      "position": [1960, 120],
+      "id": "node_wf01_event_bus_09"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Canary, invalid-mode, invalid-signature, and invalid-score paths terminate here without provider fan-out.\nconst boundary = $json.boundary;\nreturn [{ json: { runtime: $json.runtime, boundary } }];"
+      },
+      "name": "10. Build Boundary Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1080, 420],
+      "id": "node_wf01_boundary_response_10"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ completed: $json.boundary.completed === true, mode: $json.runtime.mode, externalFanout: $json.boundary.allowExternalFanout === true, reason: $json.boundary.reason }) }}",
+        "options": {
+          "responseCode": "={{ $json.boundary.httpStatus }}",
+          "responseHeaders": { "entries": [{ "name": "Content-Type", "value": "application/json" }] }
+        }
+      },
+      "name": "11. Respond to Boundary",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1520, 420],
+      "id": "node_wf01_respond_11"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This runs only after every active-path internal operation and provider fan-out completed.\nconst normalized = $('2. Verify & Normalize Signed Event').item.json;\nreturn [{\n  json: {\n    runtime: normalized.runtime,\n    boundary: { completed: true, allowExternalFanout: true, httpStatus: 200, reason: 'ACTIVE_PATH_COMPLETED' }\n  }\n}];"
+      },
+      "name": "12. Complete Active Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2180, 120],
+      "id": "node_wf01_active_response_12"
     }
   ],
   "connections": {
-    "1. Inbound Lead Webhook": {
-      "main": [
-        [
-          {
-            "node": "2. CloudEvent v1.1 Normalizer",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "2. CloudEvent v1.1 Normalizer": {
-      "main": [
-        [
-          {
-            "node": "3. MARK DIRA Risk Evaluation",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "3. MARK DIRA Risk Evaluation": {
-      "main": [
-        [
-          {
-            "node": "4. DIRA Tier-1 Qualification Filter",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "4. DIRA Tier-1 Qualification Filter": {
-      "main": [
-        [
-          {
-            "node": "5. Sync to Sovereign CRM",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "5. Sync to Sovereign CRM": {
-      "main": [
-        [
-          {
-            "node": "6. Telegram Executive Alert",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "6. Telegram Executive Alert": {
-      "main": [
-        [
-          {
-            "node": "7. Publish to Event Bus v1.1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    }
+    "1. Inbound Lead Webhook": { "main": [[{ "node": "2. Verify & Normalize Signed Event", "type": "main", "index": 0 }]] },
+    "2. Verify & Normalize Signed Event": { "main": [[{ "node": "3. Runtime Mode Gate", "type": "main", "index": 0 }]] },
+    "3. Runtime Mode Gate": { "main": [
+      [{ "node": "4. MARK DIRA Risk Evaluation", "type": "main", "index": 0 }],
+      [{ "node": "10. Build Boundary Response", "type": "main", "index": 0 }]
+    ] },
+    "4. MARK DIRA Risk Evaluation": { "main": [[{ "node": "5. Validate DIRA and RIIS Scores", "type": "main", "index": 0 }]] },
+    "5. Validate DIRA and RIIS Scores": { "main": [[{ "node": "6. Valid DIRA/RIIS Qualification Filter", "type": "main", "index": 0 }]] },
+    "6. Valid DIRA/RIIS Qualification Filter": { "main": [
+      [{ "node": "7. Sync to Sovereign CRM", "type": "main", "index": 0 }],
+      [{ "node": "10. Build Boundary Response", "type": "main", "index": 0 }]
+    ] },
+    "7. Sync to Sovereign CRM": { "main": [[{ "node": "8. Telegram Executive Alert", "type": "main", "index": 0 }]] },
+    "8. Telegram Executive Alert": { "main": [[{ "node": "9. Publish to Event Bus v1.1", "type": "main", "index": 0 }]] },
+    "9. Publish to Event Bus v1.1": { "main": [[{ "node": "12. Complete Active Response", "type": "main", "index": 0 }]] },
+    "10. Build Boundary Response": { "main": [[{ "node": "11. Respond to Boundary", "type": "main", "index": 0 }]] },
+    "12. Complete Active Response": { "main": [[{ "node": "11. Respond to Boundary", "type": "main", "index": 0 }]] }
   },
   "settings": {
     "executionOrder": "v1",
