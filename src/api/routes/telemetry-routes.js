@@ -472,7 +472,12 @@ export async function handleTelemetryRequest(path, context = {}) {
   }
 
   // 9. Health Endpoint
-  if (normalized === 'health' || path === '/health' || path === '/api/health') {
+  if (
+    normalized === 'health'
+    || path === '/health'
+    || path === '/api/health'
+    || path === '/api/v1/health'
+  ) {
     const snapshot = telemetry.getSnapshot();
     return {
       status: 200,

@@ -152,8 +152,8 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
         response = await handleTelemetryRequest(url, { headers: effectiveHeaders, query: effectiveQuery, body });
       }
     }
-    // 1b. Public Health Endpoint (/health, /api/health)
-    else if (url === '/health' || url === '/api/health') {
+    // 1b. Public Health Endpoint (/health, /api/health, /api/v1/health)
+    else if (url === '/health' || url === '/api/health' || url === '/api/v1/health') {
       response = await handleTelemetryRequest(url, { headers: effectiveHeaders, query: effectiveQuery, body });
     }
     // 2a. ARGOS DLD Transaction Ingestion & Whale Alerts (/api/v1/market/dld-sync, /api/market/dld-sync)
