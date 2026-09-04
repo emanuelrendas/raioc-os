@@ -337,4 +337,76 @@ describe('MISSION P1-A: Canonical Website Lead Ingress', () => {
     const eleventh = await routeApiRequest('/api/lead', 'POST', { name: 'Router Test 11', email: 'router11@example.com' }, {}, headers);
     assert.strictEqual(eleventh.status, 429, 'the router must propagate headers into handleLeadSubmission for rate limiting to engage');
   });
+
+  test('T12 — database timeout is bounded with no retry and a subsequent explicit submission succeeds', async () => {
+    setConfiguredEnv();
+
+    const calls = [];
+
+    global.fetch = async (url, opts = {}) => {
+      calls.push({
+        url: String(url),
+        method: opts.method || 'GET',
+        signal: opts.signal,
+      });
+
+      if (calls.length === 1) {
+        assert.ok(opts.signal, 'timeout attempt must receive an abort signal');
+        assert.ok(
+          opts.signal instanceof AbortSignal,
+          'timeout attempt signal must be an AbortSignal',
+        );
+
+        throw new DOMException(
+          'The operation was aborted due to timeout',
+          'TimeoutError',
+        );
+      }
+
+      if (calls.length === 2) {
+        return {
+          ok: true,
+          status: 201,
+          text: async () => JSON.stringify([{ id: 'lead-timeout-recovery-001' }]),
+        };
+      }
+
+      throw new Error(`unexpected fetch call ${calls.length}`);
+    };
+
+    const timedOut = await handleLeadSubmission(
+      VALID_PAYLOAD,
+      { headers: { 'x-forwarded-for': '10.0.0.12' } },
+    );
+
+    assert.strictEqual(timedOut.status, 502);
+    assert.strictEqual(timedOut.body.ok, false);
+    assert.strictEqual(timedOut.body.stored, false);
+    assert.strictEqual(calls.length, 1, 'timeout must not trigger an automatic retry');
+    assert.strictEqual(calls[0].method, 'POST');
+    assert.ok(calls[0].url.includes('/rest/v1/leads'));
+
+    const recovered = await handleLeadSubmission(
+      VALID_PAYLOAD,
+      { headers: { 'x-forwarded-for': '10.0.0.12' } },
+    );
+
+    assert.strictEqual(recovered.status, 200);
+    assert.strictEqual(recovered.body.ok, true);
+    assert.strictEqual(recovered.body.stored, true);
+    assert.strictEqual(recovered.body.returning, false);
+    assert.strictEqual(recovered.body.id, 'lead-timeout-recovery-001');
+
+    assert.strictEqual(calls.length, 2, 'exactly two explicit mocked database calls expected');
+    assert.deepStrictEqual(
+      calls.map(call => call.method),
+      ['POST', 'POST'],
+      'timeout and explicit recovery must each perform exactly one POST',
+    );
+
+    assert.ok(
+      calls.every(call => call.url.includes('/rest/v1/leads')),
+      'all mocked fetches must remain inside the lead persistence boundary',
+    );
+  });
 });
