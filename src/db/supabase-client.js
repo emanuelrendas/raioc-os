@@ -1007,6 +1007,62 @@ export class SupabaseClient {
     }
   }
 
+  /**
+   * MISSION-016: reads recent leads from the real table. GET /api/crm/leads
+   * previously returned a hardcoded empty array outside mock mode, so a live
+   * deployment reported zero leads no matter how many the table held.
+   *
+   * @param {Object} options
+   * @param {number} options.limit - page size, capped at 200
+   * @param {number} options.offset - rows to skip
+   * @param {string} [options.source] - optional exact-match source filter
+   * @returns {Promise<{ leads: Array, count: number, limit: number, offset: number }>}
+   */
+  async fetchRecentLeads(options = {}) {
+    const limit = Math.min(Math.max(Number(options.limit) || 50, 1), 200);
+    const offset = Math.max(Number(options.offset) || 0, 0);
+    const source = options.source ? String(options.source) : null;
+
+    if (this.isMock) {
+      const all = (this.mockStore.leads || [])
+        .filter((l) => !source || l.source === source)
+        .slice()
+        .reverse();
+      return { leads: all.slice(offset, offset + limit), count: all.length, limit, offset };
+    }
+
+    try {
+      const query = new URLSearchParams({
+        select: '*',
+        order: 'created_at.desc',
+        limit: String(limit),
+        offset: String(offset),
+      });
+      if (source) query.set('source', `eq.${source}`);
+
+      const res = await fetch(`${this.url}/rest/v1/leads?${query.toString()}`, {
+        headers: {
+          apikey: this.key,
+          Authorization: `Bearer ${this.key}`,
+          'Content-Type': 'application/json',
+          // Ask PostgREST for the total row count alongside the page.
+          Prefer: 'count=exact',
+        },
+      });
+      if (!res.ok) throw new Error(`Supabase fetchRecentLeads error: ${res.status} ${res.statusText}`);
+
+      const rows = await res.json();
+      const contentRange = res.headers.get('content-range') || '';
+      const totalFromHeader = Number(contentRange.split('/')[1]);
+      const count = Number.isFinite(totalFromHeader) ? totalFromHeader : (Array.isArray(rows) ? rows.length : 0);
+
+      return { leads: Array.isArray(rows) ? rows : [], count, limit, offset };
+    } catch (err) {
+      logger.error('SUPABASE', 'Failed to fetch recent leads', { error: err.message });
+      return { leads: [], count: 0, limit, offset, error: err.message };
+    }
+  }
+
   async fetchPendingAssessments(limit = 50) {
     if (this.isMock) {
       return this.mockStore.assessments
@@ -2057,17 +2113,22 @@ export class SupabaseClient {
       return Array.from(this.mockStore.agent_fleet_status.values());
     }
 
+    // MISSION-016 (truthfulness): agent_fleet_status records live heartbeats. An empty
+    // table means no agent is reporting, which is a real operational signal. Returning
+    // the seed roster there presented idle agents as ACTIVE, with a seeded spend figure.
     try {
       const res = await fetch(`${this.url}/rest/v1/agent_fleet_status?select=*&order=updated_at.desc`, {
         headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
       });
-      if (res.ok) {
-        const rows = await res.json();
-        if (rows && rows.length > 0) return rows;
+      if (!res.ok) {
+        logger.error('SUPABASE', `fetchFleetStatus failed: HTTP ${res.status}. Reporting no agents rather than the seed roster.`);
+        return [];
       }
-      return defaultRoster;
-    } catch {
-      return defaultRoster;
+      const rows = await res.json();
+      return Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      logger.error('SUPABASE', `fetchFleetStatus failed: ${err.message}. Reporting no agents rather than the seed roster.`);
+      return [];
     }
   }
 
@@ -2422,17 +2483,23 @@ export class SupabaseClient {
       return this.mockStore.interaction_logs.slice(0, limit);
     }
 
+    // MISSION-016 (truthfulness, extends MISSION-010): a live deployment previously
+    // fell back to the demo records above whenever the table was empty or the query
+    // failed, with timestamps computed per request so fabricated client interactions
+    // always looked seconds old. An empty stream is now reported as empty.
     try {
       const res = await fetch(`${this.url}/rest/v1/interaction_logs?select=*&order=created_at.desc&limit=${limit}`, {
         headers: { apikey: this.key, Authorization: `Bearer ${this.key}` },
       });
-      if (res.ok) {
-        const rows = await res.json();
-        if (rows && rows.length > 0) return rows;
+      if (!res.ok) {
+        logger.error('SUPABASE', `fetchInteractionLogs failed: HTTP ${res.status}. Reporting empty stream rather than demo data.`);
+        return [];
       }
-      return defaultLogs.slice(0, limit);
-    } catch {
-      return defaultLogs.slice(0, limit);
+      const rows = await res.json();
+      return Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      logger.error('SUPABASE', `fetchInteractionLogs failed: ${err.message}. Reporting empty stream rather than demo data.`);
+      return [];
     }
   }
 
