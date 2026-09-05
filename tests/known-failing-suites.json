@@ -1,0 +1,203 @@
+{
+  "_comment": [
+    "Suites known to fail on main, recorded so CI can report the real number",
+    "instead of running only the suites that pass. Every entry needs a reason.",
+    "This list may shrink. It must never grow without a deliberate --update and",
+    "a note in the pull request explaining why the debt increased."
+  ],
+  "recordedAt": "2026-09-05T12:50:56.455Z",
+  "totals": {
+    "tests": 550,
+    "pass": 450,
+    "fail": 100,
+    "suites": 91
+  },
+  "suites": [
+    {
+      "name": "ATLAS & LEX OPAL ROI: Dubai Law No. 8 of 2007 Escrow Shield & Institutional Memorandum Generation",
+      "file": "tests/integration/aida-atlas-lex-e2e.test.js",
+      "signature": "404!==200 x2",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "ATLAS & LEX OPAL ROI: Mathematical Precision of Cap Rate, 5-Year IRR & Cash Flows",
+      "file": "tests/integration/aida-atlas-lex-e2e.test.js",
+      "signature": "404!==200 x2",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "INTEGRATION: Enterprise Core Registries & Knowledge Graph",
+      "file": "tests/integration/enterprise-core.test.js",
+      "signature": "404!==200 x8",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "INTEGRATION: Executive AI Chat Gateway (/api/chat & /api/executive/chat)",
+      "file": "tests/integration/executive-api.test.js",
+      "signature": "401!==200 x2",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "INTEGRATION: Executive Mission Control & Fleet Telemetry Gateways",
+      "file": "tests/integration/mission-control.test.js",
+      "signature": "404!==200 x6",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "INTEGRATION: Mission Control V1 24/7 Wall-Screen Dashboard",
+      "file": "tests/integration/mission-control-v1.test.js",
+      "signature": "Cannot read properties of undefined (reading  x4",
+      "reason": "STALE-CONTRACT: the module under test changed shape and the test was not updated"
+    },
+    {
+      "name": "INTEGRATION: Mission Control V2 Integrated Flow & HITL Governance",
+      "file": "tests/integration/mission-control-v2-flow.test.js",
+      "signature": "404!==200 x4",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "INTEGRATION: Sprint 2 Core Hardening & Architecture Verification",
+      "file": "tests/integration/sprint-2-core-hardening.test.js",
+      "signature": "401!==200 x1",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "INTEGRATION: Telegram Channel Webhook Ingestion & Event Bus v1.1",
+      "file": "tests/integration/telegram-ingestion.test.js",
+      "signature": "401!==200 x1",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "LEAD TRIAGE E2E: Consolidated Multi-Agent Pipeline & Audit Telemetry Verification",
+      "file": "tests/integration/lead-triage-e2e.test.js",
+      "signature": "401!==202 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "LEAD TRIAGE E2E: Mandate 1 - Lord Alistair Sterling (25M AED, Palm Jumeirah)",
+      "file": "tests/integration/lead-triage-e2e.test.js",
+      "signature": "401!==202 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "LEAD TRIAGE E2E: Mandate 2 - Dr. Afonso Henriques (30M AED, Dubai Creek Harbour)",
+      "file": "tests/integration/lead-triage-e2e.test.js",
+      "signature": "401!==202 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "LEAD TRIAGE E2E: Mandate 3 - Baroness Victoria Vance (45M AED, DIFC)",
+      "file": "tests/integration/lead-triage-e2e.test.js",
+      "signature": "401!==202 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "LEAD TRIAGE E2E: Mandate 4 - Zhang Wei (60M AED, Palm Jebel Ali)",
+      "file": "tests/integration/lead-triage-e2e.test.js",
+      "signature": "401!==202 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "LEAD TRIAGE E2E: Mandate 5 - Sheikh Tariq Al-Mansoor (80M AED, Dubai Hills)",
+      "file": "tests/integration/lead-triage-e2e.test.js",
+      "signature": "401!==202 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "MARK OCR VISION: Tool Telemetry Probe & Mission Control V1 Reflection",
+      "file": "tests/integration/mark-ocr-vision.test.js",
+      "signature": "404!==200 x1",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "MISSION BE-002: Complete Executive API Suite",
+      "file": "tests/mission-be-002-executive-api.test.js",
+      "signature": "401!==200 x6",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "MISSION ID: EXEC-002 — Production Executive API Endpoints",
+      "file": "tests/mission-exec-002-executive-api.test.js",
+      "signature": "401!==200 x5",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "MISSION ID: OM-001 — Operational Capability 3: Investor Communication via n8n & Event Bus",
+      "file": "tests/mission-om-001-investor-communication.test.js",
+      "signature": "401!==200 x1",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "MISSION INFRA-001 — Consolidated Website + Serverless + Backend Verification",
+      "file": "tests/mission-infra-001-consolidation.test.js",
+      "signature": "401!==200 x1",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "Namecheap PrivateEmail & Nodemailer SMTP Adapter Tests",
+      "file": "tests/smtp-email-adapter.test.js",
+      "signature": "suite-level failure",
+      "reason": "UNTRIAGED: suite fails without a single dominant assertion signature"
+    },
+    {
+      "name": "PRODUCTION RECOVERY: 100% Endpoint Verification via Single Gateway (api/index.js)",
+      "file": "tests/production-recovery-gateway.test.js",
+      "signature": "401!==200 x10",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "RAIOC Go-Live Production Pipeline Verification",
+      "file": "tests/production-verification.test.js",
+      "signature": "suite-level failure",
+      "reason": "UNTRIAGED: suite fails without a single dominant assertion signature"
+    },
+    {
+      "name": "RAIOC Sprint 3: Executive Command Center & Full Production Activation Tests",
+      "file": "tests/production-activation-sprint-3.test.js",
+      "signature": "404!==200 x1",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "Security & Authentication Tests (MISSION-001 Hardened)",
+      "file": "tests/security-auth.test.js",
+      "signature": "suite-level failure",
+      "reason": "UNTRIAGED: suite fails without a single dominant assertion signature"
+    },
+    {
+      "name": "Specialist Agents & Agent Directory Tests",
+      "file": "tests/specialist-agents.test.js",
+      "signature": "suite-level failure",
+      "reason": "UNTRIAGED: suite fails without a single dominant assertion signature"
+    },
+    {
+      "name": "WEBSITE PRIVATE WEALTH: Confidential Mandate Ingestion -> CRM & Event Bus",
+      "file": "tests/integration/website-private-wealth.test.js",
+      "signature": "404!==200 x1",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "WHATSAPP PHASE 8: Tool Telemetry Probe & Mission Control V1 Reflection",
+      "file": "tests/integration/whatsapp-ingestion.test.js",
+      "signature": "404!==200 x1",
+      "reason": "STALE-ROUTE: the endpoint under test no longer resolves at that path"
+    },
+    {
+      "name": "Website Integration & Calculator Tests",
+      "file": "tests/api-calculators.test.js",
+      "signature": "401!==200 x1",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    },
+    {
+      "name": "WhatsApp Business Cloud API Tests",
+      "file": "tests/whatsapp-business.test.js",
+      "signature": "suite-level failure",
+      "reason": "UNTRIAGED: suite fails without a single dominant assertion signature"
+    },
+    {
+      "name": "🏛 E2E Pipeline Simulation: AED 35,000,000 Sovereign Mandate (Palm Jebel Ali / DIFC SPV)",
+      "file": "tests/integration/e2e-sovereign-mandate-35m.test.js",
+      "signature": "401!==200 x1",
+      "reason": "STALE-AUTH: written before the MISSION-001/002 auth hardening; calls a protected endpoint with no credentials and expects success"
+    }
+  ]
+}

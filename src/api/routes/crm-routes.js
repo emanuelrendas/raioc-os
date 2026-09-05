@@ -16,6 +16,7 @@ import { crmSyncClient } from '../../integrations/crm/crm-sync-client.js';
 import { n8nWebhookClient } from '../../integrations/n8n/n8n-webhook-client.js';
 import { run_cycle } from '../../core/run-cycle.js';
 import { correlationTracer } from '../../monitoring/correlation-tracer.js';
+import { authMiddleware, Roles } from '../../security/auth-middleware.js';
 import { logger } from '../../logging/audit-logger.js';
 
 export const SUPPORTED_CRM_SEGMENTS = {
@@ -477,14 +478,36 @@ export async function handleCrmRequest(url, method = 'GET', body = {}, query = {
   }
 
   // 4. Retrieve Recent Ingested Leads: GET /api/crm/leads
+  // MISSION-016: this read now hits the real table and requires authentication.
+  // It returns identifiable contact data, so it is not a public endpoint.
   if (method === 'GET' && normalized === 'leads') {
-    const leads = supabase.isMock ? (supabase.mockStore.leads || []) : [];
+    const auth = authMiddleware.authenticateRequest(headers, [Roles.ADMIN, Roles.AGENT]);
+    if (!auth.authenticated) {
+      return {
+        status: 401,
+        body: {
+          success: false,
+          error: 'Unauthorized: lead records require authentication',
+          details: auth.error,
+        },
+      };
+    }
+
+    const page = await supabase.fetchRecentLeads({
+      limit: query.limit,
+      offset: query.offset,
+      source: query.source,
+    });
+
     return {
       status: 200,
       body: {
         success: true,
-        count: leads.length,
-        leads: leads.slice(-50),
+        count: page.count,
+        returned: page.leads.length,
+        limit: page.limit,
+        offset: page.offset,
+        leads: page.leads,
       },
     };
   }

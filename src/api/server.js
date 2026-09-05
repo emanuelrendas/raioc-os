@@ -222,7 +222,9 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
     }
     // 9a. CRM Sync & Direct Webhook Relay
     else if (url.startsWith('/api/v1/crm') || url.startsWith('/api/crm')) {
-      response = await handleCrmRequest(url, method, body, effectiveQuery, headers);
+      // MISSION-016: pass the resolved method/body/headers so an object-style call
+      // into routeApiRequest does not silently hand the handler the wrong values.
+      response = await handleCrmRequest(url, effectiveMethod, effectiveBody, effectiveQuery, effectiveHeaders);
     }
     // 9b. AI Reasoning Tools & Multimodal Engine (Opal, Mixboard, Flow, Pitch Deck)
     else if (url.startsWith('/api/v1/tools') || url.startsWith('/api/tools')) {
@@ -236,7 +238,11 @@ export async function routeApiRequest(reqPath, method = 'GET', body = {}, query 
       response = await handleApprovalsRequest(method, body, effectiveHeaders);
     }
     else if (url.startsWith('/api/v1/mission-control/interactions') || url.startsWith('/api/mission-control/interactions')) {
-      response = await handleInteractionsRequest(effectiveQuery, effectiveHeaders);
+      // MISSION-016: the call passed (query, headers) into a handler declared as
+      // (url, method, body, query, headers), so `method` received the headers object
+      // and every request fell into the 405 branch. The interaction stream has never
+      // returned data. Arguments are now aligned with the signature.
+      response = await handleInteractionsRequest(url, effectiveMethod, effectiveBody, effectiveQuery, effectiveHeaders);
     }
     else if (url.startsWith('/api/v1/mission-control/state') || url.startsWith('/api/mission-control/state')) {
       response = await handleMissionControlV1State(effectiveHeaders);

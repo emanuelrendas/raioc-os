@@ -24,6 +24,98 @@ export const config = {
   },
 };
 
+// MISSION-016 (security): the asset handler previously passed the caller-controlled
+// path straight to path.resolve(), so '/../secret.txt' escaped the application root
+// and '/src/config/secrets-manager.js' served source code to any anonymous caller.
+// Assets are now confined to an explicit set of roots plus a named allowlist of
+// root-level files, and only declared media types are servable.
+const ASSET_MIME_TYPES = {
+  '.json': 'application/json',
+  '.js': 'application/javascript',
+  '.mjs': 'application/javascript',
+  '.css': 'text/css; charset=utf-8',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.txt': 'text/plain',
+  '.xml': 'application/xml',
+  '.pdf': 'application/pdf',
+};
+
+// Directories whose contents may be served in full.
+const ASSET_ROOTS = ['assets', 'public'];
+
+// Individual files at the project root that the public site legitimately requests.
+const ROOT_FILE_ALLOWLIST = new Set([
+  'og.jpg',
+  'robots.txt',
+  'sitemap.xml',
+  'llms.txt',
+  'favicon.ico',
+]);
+
+function isReadableFile(filePath) {
+  try {
+    return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Resolves a request path to a file on disk, or null when the request is not a
+ * legitimate asset request. Fail-closed: anything not provably inside an allowed
+ * root, and not on the root allowlist, resolves to null.
+ *
+ * @param {string} requestPath - caller-controlled path, e.g. '/assets/site.css'
+ * @returns {{ filePath: string, contentType: string } | null}
+ */
+export function resolveAssetPath(requestPath) {
+  const withoutQuery = String(requestPath ?? '').split('?')[0];
+  const ext = path.extname(withoutQuery).toLowerCase();
+  const contentType = ASSET_MIME_TYPES[ext];
+  if (!contentType) return null;
+
+  // Collapse the path and drop leading separators before any check runs.
+  const normalized = path.normalize(withoutQuery).replace(/^[/\\]+/, '');
+
+  // Reject empty paths, null bytes, surviving traversal segments, absolute paths.
+  if (!normalized || normalized.includes('\0')) return null;
+  if (normalized.split(/[/\\]/).some((segment) => segment === '..')) return null;
+  if (path.isAbsolute(normalized)) return null;
+
+  const projectRoot = path.resolve();
+  const segments = normalized.split(/[/\\]/);
+
+  // Case 1: a named file at the project root.
+  if (segments.length === 1) {
+    if (!ROOT_FILE_ALLOWLIST.has(segments[0])) return null;
+    const filePath = path.join(projectRoot, segments[0]);
+    return isReadableFile(filePath) ? { filePath, contentType } : null;
+  }
+
+  // Case 2: a file inside an allowed asset root. The resolved path is verified to
+  // sit under that root, so a crafted segment cannot climb back out.
+  for (const root of ASSET_ROOTS) {
+    const rootDir = path.resolve(projectRoot, root);
+    const filePath = segments[0] === root
+      ? path.resolve(projectRoot, normalized)
+      : path.resolve(rootDir, normalized);
+
+    if (!filePath.startsWith(rootDir + path.sep)) continue;
+    if (isReadableFile(filePath)) return { filePath, contentType };
+  }
+
+  return null;
+}
+
 export default async function handler(req, res) {
   const headers = req.headers || {};
   let query = req.query || {};
@@ -198,44 +290,23 @@ export default async function handler(req, res) {
   const isAssetRequest = urlExt && urlExt !== '.html';
 
   // 4-pre. Asset-First Exit: CSS, JS, images, fonts resolve from disk before any page lookup.
-  // Assets are NOT in the bundle — they must be read from disk.
+  // Assets are NOT in the bundle — they must be read from disk. resolveAssetPath is
+  // fail-closed: it returns null for anything outside the allowed roots, so a rejected
+  // path and a missing file are indistinguishable to the caller.
   if (isAssetRequest) {
-    try {
-      const candidateAssetPaths = [
-        path.resolve(url.replace(/^\//, '')),
-        path.resolve(`public/${url.replace(/^\//, '')}`),
-      ];
-      const mimeTypes = {
-        '.html': 'text/html; charset=utf-8',
-        '.json': 'application/json',
-        '.js': 'application/javascript',
-        '.css': 'text/css; charset=utf-8',
-        '.png': 'image/png',
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml',
-        '.ico': 'image/x-icon',
-        '.woff': 'font/woff',
-        '.woff2': 'font/woff2',
-        '.ttf': 'font/ttf',
-        '.txt': 'text/plain',
-        '.xml': 'application/xml',
-        '.pdf': 'application/pdf',
-      };
-      for (const filePath of candidateAssetPaths) {
-        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
-          const contentType = mimeTypes[urlExt] || 'application/octet-stream';
-          const content = fs.readFileSync(filePath);
-          res.setHeader('Content-Type', contentType);
-          res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
-          res.status(200);
-          return res.end(content);
-        }
+    const resolved = resolveAssetPath(url);
+    if (resolved) {
+      try {
+        const content = fs.readFileSync(resolved.filePath);
+        res.setHeader('Content-Type', resolved.contentType);
+        res.setHeader('Cache-Control', 'public, max-age=3600, s-maxage=86400');
+        res.status(200);
+        return res.end(content);
+      } catch (_) {
+        // Fall through to the 404 below rather than leaking a read error.
       }
-    } catch (_) {}
-    // Asset not found — fail closed, no HTML fallback
+    }
+    // Not an allowed asset, or not present — fail closed, no HTML fallback.
     res.setHeader('Content-Type', 'application/json');
     res.status(404);
     return res.end(JSON.stringify({ error: 'Asset not found', path: url }));

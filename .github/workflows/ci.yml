@@ -11,8 +11,20 @@
 #
 # Explicitly excluded from CI:
 #   - test:smoke  (requires live Supabase/SMTP secrets — never run in CI)
-#   - specialist-agents.test.js, whatsapp-business.test.js
-#     (pre-existing failures documented before MISSION-005; not in scope to fix here)
+#
+# MISSION-016 correction to the note that stood here:
+#   This file previously recorded two known-failing suites as the exclusion. The
+#   real figure on main at 2026-09-05 was 31 failing suites and 101 failing tests
+#   out of 539. Running only the nine passing suites made CI green while roughly a
+#   fifth of the suite was broken and unwatched.
+#
+#   test:ci is kept as the fast credential-free gate. test:health now runs the FULL
+#   suite against tests/known-failing-suites.json, a reviewable baseline with a
+#   root cause on every entry, and fails the build when a suite outside that
+#   baseline breaks or the failure count rises. Known debt is visible and can only
+#   shrink. Triage of the baseline is tracked separately; none of the recorded
+#   failures indicate broken production code — they are tests left behind by the
+#   auth hardening and by routes that moved.
 #
 # Owner: Emanuel Rendas (Principal Advisor)
 # Risk Tier: Tier 1 — Mandatory gate before main branch changes reach production
@@ -49,6 +61,9 @@ jobs:
       - name: Test — frozen mission suites (credential-free)
         run: npm run test:ci
 
+      - name: Test health — full suite against the recorded baseline
+        run: npm run test:health
+
       - name: Report
         if: always()
         run: |
@@ -57,3 +72,5 @@ jobs:
           echo "Commit: ${{ github.sha }}"
           echo "Branch: ${{ github.ref_name }}"
           echo "================================"
+          echo "Known-failing suites on record:"
+          node -e "const b=require('./tests/known-failing-suites.json');console.log('  suites:',b.suites.length,'| failing tests:',b.totals.fail,'of',b.totals.tests);"
