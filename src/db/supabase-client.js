@@ -3846,6 +3846,35 @@ export class SupabaseClient {
   }
 }
 
-export const supabase = new SupabaseClient();
+let sharedSupabaseClient;
 
+/**
+ * Construct the shared persistence client only when a database operation is
+ * requested. Public preview routes can therefore load without credentials,
+ * while the existing production constructor still fails closed on first use.
+ */
+export function getSupabaseClient() {
+  if (!sharedSupabaseClient) {
+    sharedSupabaseClient = new SupabaseClient();
+  }
+
+  return sharedSupabaseClient;
+}
+
+export const supabase = new Proxy({}, {
+  get(_target, property) {
+    const client = getSupabaseClient();
+    const value = Reflect.get(client, property, client);
+    return typeof value === 'function' ? value.bind(client) : value;
+  },
+
+  set(_target, property, value) {
+    const client = getSupabaseClient();
+    return Reflect.set(client, property, value, client);
+  },
+
+  has(_target, property) {
+    return property in getSupabaseClient();
+  },
+});
 

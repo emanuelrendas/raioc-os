@@ -12,7 +12,7 @@
     "cycle": "node src/core/run-cycle.js",
     "build": "node tools/sync-site-pages.mjs",
     "test": "node --test 'tests/*.test.js' 'tests/**/*.test.js'",
-    "test:ci": "node --test tests/vercel-entrypoint.test.js tests/frontend-source-of-truth-mission4.test.js tests/schema-provenance-mission3.test.js tests/security-mission2-hardening.test.js tests/execution-schema-foundation-mission015e.test.js tests/execution-runtime-integration-mission015e-b.test.js tests/runtime-execution-safety-mission015e-b-r1.test.js tests/n8n-boundary-mission015e-c-r2.test.js tests/crm-n8n-reentry-mission015e-c-r2.test.js",
+    "test:ci": "node --test tests/vercel-entrypoint.test.js tests/frontend-source-of-truth-mission4.test.js tests/schema-provenance-mission3.test.js tests/security-mission2-hardening.test.js tests/execution-schema-foundation-mission015e.test.js tests/execution-runtime-integration-mission015e-b.test.js tests/runtime-execution-safety-mission015e-b-r1.test.js tests/n8n-boundary-mission015e-c-r2.test.js tests/crm-n8n-reentry-mission015e-c-r2.test.js tests/website-lead-ingress-p1a.test.js tests/preview-recovery-r3a.test.js tests/mission-016-path-traversal-and-data-truth.test.js tests/mission-018-front-door.test.js tests/mission-019-asset-cache.test.js",
     "test:health": "node scripts/test-health.mjs",
     "test:health:update": "node scripts/test-health.mjs --update",
     "test:smoke": "node scripts/smoke-test-live-pipeline.js",

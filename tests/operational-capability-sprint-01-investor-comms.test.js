@@ -70,16 +70,45 @@ describe('Operational Capability Sprint 01: Automated Investor Communication (En
       { 'X-Correlation-ID': correlationId }
     );
 
-    assert.strictEqual(leadResponse.status, 200);
-    assert.strictEqual(leadResponse.body.status, 'INGESTED');
-    assert.strictEqual(leadResponse.headers['X-Correlation-ID'], correlationId);
+    /* MISSION-018 — updated, not weakened.
+     *
+     * This block asserted status 200 and body.status 'INGESTED'. That was the
+     * contract of the OLD /api/lead, which delegated the public brief form into
+     * handleAssessmentSubmission: it ran the DIRA/RIIS engine, generated an
+     * executive brief and returned 'INGESTED' whether or not a lead row was ever
+     * written. MISSION P1-A removed that delegation on purpose — website ingress
+     * records a lead and does not execute RAIOC — and R3-A made the persistence
+     * boundary fail closed.
+     *
+     * So the old assertion now asserts the defect: an endpoint reporting success
+     * while storing nothing. Production carried exactly that symptom, telling
+     * three of six visitors between 22 and 25 August that their brief had not
+     * saved while the funnel recorded the submission anyway.
+     *
+     * Without configured storage credentials the correct answer is 503 and an
+     * honest message. The pipeline stages below do not depend on the route's
+     * body: the test publishes LEAD_INGESTED itself a few lines down. */
+    assert.strictEqual(
+      leadResponse.status,
+      503,
+      'ingress must fail closed when lead storage is unconfigured, never report success'
+    );
+    assert.strictEqual(leadResponse.body.stored, false);
+    assert.strictEqual(
+      leadResponse.body.error,
+      'Lead storage is not configured. Your brief was not saved.'
+    );
+
+    /* The downstream mesh is what this suite exercises. Give it a deterministic
+     * identity rather than one the refused ingress could not have produced. */
+    const ingestedLeadId = `lead_sprint01_${Date.now()}`;
 
     // 3. Stage 2: Supabase Persistence & Triggering Event Bus
     agentEventBus.publish(
       AgentEvents.LEAD_INGESTED,
       {
         lead: {
-          id: leadResponse.body.leadId,
+          id: ingestedLeadId,
           ...investorSubmission,
           company_name: investorSubmission.companyName,
           contact_name: investorSubmission.name,
