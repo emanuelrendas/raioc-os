@@ -44,6 +44,10 @@ const LIMITS_FIELD = {
   investment_objective: 80, budget_band: 40, notes: 4000,
   referrer_url: 500, utm_source: 80, utm_medium: 80, utm_campaign: 120,
   lead_magnet: 80, preferred_language: 10,
+  /* MISSION-018: the funnel join key. lead_events carries it on every row;
+     leads did not, so no submission could ever be traced back to the page,
+     campaign or assessment answers that produced it. */
+  session_id: 100,
 };
 
 const LANGS = new Set(['en', 'pt', 'es']);
@@ -129,6 +133,10 @@ export async function handleLeadSubmission(payload = {}, options = {}) {
     utm_medium:   clean(body.utm_medium   || body.attribution?.utm_medium,   LIMITS_FIELD.utm_medium),
     utm_campaign: clean(body.utm_campaign || body.attribution?.utm_campaign, LIMITS_FIELD.utm_campaign),
     referrer_url: clean(body.referrer_url || body.attribution?.referrer_url, LIMITS_FIELD.referrer_url),
+    /* MISSION-018: carried from window.Track so lead_events rows recorded under
+       the same browser session can be attributed to this lead. Absent when the
+       visitor blocks sessionStorage, which is a legitimate null, not an error. */
+    session_id: clean(body.session_id || body.attribution?.session_id, LIMITS_FIELD.session_id),
     /* A website submission is an inbound request to be contacted, so it
        is recorded as opted_in. That is consent to a REPLY. It is not
        consent to a newsletter; a marketing list needs its own tick. */

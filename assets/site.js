@@ -293,7 +293,10 @@ window.Track = (function(){
     }
   } catch { /* private mode, storage disabled — events simply stop */ }
 
-  return function track(event_name, event_props){
+  /* MISSION-018: the id was trapped in this closure, so the lead insert
+     never carried it and every funnel event stayed orphaned. Exposed
+     read-only so the brief form sends the same id it reports events under. */
+  function track(event_name, event_props){
     if(!sid) return;
     try {
       fetch('/api/event', {
@@ -307,7 +310,12 @@ window.Track = (function(){
         keepalive: true,
       }).catch(()=>{});
     } catch { /* never let this surface */ }
-  };
+  }
+
+  try { Object.defineProperty(track, 'sessionId', { get: function(){ return sid; } }); }
+  catch { track.sessionId = sid; }
+
+  return track;
 })();
 
 /* ═══════════════ BRIEF FORM → STORED, THEN WHATSAPP ═══════════════
@@ -353,6 +361,9 @@ window.Track = (function(){
       headers: { 'Content-Type': 'application/json' },
       keepalive: true,
       body: JSON.stringify({
+        /* MISSION-018: the join key. Without it leads.session_id stays NULL and
+           lead_events can never be attributed to the lead they produced. */
+        session_id: (window.Track && window.Track.sessionId) || null,
         name:  val('b-name'),
         email: val('b-email'),
         address: val('b-base'),

@@ -75,7 +75,13 @@ export async function upsertLead(URL_BASE, SERVICE, row) {
      be silently reset to "new" by a repeat form submission. */
   const KEEP = ['name', 'mobile', 'address', 'notes', 'investment_objective',
                 'budget_band', 'lead_magnet', 'preferred_language',
-                'utm_source', 'utm_medium', 'utm_campaign', 'referrer_url'];
+                'utm_source', 'utm_medium', 'utm_campaign', 'referrer_url',
+                /* MISSION-018: a returning client submits from a NEW browser
+                   session, and the funnel events of that visit are recorded
+                   under the new id. Keeping the first session forever would
+                   orphan every later visit, so the newest one wins. The guard
+                   above still applies: a blank value never erases the stored id. */
+                'session_id'];
 
   const patch = {};
   for (const k of KEEP) {
