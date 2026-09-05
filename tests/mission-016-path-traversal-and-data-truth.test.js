@@ -188,3 +188,43 @@ describe('MISSION-016 #3: lead visibility and interaction stream', () => {
     }
   });
 });
+
+describe('MISSION-016 #4: resolution does not depend on the working directory', () => {
+  test('legitimate assets resolve from any cwd', () => {
+    const original = process.cwd();
+    try {
+      const repoRoot = path.resolve(import.meta.dirname, '..');
+      for (const cwd of [repoRoot, os.tmpdir(), path.parse(repoRoot).root]) {
+        process.chdir(cwd);
+        for (const asset of ['/assets/site.css', '/assets/site.js', '/robots.txt', '/og.jpg']) {
+          assert.ok(
+            resolveAssetPath(asset),
+            `${asset} must resolve with cwd=${cwd}. On a host that runs the function from ` +
+            'anywhere but the project root, a cwd-relative resolver returns null for every ' +
+            'asset and the site loads with no stylesheet at all.'
+          );
+        }
+      }
+    } finally {
+      process.chdir(original);
+    }
+  });
+
+  test('confinement holds from a foreign cwd', () => {
+    const original = process.cwd();
+    try {
+      process.chdir(os.tmpdir());
+      for (const attack of [
+        '/../secret.txt',
+        '/src/config/secrets-manager.js',
+        '/package.json',
+        '/assets/../package.json',
+        '/../../etc/hosts.txt',
+      ]) {
+        assert.equal(resolveAssetPath(attack), null, `${attack} must stay refused regardless of cwd`);
+      }
+    } finally {
+      process.chdir(original);
+    }
+  });
+});

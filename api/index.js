@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { routeApiRequest } from '../src/api/server.js';
 import { renderCommandCenterHtml } from '../src/dashboard/command-center-html.js';
 import { renderExecutiveBriefHtml } from '../src/site/brief-viewer-html.js';
@@ -61,6 +62,29 @@ const ROOT_FILE_ALLOWLIST = new Set([
   'favicon.ico',
 ]);
 
+/**
+ * Roots to resolve an asset against, in order of trust.
+ *
+ * The first is derived from this module's own location and does not depend on
+ * the working directory: this file lives at <root>/api/index.js, so its parent's
+ * parent is the project root wherever the bundle is unpacked. The second is the
+ * working directory, kept as a fallback for a host that relocates the entry
+ * point away from the sources it ships.
+ *
+ * MISSION-016 originally used path.resolve() alone, which is process.cwd(). That
+ * matched the pre-existing behaviour and works when the platform runs the
+ * function from the project root, but it is silent and total when it does not:
+ * every asset resolves to null and the site loads with no stylesheet at all.
+ * Verified before this change: from any working directory other than the project
+ * root, /assets/site.css, /assets/site.js, /robots.txt and /og.jpg all returned
+ * null. Confinement is unaffected — each candidate root is still checked with
+ * the same startsWith guard.
+ */
+const PROJECT_ROOTS = [...new Set([
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
+  path.resolve(),
+])];
+
 function isReadableFile(filePath) {
   try {
     return fs.existsSync(filePath) && fs.statSync(filePath).isFile();
@@ -91,26 +115,28 @@ export function resolveAssetPath(requestPath) {
   if (normalized.split(/[/\\]/).some((segment) => segment === '..')) return null;
   if (path.isAbsolute(normalized)) return null;
 
-  const projectRoot = path.resolve();
   const segments = normalized.split(/[/\\]/);
 
-  // Case 1: a named file at the project root.
-  if (segments.length === 1) {
-    if (!ROOT_FILE_ALLOWLIST.has(segments[0])) return null;
-    const filePath = path.join(projectRoot, segments[0]);
-    return isReadableFile(filePath) ? { filePath, contentType } : null;
-  }
+  for (const projectRoot of PROJECT_ROOTS) {
+    // Case 1: a named file at the project root.
+    if (segments.length === 1) {
+      if (!ROOT_FILE_ALLOWLIST.has(segments[0])) return null;
+      const filePath = path.join(projectRoot, segments[0]);
+      if (isReadableFile(filePath)) return { filePath, contentType };
+      continue;
+    }
 
-  // Case 2: a file inside an allowed asset root. The resolved path is verified to
-  // sit under that root, so a crafted segment cannot climb back out.
-  for (const root of ASSET_ROOTS) {
-    const rootDir = path.resolve(projectRoot, root);
-    const filePath = segments[0] === root
-      ? path.resolve(projectRoot, normalized)
-      : path.resolve(rootDir, normalized);
+    // Case 2: a file inside an allowed asset root. The resolved path is verified
+    // to sit under that root, so a crafted segment cannot climb back out.
+    for (const root of ASSET_ROOTS) {
+      const rootDir = path.resolve(projectRoot, root);
+      const filePath = segments[0] === root
+        ? path.resolve(projectRoot, normalized)
+        : path.resolve(rootDir, normalized);
 
-    if (!filePath.startsWith(rootDir + path.sep)) continue;
-    if (isReadableFile(filePath)) return { filePath, contentType };
+      if (!filePath.startsWith(rootDir + path.sep)) continue;
+      if (isReadableFile(filePath)) return { filePath, contentType };
+    }
   }
 
   return null;
